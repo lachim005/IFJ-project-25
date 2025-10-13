@@ -4,6 +4,8 @@
 #define _STRING_INIT_SIZE 32
 #define _STRING_SCALE_FACTOR 2
 
+#include <stdbool.h>
+
 typedef struct string {
     char *val;
     /// Capacity allocated at *val
