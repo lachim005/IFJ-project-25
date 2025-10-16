@@ -6,6 +6,7 @@
 typedef enum tok_type {
     TOK_IDENTIFIER, // Name stored in string_val
     TOK_GLOBAL_VAR, // Name stored in string_val
+    TOK_EOL,
     // Literals
     TOK_LIT_INT, // Value stored in int_val
     TOK_LIT_DOUBLE, // Value stored in double_val
