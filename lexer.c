@@ -133,6 +133,10 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
         case S_START:
             switch (ch) {
                 case '\n': FOUND_TOK(TOK_EOL);
+                case '(': FOUND_TOK(TOK_LEFT_PAR);
+                case ')': FOUND_TOK(TOK_RIGHT_PAR);
+                case '{': FOUND_TOK(TOK_LEFT_BRACE);
+                case '}': FOUND_TOK(TOK_RIGHT_BRACE);
                 case '+': FOUND_TOK(TOK_OP_PLUS);
                 case '-': FOUND_TOK(TOK_OP_MINUS);
                 case '*': FOUND_TOK(TOK_OP_MULT);
@@ -149,7 +153,7 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
             if (isdigit(ch)) { str_append_char(buf1, ch); MOVE_STATE(S_INT_LIT); }
             if (isalpha(ch)) { str_append_char(buf1, ch); MOVE_STATE(S_IDENTIFIER); }
             if (isspace(ch)) continue;
-            break;
+            return ERR_LEX_UNEXPECTED_CHARACTER;
         case S_LESS_THAN:
             if (ch == '=') FOUND_TOK(TOK_OP_LESS_EQ);
             UNGET;
