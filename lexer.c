@@ -155,6 +155,9 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
         // FSM
         switch (state) {
         case S_START:
+            // Sets the token position at the start
+            tok->pos_char = lexer->pos_char;
+            tok->pos_line = lexer->pos_line;
             switch (ch) {
                 case '\n': FOUND_TOK(TOK_EOL);
                 case '(': FOUND_TOK(TOK_LEFT_PAR);

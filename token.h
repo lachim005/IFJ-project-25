@@ -56,6 +56,8 @@ typedef struct token {
         int int_val;
         double double_val;
     };
+    unsigned pos_line;
+    unsigned pos_char;
 } Token;
 
 #endif // !_TOKEN_H_
