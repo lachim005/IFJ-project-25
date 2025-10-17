@@ -17,6 +17,7 @@ typedef enum lex_fsm_state {
     S_DIV,
     S_COMMENT,
     S_MULTILINE_COMMENT,
+    S_MULTILINE_COMMENT_NEW_NEST_LEVEL,
     S_MULTILINE_COMMENT_END,
     // String literals
     S_STR_START,
@@ -125,6 +126,8 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
     String *buf2 = str_init();
     if (buf2 == NULL) goto ERR_BUF2;
 
+    unsigned comment_nest_level = 0;
+
     bool found_tok = false;
 
     int ch;
@@ -171,7 +174,7 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
             UNGET;
             FOUND_TOK(TOK_OP_ASSIGN);
         case S_DIV:
-            if (ch == '*') MOVE_STATE(S_MULTILINE_COMMENT);
+            if (ch == '*') { comment_nest_level++; MOVE_STATE(S_MULTILINE_COMMENT); }
             if (ch == '/') MOVE_STATE(S_COMMENT);
             UNGET;
             FOUND_TOK(TOK_OP_DIV);
@@ -180,11 +183,20 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
             continue;
         case S_MULTILINE_COMMENT:
             if (ch == '*') MOVE_STATE(S_MULTILINE_COMMENT_END);
+            if (ch == '/') MOVE_STATE(S_MULTILINE_COMMENT_NEW_NEST_LEVEL);
             continue;
+        case S_MULTILINE_COMMENT_NEW_NEST_LEVEL:
+            if (ch == '*') comment_nest_level++;
+            if (ch == '/') continue;
+            MOVE_STATE(S_MULTILINE_COMMENT);
         case S_MULTILINE_COMMENT_END:
-            if (ch == '/') MOVE_STATE(S_START);
-            if (ch != '*') MOVE_STATE(S_MULTILINE_COMMENT);
-            continue;
+            if (ch == '*') continue;
+            if (ch != '/') MOVE_STATE(S_MULTILINE_COMMENT);
+            comment_nest_level--;
+            if (comment_nest_level == 0) {
+                MOVE_STATE(S_START);
+            }
+            MOVE_STATE(S_MULTILINE_COMMENT);
         case S_STR_START:
             if (ch == '"') MOVE_STATE(S_STR_EMPTY);
             if (ch == '\\') MOVE_STATE(S_STR_ESCAPE);
