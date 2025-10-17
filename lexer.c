@@ -25,8 +25,8 @@ typedef enum lex_fsm_state {
     S_STR_ESCAPE,
     S_STR_ESCAPE_CODE_1,
     S_STR_ESCAPE_CODE_2,
-    S_STR_END,
     S_STR_EMPTY,
+    S_STR_MULTILINE_FIRST_LINE,
     S_STR_MULTILINE_INSIDE,
     S_STR_MULTILINE_END1,
     S_STR_MULTILINE_END2,
@@ -77,6 +77,15 @@ bool hex2int(char *hexStr, int *out) {
         return false;
     }
     *out = val;
+    return true;
+}
+
+/// Returns true if the given string contains only whitespace characters
+bool is_just_whitespace(char *str) {
+    while (*str != '\0') {
+        if (!isspace(*str)) return false;
+        str++;
+    }
     return true;
 }
 
@@ -199,11 +208,18 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
             MOVE_STATE(S_MULTILINE_COMMENT);
         case S_STR_START:
             if (ch == '"') MOVE_STATE(S_STR_EMPTY);
+            if (ch == '\n') return ERR_LEX_NL_IN_STRING_LITERAL;
             if (ch == '\\') MOVE_STATE(S_STR_ESCAPE);
             str_append_char(buf1, ch);
             MOVE_STATE(S_STR_INSIDE);
         case S_STR_INSIDE:
-            if (ch == '"') MOVE_STATE(S_STR_END);
+            if (ch == '"') {
+                tok->string_val = str_init();
+                if (tok->string_val == NULL) return ERR_LEX_MALLOC;
+                str_append_string(tok->string_val, buf1->val);
+                FOUND_TOK(TOK_LIT_STRING);
+            }
+            if (ch == '\n') return ERR_LEX_NL_IN_STRING_LITERAL;
             if (ch == '\\') MOVE_STATE(S_STR_ESCAPE);
             str_append_char(buf1, ch);
             continue;
@@ -230,33 +246,64 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
             str_clear(buf2);
             str_append_char(buf1, code);
             MOVE_STATE(S_STR_INSIDE)
-        case S_STR_END:
-            UNGET;
-            tok->string_val = str_init();
-            if (tok->string_val == NULL) return ERR_LEX_MALLOC;
-            str_append_string(tok->string_val, buf1->val);
-            FOUND_TOK(TOK_LIT_STRING);
         case S_STR_EMPTY:
-            if (ch == '"') MOVE_STATE(S_STR_MULTILINE_INSIDE);
+            if (ch == '"') MOVE_STATE(S_STR_MULTILINE_FIRST_LINE);
             UNGET;
             tok->string_val = str_init();
             if (tok->string_val == NULL) return ERR_LEX_MALLOC;
             FOUND_TOK(TOK_LIT_STRING);
-        case S_STR_MULTILINE_INSIDE:
-            // TODO: Fix multiline string literal whitespace trimming
+        case S_STR_MULTILINE_FIRST_LINE:
+            str_append_char(buf2, ch);
+            if (ch == '\n') {
+                // We don't append the first line if it just whitespace
+                if (!is_just_whitespace(buf2->val)) {
+                    str_append_string(buf1, buf2->val);
+                }
+                str_clear(buf2);
+                MOVE_STATE(S_STR_MULTILINE_INSIDE);
+            }
+            // This will not return to the FIRST_LINE_STATE, but
+            // it's fine because the state is here only to handle
+            // empty first lines, which this will not be
             if (ch == '"') MOVE_STATE(S_STR_MULTILINE_END1);
-            str_append_char(buf1, ch);
+            continue;
+        case S_STR_MULTILINE_INSIDE:
+            if (ch == '\n') {
+                str_append_string(buf1, buf2->val);
+                str_clear(buf2);
+            }
+            str_append_char(buf2, ch);
+            if (ch == '"') MOVE_STATE(S_STR_MULTILINE_END1);
             continue;
         case S_STR_MULTILINE_END1:
+            if (ch == '\n') {
+                str_append_string(buf1, buf2->val);
+                str_clear(buf2);
+            }
+            str_append_char(buf2, ch);
             if (ch == '"') MOVE_STATE(S_STR_MULTILINE_END2);
-            str_append_char(buf1, '"');
-            str_append_char(buf1, ch);
             MOVE_STATE(S_STR_MULTILINE_INSIDE);
         case S_STR_MULTILINE_END2:
-            if (ch == '"') MOVE_STATE(S_STR_END);
-            str_append_char(buf1, '"');
-            str_append_char(buf1, '"');
-            str_append_char(buf1, ch);
+            if (ch == '"') {
+                // End of literal
+                // Removes the two "" at the end
+                str_remove_last(buf2);
+                str_remove_last(buf2);
+                // We don't append the last line if it is just whitespace
+                // We append only if this is the only line
+                if (buf1->val[0] == '\0' || !is_just_whitespace(buf2->val)) {
+                    str_append_string(buf1, buf2->val);
+                }
+                tok->string_val = str_init();
+                if (tok->string_val == NULL) return ERR_LEX_MALLOC;
+                str_append_string(tok->string_val, buf1->val);
+                FOUND_TOK(TOK_LIT_STRING);
+            }
+            if (ch == '\n') {
+                str_append_string(buf1, buf2->val);
+                str_clear(buf2);
+            }
+            str_append_char(buf2, ch);
             MOVE_STATE(S_STR_MULTILINE_INSIDE);
         case S_ZERO:
             if (ch == 'x') MOVE_STATE(S_INT_HEX_LIT);
@@ -337,6 +384,7 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
     str_free(&buf2);
 
     if (found_tok) return ERR_LEX_OK;
+    if (ch == EOF && state != S_START) return ERR_LEX_UNEXPECTED_EOF;
     if (ch == EOF) return ERR_LEX_EOF;
     return ERR_LEX_UNKNOWN_ERR;
 
