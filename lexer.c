@@ -47,19 +47,34 @@ typedef enum lex_fsm_state {
 
 bool lexer_init(Lexer *lexer, char *filename) {
     FILE* f = fopen(filename, "r");
-    if (f == NULL) {
-        return false;
-    }
+    if (f == NULL) { goto ERR_FILE; }
+
+    String *buf1 = str_init();
+    if (buf1 == NULL) { goto ERR_BUF1; }
+    String *buf2 = str_init();
+    if (buf2 == NULL) { goto ERR_BUF2; }
 
     lexer->file = f;
     lexer->pos_char = 0;
     lexer->pos_line = 1;
+    lexer->last_char_was_newline = false;
+    lexer->buf1 = buf1;
+    lexer->buf2 = buf2;
 
     return true;
+
+ERR_BUF2:
+    str_free(&lexer->buf1);
+ERR_BUF1:
+    fclose(f);
+ERR_FILE:
+    return false;
 }
 
 void lexer_free(Lexer *lexer) {
     fclose(lexer->file);
+    str_free(&lexer->buf1);
+    str_free(&lexer->buf2);
     lexer->file = NULL;
 }
 
@@ -131,11 +146,11 @@ TokType check_keyword(char* id) {
 ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
     LexFsmState state = S_START;
 
-    // Allocates some buffers
-    String *buf1 = str_init();
-    if (buf1 == NULL) goto ERR_BUF1;
-    String *buf2 = str_init();
-    if (buf2 == NULL) goto ERR_BUF2;
+    // Clears buffers
+    String *buf1 = lexer->buf1;
+    String *buf2 = lexer->buf2;
+    str_clear(buf1);
+    str_clear(buf2);
 
     unsigned comment_nest_level = 0;
 
@@ -395,16 +410,8 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
         }
     }
 
-    str_free(&buf1);
-    str_free(&buf2);
-
     if (found_tok) return ERR_LEX_OK;
     if (ch == EOF && state != S_START) return ERR_LEX_UNEXPECTED_EOF;
     if (ch == EOF) return ERR_LEX_EOF;
     return ERR_LEX_UNKNOWN_ERR;
-
-ERR_BUF2:
-    str_free(&buf1);
-ERR_BUF1:
-    return ERR_LEX_MALLOC;
 }

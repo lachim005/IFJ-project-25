@@ -12,6 +12,11 @@ typedef struct lexer {
     unsigned pos_line;
     unsigned pos_char;
     bool last_char_was_newline; // Used for counting lines
+
+    // Buffers used for lexical analysis.
+    // Used only in get_token, put here so we don't have to create new ones on every call
+    String *buf1;
+    String *buf2;
 } Lexer;
 
 typedef enum lexer_status {
