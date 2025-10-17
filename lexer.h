@@ -8,6 +8,10 @@
 
 typedef struct lexer {
     FILE* file;
+    // Current position in file. Used for friendlier error messages
+    unsigned pos_line;
+    unsigned pos_char;
+    bool last_char_was_newline; // Used for counting lines
 } Lexer;
 
 typedef enum lexer_status {

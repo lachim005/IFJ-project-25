@@ -52,6 +52,8 @@ bool lexer_init(Lexer *lexer, char *filename) {
     }
 
     lexer->file = f;
+    lexer->pos_char = 0;
+    lexer->pos_line = 1;
 
     return true;
 }
@@ -124,7 +126,7 @@ TokType check_keyword(char* id) {
 
 #define FOUND_TOK(token) {tok->type = token; found_tok=true; continue;}
 #define MOVE_STATE(s) {state = s; continue;}
-#define UNGET ungetc(ch, lexer->file);
+#define UNGET { ungetc(ch, lexer->file); lexer->pos_char--; lexer->last_char_was_newline = false; }
 
 ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
     LexFsmState state = S_START;
@@ -141,6 +143,16 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
 
     int ch;
     while (!found_tok && ((ch = fgetc(lexer->file)) != EOF)) {
+        // Increments position
+        if (lexer->last_char_was_newline) {
+            // We increment the line position AFTER reading the newline
+            lexer->pos_char = 0;
+            lexer->pos_line++;
+        }
+        lexer->pos_char++;
+        lexer->last_char_was_newline = ch == '\n';
+
+        // FSM
         switch (state) {
         case S_START:
             switch (ch) {
