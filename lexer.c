@@ -16,6 +16,17 @@ typedef enum lex_fsm_state {
     S_COMMENT,
     S_MULTILINE_COMMENT,
     S_MULTILINE_COMMENT_END,
+    // String literals
+    S_STR_START,
+    S_STR_INSIDE,
+    S_STR_ESCAPE,
+    S_STR_ESCAPE_CODE_1,
+    S_STR_ESCAPE_CODE_2,
+    S_STR_END,
+    S_STR_EMPTY,
+    S_STR_MULTILINE_INSIDE,
+    S_STR_MULTILINE_END1,
+    S_STR_MULTILINE_END2,
 } LexFsmState;
 
 bool lexer_init(Lexer *lexer, char *filename) {
@@ -32,6 +43,25 @@ bool lexer_init(Lexer *lexer, char *filename) {
 void lexer_free(Lexer *lexer) {
     fclose(lexer->file);
     lexer->file = NULL;
+}
+
+bool hex2int(char *hexStr, int *out) {
+    int val = 0;
+    for (int i = 0; hexStr[i] != '\0'; i++) {
+        char c = tolower(hexStr[i]);
+        val *= 16;
+        if (isdigit(c)) {
+            val += c - '0';
+            continue;
+        }
+        if (isalpha(c)) {
+            val += c - 'a' + 10;
+            continue;
+        }
+        return false;
+    }
+    *out = val;
+    return true;
 }
 
 #define FOUND_TOK(token) {tok->type = token; found_tok=true; continue;}
@@ -51,7 +81,6 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
 
     int ch;
     while (!found_tok && ((ch = fgetc(lexer->file)) != EOF)) {
-        printf("lexing char: %c\n", ch);
         switch (state) {
         case S_START:
             switch (ch) {
@@ -65,6 +94,7 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
                 case '<': MOVE_STATE(S_LESS_THAN);
                 case '!': MOVE_STATE(S_EXCLAMATION);
                 case '=': MOVE_STATE(S_EQ);
+                case '"': MOVE_STATE(S_STR_START);
             }
             if (isspace(ch)) continue;
             break;
@@ -98,6 +128,67 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
             if (ch == '/') MOVE_STATE(S_START);
             if (ch != '*') MOVE_STATE(S_MULTILINE_COMMENT);
             continue;
+        case S_STR_START:
+            if (ch == '"') MOVE_STATE(S_STR_EMPTY);
+            if (ch == '\\') MOVE_STATE(S_STR_ESCAPE);
+            str_append_char(buf1, ch);
+            MOVE_STATE(S_STR_INSIDE);
+        case S_STR_INSIDE:
+            if (ch == '"') MOVE_STATE(S_STR_END);
+            if (ch == '\\') MOVE_STATE(S_STR_ESCAPE);
+            str_append_char(buf1, ch);
+            continue;
+        case S_STR_ESCAPE:
+            if (ch == 'x') MOVE_STATE(S_STR_ESCAPE_CODE_1);
+            char escaped_char = 0;
+            switch (ch) {
+                case '"': escaped_char = '"'; break;
+                case 'r': escaped_char = '\r'; break;
+                case 'n': escaped_char = '\n'; break;
+                case 't': escaped_char = '\t'; break;
+                case '\\': escaped_char = '\\'; break;
+            }
+            if (escaped_char == 0) return ERR_LEX_STRING_UNEXPECTED_ESCAPE_SEQUENCE;
+            str_append_char(buf1, escaped_char);
+            MOVE_STATE(S_STR_INSIDE);
+        case S_STR_ESCAPE_CODE_1:
+            str_append_char(buf2, ch);
+            MOVE_STATE(S_STR_ESCAPE_CODE_2);
+        case S_STR_ESCAPE_CODE_2:
+            str_append_char(buf2, ch);
+            int code;
+            if (!hex2int(buf2->val, &code)) return ERR_LEX_STRING_UNEXPECTED_ESCAPE_SEQUENCE;
+            str_clear(buf2);
+            str_append_char(buf1, code);
+            MOVE_STATE(S_STR_INSIDE)
+        case S_STR_END:
+            UNGET;
+            tok->string_val = str_init();
+            if (tok->string_val == NULL) return ERR_LEX_MALLOC;
+            str_append_string(tok->string_val, buf1->val);
+            FOUND_TOK(TOK_LIT_STRING);
+        case S_STR_EMPTY:
+            if (ch == '"') MOVE_STATE(S_STR_MULTILINE_INSIDE);
+            UNGET;
+            tok->string_val = str_init();
+            if (tok->string_val == NULL) return ERR_LEX_MALLOC;
+            FOUND_TOK(TOK_LIT_STRING);
+        case S_STR_MULTILINE_INSIDE:
+            // TODO: Fix multiline string literal whitespace trimming
+            if (ch == '"') MOVE_STATE(S_STR_MULTILINE_END1);
+            str_append_char(buf1, ch);
+            continue;
+        case S_STR_MULTILINE_END1:
+            if (ch == '"') MOVE_STATE(S_STR_MULTILINE_END2);
+            str_append_char(buf1, '"');
+            str_append_char(buf1, ch);
+            MOVE_STATE(S_STR_MULTILINE_INSIDE);
+        case S_STR_MULTILINE_END2:
+            if (ch == '"') MOVE_STATE(S_STR_END);
+            str_append_char(buf1, '"');
+            str_append_char(buf1, '"');
+            str_append_char(buf1, ch);
+            MOVE_STATE(S_STR_MULTILINE_INSIDE);
         }
     }
 

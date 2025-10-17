@@ -51,7 +51,7 @@ typedef enum tok_type {
 typedef struct token {
     TokType type;
     union {
-        String string_val;
+        String *string_val;
         int int_val;
         double double_val;
     };
