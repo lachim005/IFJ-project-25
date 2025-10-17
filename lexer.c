@@ -2,6 +2,7 @@
 #include "string.h"
 #include "token.h"
 #include <ctype.h>
+#include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -76,6 +77,39 @@ bool hex2int(char *hexStr, int *out) {
     }
     *out = val;
     return true;
+}
+
+/// Returns keyword tokType if the string is a keyword or TOK_IDENTIFIER
+TokType check_keyword(char* id) {
+    static struct {
+        char *kw;
+        TokType type;
+    } keywordTable[] = {
+        {"class", TOK_KW_CLASS},
+        {"if", TOK_KW_IF},
+        {"else", TOK_KW_ELSE},
+        {"is", TOK_OP_IS},
+        {"null", TOK_KW_NULL},
+        {"return", TOK_KW_RETURN},
+        {"var", TOK_KW_VAR},
+        {"while", TOK_KW_WHILE},
+        {"Ifj", TOK_KW_IFJ},
+        {"static", TOK_KW_STATIC},
+        {"import", TOK_KW_IMPORT},
+        {"for", TOK_KW_FOR},
+        {"Num", TOK_TYPE_NUM},
+        {"String", TOK_TYPE_STRING},
+        {"Null", TOK_TYPE_NULL},
+        {"", TOK_IDENTIFIER}, // End marker
+    };
+
+    for (int i = 0; keywordTable[i].kw[0] != '\0'; i++) {
+        if (strcmp(keywordTable[i].kw, id) != 0) continue;
+        // Found keyword
+        return keywordTable[i].type;
+    }
+
+    return TOK_IDENTIFIER;
 }
 
 #define FOUND_TOK(token) {tok->type = token; found_tok=true; continue;}
@@ -256,6 +290,11 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
                 continue;
             }
             UNGET;
+            TokType kwType = check_keyword(buf1->val);
+            if (kwType != TOK_IDENTIFIER) {
+                // Found keyword
+                FOUND_TOK(kwType);
+            }
             tok->string_val = str_init();
             if (tok->string_val == NULL) return ERR_LEX_MALLOC;
             str_append_string(tok->string_val, buf1->val);
