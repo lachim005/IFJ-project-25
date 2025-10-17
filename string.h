@@ -26,6 +26,9 @@ bool str_append_char(String *str, char ch);
 /// Empties a given string
 void str_clear(String *str);
 
+/// Removes the last character from a given string
+void str_remove_last(String *str);
+
 /// Frees a given string
 void str_free(String **str);
 

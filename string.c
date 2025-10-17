@@ -74,6 +74,12 @@ void str_clear(String *str) {
     str->val[0] = '\0';
 }
 
+void str_remove_last(String *str) {
+    if (str->length == 0) return;
+    str->length--;
+    str->val[str->length] = '\0';
+}
+
 void str_free(String **str) {
     if (str != NULL && *str != NULL) {
         free((*str)->val);
