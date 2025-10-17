@@ -17,6 +17,7 @@ typedef enum lexer_status {
     ERR_LEX_MALLOC,
     ERR_LEX_UNEXPECTED_AFTER_EXCLAM,
     ERR_LEX_STRING_UNEXPECTED_ESCAPE_SEQUENCE,
+    ERR_LEX_NUM_LIT_UNEXPECTED_CHARACTER,
 } ErrLex; // Lexer? More like LexERR
 
 /// Opens the given file and prepares the given lexer structure. Returns false if something went wrong

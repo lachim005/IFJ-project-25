@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 typedef enum lex_fsm_state {
     S_START,
@@ -27,6 +28,15 @@ typedef enum lex_fsm_state {
     S_STR_MULTILINE_INSIDE,
     S_STR_MULTILINE_END1,
     S_STR_MULTILINE_END2,
+    // Number literals
+    S_ZERO,
+    S_INT_LIT,
+    S_INT_HEX_LIT,
+    S_FLOAT_DOT,
+    S_FLOAT_DECIMAL,
+    S_FLOAT_E,
+    S_FLOAT_E_SIGN,
+    S_FLOAT_EXPONENT,
 } LexFsmState;
 
 bool lexer_init(Lexer *lexer, char *filename) {
@@ -95,7 +105,9 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
                 case '!': MOVE_STATE(S_EXCLAMATION);
                 case '=': MOVE_STATE(S_EQ);
                 case '"': MOVE_STATE(S_STR_START);
+                case '0': str_append_char(buf1, ch); MOVE_STATE(S_ZERO);
             }
+            if (isdigit(ch)) { str_append_char(buf1, ch); MOVE_STATE(S_INT_LIT); }
             if (isspace(ch)) continue;
             break;
         case S_LESS_THAN:
@@ -189,6 +201,49 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
             str_append_char(buf1, '"');
             str_append_char(buf1, ch);
             MOVE_STATE(S_STR_MULTILINE_INSIDE);
+        case S_ZERO:
+            if (ch == 'x') MOVE_STATE(S_INT_HEX_LIT);
+            // Continues down:
+        case S_INT_LIT:
+            str_append_char(buf1, ch);
+            if (ch == 'e' || ch == 'E') MOVE_STATE(S_FLOAT_E);
+            if (ch == '.') MOVE_STATE(S_FLOAT_DOT);
+            if (isdigit(ch)) MOVE_STATE(S_INT_LIT);
+            UNGET;
+            str_remove_last(buf1);
+            tok->int_val = strtol(buf1->val, NULL, 10); // Should not fail
+            FOUND_TOK(TOK_LIT_INT);
+        case S_INT_HEX_LIT:
+            if (isdigit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'Z')) {
+                str_append_char(buf1, ch);
+                continue;
+            }
+            UNGET;
+            hex2int(buf1->val, &tok->int_val); // Should not fail
+            FOUND_TOK(TOK_LIT_INT);
+        case S_FLOAT_DOT:
+            if (!isdigit(ch)) return ERR_LEX_NUM_LIT_UNEXPECTED_CHARACTER;
+            str_append_char(buf1, ch);
+            MOVE_STATE(S_FLOAT_DECIMAL);
+        case S_FLOAT_E:
+            str_append_char(buf1, ch);
+            if (ch == '+' || ch == '-') MOVE_STATE(S_FLOAT_E_SIGN);
+            if (isdigit(ch)) MOVE_STATE(S_FLOAT_EXPONENT);
+            return ERR_LEX_NUM_LIT_UNEXPECTED_CHARACTER;
+        case S_FLOAT_E_SIGN:
+            str_append_char(buf1, ch);
+            if (isdigit(ch)) MOVE_STATE(S_FLOAT_EXPONENT);
+            return ERR_LEX_NUM_LIT_UNEXPECTED_CHARACTER;
+        case S_FLOAT_DECIMAL:
+            if (ch == 'e' || ch == 'E') { str_append_char(buf1, 'e'); MOVE_STATE(S_FLOAT_E); }
+            // Continues down:
+        case S_FLOAT_EXPONENT:
+            str_append_char(buf1, ch);
+            if (isdigit(ch)) continue;
+            str_remove_last(buf1);
+            UNGET;
+            tok->double_val = strtod(buf1->val, NULL); // Should not fail
+            FOUND_TOK(TOK_LIT_DOUBLE);
         }
     }
 
