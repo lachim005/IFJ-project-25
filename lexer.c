@@ -37,6 +37,10 @@ typedef enum lex_fsm_state {
     S_FLOAT_E,
     S_FLOAT_E_SIGN,
     S_FLOAT_EXPONENT,
+    // Identifiers
+    S_IDENTIFIER,
+    S_GLOBAL_VAR_START,
+    S_GLOBAL_VAR,
 } LexFsmState;
 
 bool lexer_init(Lexer *lexer, char *filename) {
@@ -106,8 +110,10 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
                 case '=': MOVE_STATE(S_EQ);
                 case '"': MOVE_STATE(S_STR_START);
                 case '0': str_append_char(buf1, ch); MOVE_STATE(S_ZERO);
+                case '_': str_append_char(buf1, ch); MOVE_STATE(S_GLOBAL_VAR_START);
             }
             if (isdigit(ch)) { str_append_char(buf1, ch); MOVE_STATE(S_INT_LIT); }
+            if (isalpha(ch)) { str_append_char(buf1, ch); MOVE_STATE(S_IDENTIFIER); }
             if (isspace(ch)) continue;
             break;
         case S_LESS_THAN:
@@ -244,6 +250,30 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
             UNGET;
             tok->double_val = strtod(buf1->val, NULL); // Should not fail
             FOUND_TOK(TOK_LIT_DOUBLE);
+        case S_IDENTIFIER:
+            if (isalnum(ch) || ch == '_') {
+                str_append_char(buf1, ch);
+                continue;
+            }
+            UNGET;
+            tok->string_val = str_init();
+            if (tok->string_val == NULL) return ERR_LEX_MALLOC;
+            str_append_string(tok->string_val, buf1->val);
+            FOUND_TOK(TOK_IDENTIFIER);
+        case S_GLOBAL_VAR_START:
+            str_append_char(buf1, ch);
+            if (ch == '_') MOVE_STATE(S_GLOBAL_VAR);
+            return ERR_LEX_EXPECTED_GLOBAL_VAR;
+        case S_GLOBAL_VAR:
+            if (isalnum(ch) || ch == '_') {
+                str_append_char(buf1, ch);
+                continue;
+            }
+            UNGET;
+            tok->string_val = str_init();
+            if (tok->string_val == NULL) return ERR_LEX_MALLOC;
+            str_append_string(tok->string_val, buf1->val);
+            FOUND_TOK(TOK_GLOBAL_VAR);
         }
     }
 
