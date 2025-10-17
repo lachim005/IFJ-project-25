@@ -23,6 +23,9 @@ bool str_append_string(String *str, char *str_to_append);
 /// Appends a given character to a string. Returns true if the operation was successfull
 bool str_append_char(String *str, char ch);
 
+/// Empties a given string
+void str_clear(String *str);
+
 /// Frees a given string
 void str_free(String **str);
 
