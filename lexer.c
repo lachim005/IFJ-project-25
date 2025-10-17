@@ -175,7 +175,7 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
             UNGET;
             FOUND_TOK(TOK_OP_DIV);
         case S_COMMENT:
-            if (ch == '\n') MOVE_STATE(S_START);
+            if (ch == '\n') FOUND_TOK(TOK_EOL)
             continue;
         case S_MULTILINE_COMMENT:
             if (ch == '*') MOVE_STATE(S_MULTILINE_COMMENT_END);
