@@ -137,6 +137,7 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
                 case ')': FOUND_TOK(TOK_RIGHT_PAR);
                 case '{': FOUND_TOK(TOK_LEFT_BRACE);
                 case '}': FOUND_TOK(TOK_RIGHT_BRACE);
+                case ',': FOUND_TOK(TOK_COMMA);
                 case '+': FOUND_TOK(TOK_OP_PLUS);
                 case '-': FOUND_TOK(TOK_OP_MINUS);
                 case '*': FOUND_TOK(TOK_OP_MULT);

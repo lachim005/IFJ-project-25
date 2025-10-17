@@ -42,6 +42,7 @@ typedef enum tok_type {
     TOK_RIGHT_PAR, // )
     TOK_LEFT_BRACE, // {
     TOK_RIGHT_BRACE, // }
+    TOK_COMMA, // ,
     // Data types (include in keywords table!)
     TOK_TYPE_NUM,
     TOK_TYPE_STRING,
