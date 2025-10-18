@@ -60,4 +60,7 @@ typedef struct token {
     unsigned pos_char;
 } Token;
 
+/// Frees resources allocated in the token, like string_val
+void token_free(Token *token);
+
 #endif // !_TOKEN_H_
