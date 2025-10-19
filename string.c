@@ -69,6 +69,17 @@ bool str_append_char(String *str, char ch) {
     return true;
 }
 
+void str_clear(String *str) {
+    str->length = 0;
+    str->val[0] = '\0';
+}
+
+void str_remove_last(String *str) {
+    if (str->length == 0) return;
+    str->length--;
+    str->val[str->length] = '\0';
+}
+
 void str_free(String **str) {
     if (str != NULL && *str != NULL) {
         free((*str)->val);
