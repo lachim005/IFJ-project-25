@@ -35,7 +35,7 @@ typedef enum lexer_status {
 
 /// Opens the given file and prepares the given lexer structure. Returns false if something went wrong
 /// TODO: Error return codes?
-bool lexer_init(Lexer *lexer, char *filename);
+bool lexer_init(Lexer *lexer, FILE *input_stream);
 
 /// Frees the inside of the given lexer structure
 void lexer_free(Lexer *lexer);

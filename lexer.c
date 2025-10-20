@@ -45,16 +45,13 @@ typedef enum lex_fsm_state {
     S_GLOBAL_VAR,
 } LexFsmState;
 
-bool lexer_init(Lexer *lexer, char *filename) {
-    FILE* f = fopen(filename, "r");
-    if (f == NULL) { goto ERR_FILE; }
-
+bool lexer_init(Lexer *lexer, FILE *input_stream) {
     String *buf1 = str_init();
     if (buf1 == NULL) { goto ERR_BUF1; }
     String *buf2 = str_init();
     if (buf2 == NULL) { goto ERR_BUF2; }
 
-    lexer->file = f;
+    lexer->file = input_stream;
     lexer->pos_char = 0;
     lexer->pos_line = 1;
     lexer->last_char_was_newline = false;
@@ -66,13 +63,10 @@ bool lexer_init(Lexer *lexer, char *filename) {
 ERR_BUF2:
     str_free(&lexer->buf1);
 ERR_BUF1:
-    fclose(f);
-ERR_FILE:
     return false;
 }
 
 void lexer_free(Lexer *lexer) {
-    fclose(lexer->file);
     str_free(&lexer->buf1);
     str_free(&lexer->buf2);
     lexer->file = NULL;
