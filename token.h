@@ -24,6 +24,13 @@ typedef enum tok_type {
     TOK_OP_LESS_EQ, // <=
     TOK_OP_EQ, // ==
     TOK_OP_NOT_EQ, // !=
+    TOK_OP_AND, // &&
+    TOK_OP_OR, // ||
+    TOK_OP_COLON, // :
+    TOK_OP_QUESTION_MARK, // ?
+    TOK_OP_DOUBLE_DOT, // ..
+    TOK_OP_TRIPLE_DOT, // ...
+    TOK_OP_NOT, // !
     TOK_OP_IS, // include in keywords table!
     // Keywords
     TOK_KW_CLASS,
@@ -37,6 +44,9 @@ typedef enum tok_type {
     TOK_KW_STATIC,
     TOK_KW_IMPORT,
     TOK_KW_FOR,
+    TOK_KW_TRUE,
+    TOK_KW_FALSE,
+    TOK_KW_IN,
     // Parantheses
     TOK_LEFT_PAR, // (
     TOK_RIGHT_PAR, // )
@@ -46,6 +56,7 @@ typedef enum tok_type {
     // Data types (include in keywords table!)
     TOK_TYPE_NUM,
     TOK_TYPE_STRING,
+    TOK_TYPE_BOOL,
     TOK_TYPE_NULL,
 } TokType;
 

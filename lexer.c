@@ -19,6 +19,10 @@ typedef enum lex_fsm_state {
     S_MULTILINE_COMMENT,
     S_MULTILINE_COMMENT_NEW_NEST_LEVEL,
     S_MULTILINE_COMMENT_END,
+    S_DOT,
+    S_DOUBLE_DOT,
+    S_AMPERSAND,
+    S_PIPE,
     // String literals
     S_STR_START,
     S_STR_INSIDE,
@@ -120,7 +124,11 @@ TokType check_keyword(char* id) {
         {"for", TOK_KW_FOR},
         {"Num", TOK_TYPE_NUM},
         {"String", TOK_TYPE_STRING},
+        {"Bool", TOK_TYPE_BOOL},
         {"Null", TOK_TYPE_NULL},
+        {"true", TOK_KW_TRUE},
+        {"false", TOK_KW_FALSE},
+        {"in", TOK_KW_IN},
         {"", TOK_IDENTIFIER}, // End marker
     };
 
@@ -177,8 +185,12 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
                 case '+': FOUND_TOK(TOK_OP_PLUS);
                 case '-': FOUND_TOK(TOK_OP_MINUS);
                 case '*': FOUND_TOK(TOK_OP_MULT);
+                case '?': FOUND_TOK(TOK_OP_QUESTION_MARK);
+                case ':': FOUND_TOK(TOK_OP_COLON);
+                case '&': MOVE_STATE(S_AMPERSAND);
+                case '|': MOVE_STATE(S_PIPE);
                 case '/': MOVE_STATE(S_DIV);
-                case '.': FOUND_TOK(TOK_OP_DOT);
+                case '.': MOVE_STATE(S_DOT);
                 case '>': MOVE_STATE(S_GREATER_THAN);
                 case '<': MOVE_STATE(S_LESS_THAN);
                 case '!': MOVE_STATE(S_EXCLAMATION);
@@ -201,7 +213,8 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
             FOUND_TOK(TOK_OP_GREATER);
         case S_EXCLAMATION:
             if (ch == '=') FOUND_TOK(TOK_OP_NOT_EQ);
-            return ERR_LEX_UNEXPECTED_AFTER_EXCLAM;
+            UNGET;
+            FOUND_TOK(TOK_OP_NOT);
         case S_EQ:
             if (ch == '=') FOUND_TOK(TOK_OP_EQ);
             UNGET;
@@ -269,7 +282,7 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
             if (!hex2int(buf2->val, &code)) return ERR_LEX_STRING_UNEXPECTED_ESCAPE_SEQUENCE;
             str_clear(buf2);
             str_append_char(buf1, code);
-            MOVE_STATE(S_STR_INSIDE)
+            MOVE_STATE(S_STR_INSIDE);
         case S_STR_EMPTY:
             if (ch == '"') MOVE_STATE(S_STR_MULTILINE_FIRST_LINE);
             UNGET;
@@ -401,6 +414,22 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
             if (tok->string_val == NULL) return ERR_LEX_MALLOC;
             str_append_string(tok->string_val, buf1->val);
             FOUND_TOK(TOK_GLOBAL_VAR);
+        case S_AMPERSAND:
+            if (ch == '&') FOUND_TOK(TOK_OP_AND);
+            UNGET;
+            return ERR_LEX_UNEXPECTED_AFTER_AMPERSAND;
+        case S_PIPE:
+            if (ch == '|') FOUND_TOK(TOK_OP_OR);
+            UNGET;
+            return ERR_LEX_UNEXPECTED_AFTER_PIPE;
+        case S_DOT:
+            if (ch == '.') MOVE_STATE(S_DOUBLE_DOT);
+            UNGET;
+            FOUND_TOK(TOK_OP_DOT);
+        case S_DOUBLE_DOT:
+            if (ch == '.') FOUND_TOK(TOK_OP_TRIPLE_DOT);
+            UNGET;
+            FOUND_TOK(TOK_OP_DOUBLE_DOT);
         }
     }
 
