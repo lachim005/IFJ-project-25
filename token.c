@@ -1,3 +1,10 @@
+/*
+ * token.c
+ * Implements token operations
+ *
+ * Authors:
+ * Michal Šebesta (xsebesm00)
+ */
 #include "token.h"
 #include "string.h"
 

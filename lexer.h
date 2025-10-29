@@ -1,3 +1,10 @@
+/*
+ * lexer.h
+ * Defines lexical analyser
+ *
+ * Authors:
+ * Michal Šebesta (xsebesm00)
+ */
 #ifndef _LEXER_H_
 #define _LEXER_H_
 

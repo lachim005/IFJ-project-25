@@ -1,3 +1,10 @@
+/*
+ * lexer.c
+ * Implements lexical analyser
+ *
+ * Authors:
+ * Michal Šebesta (xsebesm00)
+ */
 #include "lexer.h"
 #include "string.h"
 #include "token.h"

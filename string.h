@@ -1,3 +1,10 @@
+/*
+ * string.h
+ * Defines a dynamic string data structure
+ *
+ * Authors:
+ * Michal Šebesta (xsebesm00)
+ */
 #ifndef _STRING_H_
 #define _STRING_H_
 

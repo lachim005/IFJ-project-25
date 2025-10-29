@@ -1,3 +1,11 @@
+/*
+ * string.c
+ * Implements a dynamic string data structure
+ *
+ * Authors:
+ * Tomáš Hanák (xhanakt00)
+ * Michal Šebesta (xsebesm00)
+ */
 #include "string.h"
 #include <stdlib.h>
 #include <string.h>

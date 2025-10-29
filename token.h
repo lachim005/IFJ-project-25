@@ -1,3 +1,10 @@
+/*
+ * token.h
+ * Defines tokens
+ *
+ * Authors:
+ * Michal Šebesta (xsebesm00)
+ */
 #ifndef _TOKEN_H_
 #define _TOKEN_H_
 
