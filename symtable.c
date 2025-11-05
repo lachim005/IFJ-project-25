@@ -17,7 +17,7 @@
 
 enum { SLOT_EMPTY = 0, SLOT_OCCUPIED = 1, SLOT_DELETED = 2 };
 
-/* djb2 hash */
+// Simple djb2 hash function for strings
 static unsigned long hash_str(const char *str) {
     unsigned long hash = 5381;
     int c;
@@ -27,7 +27,8 @@ static unsigned long hash_str(const char *str) {
     return hash;
 }
 
-static int *states_alloc(size_t count) {
+// Allocate and initialize state array
+static int *state_alloc(size_t count) {
     int *s = malloc(sizeof(int) * count);
     if (!s) return NULL;
     for (size_t i = 0; i < count; ++i) s[i] = SLOT_EMPTY;
@@ -46,8 +47,8 @@ Symtable *symtable_init(void) {
         free(st);
         return NULL;
     }
-    st->states = states_alloc(st->capacity);
-    if (!st->states) {
+    st->state = state_alloc(st->capacity);
+    if (!st->state) {
         free(st->data);
         free(st);
         return NULL;
@@ -58,49 +59,47 @@ Symtable *symtable_init(void) {
 void symtable_free(Symtable *st) {
     if (!st) return;
     free(st->data);
-    free(st->states);
+    free(st->state);
     free(st);
 }
 
-/* rehash to new_capacity (must be > old capacity) */
+// Rehash symtable to new capacity
 static bool symtable_rehash(Symtable *st, size_t new_capacity) {
     SymtableItem *old_data = st->data;
-    int *old_states = st->states;
+    int *old_state = st->state;
     size_t old_cap = st->capacity;
 
     SymtableItem *new_data = malloc(sizeof(SymtableItem) * new_capacity);
     if (!new_data) return false;
-    int *new_states = states_alloc(new_capacity);
-    if (!new_states) {
+    int *new_state = state_alloc(new_capacity);
+    if (!new_state) {
         free(new_data);
         return false;
     }
 
-    /* move occupied items */
-    for (size_t i = 0; i < new_capacity; ++i) new_states[i] = SLOT_EMPTY;
+    // Move occupied items to new table
+    for (size_t i = 0; i < new_capacity; ++i) new_state[i] = SLOT_EMPTY;
     for (size_t i = 0; i < old_cap; ++i) {
-        if (old_states[i] == SLOT_OCCUPIED) {
+        if (old_state[i] == SLOT_OCCUPIED) {
             unsigned long h = hash_str(old_data[i].key.val);
             size_t probe = (size_t)(h % new_capacity);
-            while (new_states[probe] == SLOT_OCCUPIED) {
+            while (new_state[probe] == SLOT_OCCUPIED) {
                 probe = (probe + 1) % new_capacity;
             }
-            new_data[probe] = old_data[i]; /* shallow copy of String struct */
-            new_states[probe] = SLOT_OCCUPIED;
+            new_data[probe] = old_data[i];
+            new_state[probe] = SLOT_OCCUPIED;
         }
     }
 
     free(old_data);
-    free(old_states);
+    free(old_state);
 
     st->data = new_data;
-    st->states = new_states;
+    st->state = new_state;
     st->capacity = new_capacity;
-    /* st->size remains same */
     return true;
 }
 
-/* find slot index of key or -1 if not found */
 SymtableItem *symtable_find(Symtable *st, String *key) {
     if (!st || !key) return NULL;
     if (st->capacity == 0) return NULL;
@@ -111,12 +110,12 @@ SymtableItem *symtable_find(Symtable *st, String *key) {
 
     for (size_t i = 0; i < cap; ++i) {
         size_t idx = (probe + i) % cap;
-        int s = st->states[idx];
-        if (s == SLOT_EMPTY) return NULL; /* not found, and no further possible */
+        int s = st->state[idx];
+        if (s == SLOT_EMPTY) return NULL; // not found, and no further possible
         if (s == SLOT_OCCUPIED && strcmp(st->data[idx].key.val, key->val) == 0) {
             return &st->data[idx];
         }
-        /* continue on deleted or occupied-but-not-equal */
+        // continue on deleted or occupied-but-not-equal
     }
     return NULL;
 }
@@ -128,10 +127,10 @@ bool symtable_contains(Symtable *st, String *key) {
 SymtableItem *symtable_insert(Symtable *st, String *key) {
     if (!st || !key) return NULL;
 
-    /* avoid duplicates */
+    // Prevent duplicates
     if (symtable_contains(st, key)) return NULL;
 
-    /* grow when load factor > 0.7 */
+    // Grow when load factor > 0.7
     if ((st->size + 1) * 10 >= st->capacity * 7) {
         size_t newcap = st->capacity * 2;
         if (!symtable_rehash(st, newcap)) return NULL;
@@ -144,10 +143,10 @@ SymtableItem *symtable_insert(Symtable *st, String *key) {
 
     for (size_t i = 0; i < cap; ++i) {
         size_t idx = (probe + i) % cap;
-        int s = st->states[idx];
+        int s = st->state[idx];
         if (s == SLOT_OCCUPIED) {
             if (strcmp(st->data[idx].key.val, key->val) == 0) {
-                return NULL; /* duplicate safety, though we checked earlier */
+                return NULL; // Should not happen due to earlier check, checks duplicates
             }
             continue;
         }
@@ -155,16 +154,16 @@ SymtableItem *symtable_insert(Symtable *st, String *key) {
             if (first_deleted == -1) first_deleted = (ssize_t)idx;
             continue;
         }
-        /* s == SLOT_EMPTY -> found insertion point */
+        // s == SLOT_EMPTY -> found insertion point
         size_t use_idx = (first_deleted != -1) ? (size_t)first_deleted : idx;
-        st->data[use_idx].key = *key;     /* shallow copy */
-        st->data[use_idx].name.val = NULL;/* init optional fields */
+        st->data[use_idx].key = *key;
+        st->data[use_idx].name.val = NULL;
         st->data[use_idx].type = SYM_VAR;
-        st->states[use_idx] = SLOT_OCCUPIED;
+        st->state[use_idx] = SLOT_OCCUPIED;
         st->size++;
         return &st->data[use_idx];
     }
 
-    /* table full (shouldn't happen because we rehash before) */
+    // Table full, should not happen due to rehashing
     return NULL;
 }
