@@ -152,7 +152,7 @@ TokType check_keyword(char* id) {
 #define MOVE_STATE(s) {state = s; continue;}
 #define UNGET { ungetc(ch, lexer->file); lexer->pos_char--; lexer->last_char_was_newline = false; }
 
-ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
+ErrLex lexer_read_token_from_file(Lexer *lexer, Token *tok) {
     LexFsmState state = S_START;
 
     // Clears buffers
@@ -444,4 +444,20 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
     if (ch == EOF && state != S_START) return ERR_LEX_UNEXPECTED_EOF;
     if (ch == EOF) return ERR_LEX_EOF;
     return ERR_LEX_UNKNOWN_ERR;
+}
+
+ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
+    if (lexer->no_ungot_tokens > 0) {
+        *tok = lexer->ungot_tokens[--lexer->no_ungot_tokens];
+        return ERR_LEX_OK;
+    }
+    return lexer_read_token_from_file(lexer, tok);
+}
+
+bool lexer_unget_token(Lexer *lexer, Token tok) {
+    if (lexer->no_ungot_tokens == MAX_UNGET_TOKENS) {
+        return false;
+    }
+    lexer->ungot_tokens[lexer->no_ungot_tokens++] = tok;
+    return true;
 }

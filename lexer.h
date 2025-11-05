@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#define MAX_UNGET_TOKENS 10
+
 typedef struct lexer {
     FILE* file;
     // Current position in file. Used for friendlier error messages
@@ -24,6 +26,9 @@ typedef struct lexer {
     // Used only in get_token, put here so we don't have to create new ones on every call
     String *buf1;
     String *buf2;
+
+    Token ungot_tokens[MAX_UNGET_TOKENS];
+    unsigned no_ungot_tokens;
 } Lexer;
 
 typedef enum lexer_status {
@@ -48,7 +53,10 @@ bool lexer_init(Lexer *lexer, FILE *input_stream);
 /// Frees the inside of the given lexer structure
 void lexer_free(Lexer *lexer);
 
-/// Reads the next token and puts the information into tok. Returns the status code
+/// Puts the next token into tok. Returns the status code
 ErrLex lexer_get_token(Lexer *lexer, Token *tok);
+
+/// Ungets token, returns false if the ungot token stack overflowed
+bool lexer_unget_token(Lexer *lexer, Token tok);
 
 #endif // !_LEXER_H_
