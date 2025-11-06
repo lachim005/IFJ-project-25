@@ -1,3 +1,10 @@
+/*
+ * stack.c
+ * Implements a stack data structure for tokens
+ *
+ * Authors:
+ * Vojtěch Borýsek (xborysv00)
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include "stack.h"
@@ -52,14 +59,11 @@ bool stack_push(Stack *stack, Token item) {
  * Pops the top item from the stack and stores it in out_item
  * Returns true if successful, false if the stack is empty
  */
-bool stack_pop(Stack *stack, Token *out_item) {
+bool stack_pop(Stack *stack) {
     if (stack_empty(stack)) {
         return false;
     }
-
     stack->top--;
-    *out_item = stack->items[stack->top];
-
     return true;
 }
 
@@ -84,14 +88,52 @@ bool stack_top(Stack *stack, Token *out_item) {
  */
 bool stack_find_type(Stack *stack, Stack *out_stack, TokType type) {
     for (size_t i = stack->top; i > 0; i--) {
-        if (stack->items[i - 1].type != type) {
-            Token temp;
-            stack_pop(stack, &temp);
+        Token temp;
+        stack_top(stack, &temp);
+        if (temp.type != type) {
+            stack_pop(stack);
             stack_push(out_stack, temp);
         }
-        else if (stack->items[i - 1].type == type) {
+        else if (temp.type == type) {
             return true;
         }
+    }
+    return false;
+}
+
+/**
+ * Searches for the topmost terminal in the stack
+ * It pops items from the original stack and pushes them onto out_stack until it finds a terminal
+ * If found, it returns true and the terminal is on the top of the stack, otherwise false
+ */
+bool stack_find_term(Stack *stack, Stack *out_stack) {
+    for (size_t i = stack->top; i > 0; i--) {
+        Token temp;
+        stack_top(stack, &temp);
+        if (temp.type == TOK_E) {
+            stack_pop(stack);
+            stack_push(out_stack, temp);
+        }
+        else {
+            return true; // found terminal, currently on top of the stack
+        }
+    }
+    return false;
+}
+
+/**
+ * Pushes all items from src stack to dst stack
+ * Returns true if successful, false otherwise
+ */
+bool push_whole_stack(Stack *src, Stack *dst) {
+    for (size_t i = src->top; i >= 0; i--) {
+        if(stack_empty(src)){
+            return true;
+        }
+        Token temp;
+        stack_top(src, &temp);
+        stack_push(dst, temp);
+        stack_pop(src);
     }
     return false;
 }

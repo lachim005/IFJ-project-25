@@ -4,6 +4,7 @@
  *
  * Authors:
  * Michal Šebesta (xsebesm00)
+ * Vojtěch Borýsek (xborysv00)
  */
 #ifndef _AST_H_
 #define _AST_H_
@@ -16,6 +17,22 @@ typedef enum ast_expr_type {
     EX_FUN,
     EX_ADD,
     EX_SUB,
+    EX_MUL,
+    EX_DIV,
+    EX_GREATER,
+    EX_LESS,
+    EX_GREATER_EQ,
+    EX_LESS_EQ,
+    EX_EQ,
+    EX_NOT_EQ,
+    EX_AND,
+    EX_OR,
+    EX_IS,
+    EX_TERNARY,
+    EX_NOT,
+    EX_INT,
+    EX_DOUBLE,
+    EX_STRING,
     // ...
 } AstExprType;
 

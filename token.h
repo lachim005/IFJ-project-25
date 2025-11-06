@@ -4,11 +4,13 @@
  *
  * Authors:
  * Michal Šebesta (xsebesm00)
+ * Vojtěch Borýsek (xborysv00)
  */
 #ifndef _TOKEN_H_
 #define _TOKEN_H_
 
 #include "string.h"
+#include "ast.h"
 
 typedef enum tok_type {
     TOK_IDENTIFIER, // Name stored in string_val
@@ -65,6 +67,12 @@ typedef enum tok_type {
     TOK_TYPE_STRING,
     TOK_TYPE_BOOL,
     TOK_TYPE_NULL,
+    // Tokens for precedence parsing
+    TOK_DOLLAR, // $
+    TOK_E, // E
+    TOK_PREC_OPEN, // <
+    TOK_PREC_CLOSE, // >
+    TOK_PREC_EQUAL, // =
 } TokType;
 
 typedef struct token {
@@ -73,6 +81,8 @@ typedef struct token {
         String *string_val;
         int int_val;
         double double_val;
+        // pointer to ast_expression for precedence parsing
+        AstExpression *expr_val;
     };
     unsigned pos_line;
     unsigned pos_char;
