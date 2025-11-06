@@ -8,6 +8,7 @@
 
 #include "parser.h"
 #include "error.h"
+#include "symtable.h"
 #include <string.h>
 
 #define RETRUN_CODE(code) do { \
@@ -21,6 +22,16 @@
         return LEXICAL_ERROR; \
     } \
 } while(0)
+
+#define CHECK_TOKEN_SKIP_NEWLINE(lexer, token) do { \
+    token_free(&token); \
+    do { \
+        if(lexer_get_token(lexer, &token) != ERR_LEX_OK) { \
+            return LEXICAL_ERROR; \
+        } \
+    } while(token.type == TOK_NEWLINE); \
+} while(0)
+
 
 /// Checks prolugue of the program 
 /// Rule: import "ifj25" for Ifj
@@ -54,6 +65,8 @@ ErrorCode parse() {
     if (!lexer_init(lexer, stdin)){
         return INTERNAL_ERROR;
     }
+
+    Symtable *symtable = symtable_init();
     printf("%d\n", check_prologue(lexer));
 }
 

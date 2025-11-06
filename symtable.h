@@ -25,7 +25,7 @@ typedef enum sym_type {
 } SymType;
 
 typedef struct symtable_item {
-    String key;
+    char *key;
     String name;
     SymType type;
 } SymtableItem;
@@ -44,13 +44,13 @@ Symtable *symtable_init(void);
 void symtable_free(Symtable *st);
 
 /// Finds an item in the symtable with the key. Returns a pointer to the item or NULL if it is not in the symtable.
-SymtableItem *symtable_find(Symtable *st, String *key);
+SymtableItem *symtable_find(Symtable *st, const char *key);
 
 /// Returns true if the symtable contains an item with the given key
-bool symtable_contains(Symtable *st, String *key);
+bool symtable_contains(Symtable *st, const char *key);
 
 /// Inserts an item in the symtable with the key. Returns a pointer to the new item or NULL if it is not created.
-SymtableItem *symtable_insert(Symtable *st, String *key);
+SymtableItem *symtable_insert(Symtable *st, const char *key);
 
 // TODO: Removing? Probably not needed
 
