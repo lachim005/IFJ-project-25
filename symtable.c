@@ -9,6 +9,7 @@
  */
 
 #include "symtable.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -47,6 +48,14 @@ Symtable *symtable_init(void) {
     }
     st->state = state_alloc(st->capacity);
     if (!st->state) {
+        free(st->data);
+        free(st);
+        return NULL;
+    }
+
+    st->scope_stack = malloc(sizeof(int) * ST_SCOPE_STACK_INITIAL_CAPACITY);
+    if (st->scope_stack == NULL) {
+        free(st->state);
         free(st->data);
         free(st);
         return NULL;
@@ -173,4 +182,70 @@ SymtableItem *symtable_insert(Symtable *st, const char *key) {
 
     // Table full, should not happen due to rehashing
     return NULL;
+}
+
+// Global counter for scope ids, so every scope has a unique id
+int scope_id_counter = 0;
+
+bool enter_scope(Symtable *st) {
+    if (st->scope_stack_count == st->scope_stack_capacity) {
+        st->capacity <<= 1;
+        int *new_st = realloc(st->scope_stack, sizeof(int) * st->capacity );
+        if (new_st == NULL) return false;
+        st->scope_stack = new_st;
+    }
+    st->scope_stack[st->scope_stack_count++] = scope_id_counter++;
+    return true;
+}
+
+void exit_scope(Symtable *st) {
+    if (st->scope_stack_count == 0){
+        return;
+    }
+    st->scope_stack_count--;
+}
+
+int current_scope(Symtable *st) {
+    return st->scope_stack[st->scope_stack_count - 1];
+}
+
+bool append_scope_id(String *s, int scope) {
+    // Converts buffer id to string
+    char buf[64];
+    int written = snprintf(buf, 64, "%d", scope);
+    if (written >= 64) return false;
+    str_append_string(s, buf);
+    return true;
+}
+
+bool find_local_var(Symtable *st, char *var_name, SymtableItem **out_item) {
+    // Assumes format var_name@scope_id
+    String *s = str_init();
+    if (s == NULL) return false;
+    for (int i = st->scope_stack_count - 1; i >= 0; i--) {
+        // Constructs symtable name
+        str_append_string(s, var_name);
+        str_append_char(s, '@');
+        if (!append_scope_id(s, st->scope_stack[i])) return false;
+
+        SymtableItem *it = symtable_find(st, s->val);
+        if (it != NULL) {
+            *out_item = it;
+            return true;
+        }
+    }
+    // Not found
+    return true;
+    out_item = NULL;
+}
+
+SymtableItem *add_var_at_current_scope(Symtable *st, char *var_name) {
+    // Assumes format var_name@scope_id
+    String *s = str_init();
+    if (s == NULL) return false;
+    // Constructs symtable name
+    str_append_string(s, var_name);
+    str_append_char(s, '@');
+    if (!append_scope_id(s, current_scope(st))) return false;
+    return symtable_insert(st, s->val);
 }
