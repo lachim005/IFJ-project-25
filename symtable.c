@@ -11,8 +11,6 @@
 #include "symtable.h"
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 enum { SLOT_EMPTY = 0, SLOT_OCCUPIED = 1, SLOT_DELETED = 2 };
