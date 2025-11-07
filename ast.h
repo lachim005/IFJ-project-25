@@ -10,6 +10,7 @@
 #define _AST_H_
 
 #include "string.h"
+#include <stdlib.h>
 
 /// Type of expression
 typedef enum ast_expr_type {
@@ -40,7 +41,7 @@ typedef enum ast_expr_type {
 typedef struct ast_expression AstExpression;
 struct ast_expression {
     /// Identifier for EX_ID or EX_FUN
-    String id;
+    String *id;
     /// Subtrees for operands or function parameters
     AstExpression **params;
     /// Number of children in params, 1 - unary, 2 - binary, 3 - ternary, everything for functions (0 - N)
@@ -54,6 +55,7 @@ struct ast_expression {
         double double_val;
     };
 };
+AstExpression *ast_expr_create(AstExprType type, size_t child_count);
 
 typedef struct ast_scope AstScope;
 typedef struct ast_statement AstStatement;

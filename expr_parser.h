@@ -10,6 +10,7 @@
 #include "lexer.h"
 #include "token.h"
 #include "error.h"
+#include "ast.h"
 
 bool reduce(Stack *expr_stack, Stack *op_stack, Token token);
 
@@ -20,6 +21,12 @@ int calculate_table_idx(TokType type);
 void add_to_stack(Stack *expr_stack, Token token);
 
 ErrorCode parse_expression(Lexer *lexer);
+
+ErrorCode reduce_unary(Stack *op_stack, Token *operand, Token *operator);
+
+ErrorCode reduce_binary(Stack *op_stack, Token *left, Token *right, Token *op);
+
+ErrorCode reduce_ternary(Stack *op_stack, Token *cond, Token *true_expr, Token *false_expr, Token *question, Token *colon);
 
 ErrorCode reduce_plus(Stack *expr_stack, Stack *op_stack);
 
@@ -45,7 +52,7 @@ ErrorCode reduce_and(Stack *expr_stack, Stack *op_stack);
 
 ErrorCode reduce_or(Stack *expr_stack, Stack *op_stack);
 
-ErrorCode reduce_operand(Stack *expr_stack, Stack *op_stack);
+ErrorCode reduce_operand(Stack *expr_stack, Stack *op_stack, Token top_token);
 
 ErrorCode reduce_parentheses(Stack *expr_stack, Stack *op_stack);
 

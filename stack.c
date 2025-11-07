@@ -110,7 +110,7 @@ bool stack_find_term(Stack *stack, Stack *out_stack) {
     for (size_t i = stack->top; i > 0; i--) {
         Token temp;
         stack_top(stack, &temp);
-        if (temp.type == TOK_E) {
+        if (temp.type == TOK_E || temp.type == TOK_PREC_OPEN) {
             stack_pop(stack);
             stack_push(out_stack, temp);
         }
