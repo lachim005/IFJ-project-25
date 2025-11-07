@@ -15,6 +15,7 @@
 /// Type of expression
 typedef enum ast_expr_type {
     EX_ID,
+    EX_GLOBAL_ID,
     EX_FUN,
     EX_ADD,
     EX_SUB,

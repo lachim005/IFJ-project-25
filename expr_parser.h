@@ -28,10 +28,12 @@ bool eol_possible(Token token);
 
 ErrorCode reduce_binary(Stack *expr_stack, TokType op_type, AstExprType expr_type);
 
-ErrorCode reduce_identifier(Stack *expr_stack);
+ErrorCode reduce_identifier(Stack *expr_stack, TokType id_type, AstExprType expr_type);
 
 ErrorCode reduce_unary_prefix_op(Stack *expr_stack, TokType op_type, AstExprType expr_type);
 
 ErrorCode reduce_ternary(Stack *expr_stack);
 
 ErrorCode reduce_par(Stack *expr_stack);
+
+ErrorCode reduce_literal(Stack *expr_stack, TokType lit_type, AstExprType expr_type);

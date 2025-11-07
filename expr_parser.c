@@ -223,12 +223,19 @@ bool reduce(Stack *expr_stack, Stack *op_stack) {
             reduction_res = reduce_binary(expr_stack, TOK_OP_OR, EX_OR);
             break;
         case TOK_IDENTIFIER:
-            reduction_res = reduce_identifier(expr_stack);
+            reduction_res = reduce_identifier(expr_stack, TOK_IDENTIFIER, EX_ID);
             break;
         case TOK_GLOBAL_VAR:
+            reduction_res = reduce_identifier(expr_stack, TOK_GLOBAL_VAR, EX_GLOBAL_ID);
+            break;
         case TOK_LIT_INT:
+            reduction_res = reduce_literal(expr_stack, TOK_LIT_INT, EX_INT);
+            break;
         case TOK_LIT_DOUBLE:
+            reduction_res = reduce_literal(expr_stack, TOK_LIT_DOUBLE, EX_DOUBLE);
+            break;
         case TOK_LIT_STRING:
+            reduction_res = reduce_literal(expr_stack, TOK_LIT_STRING, EX_STRING);
             break;
         case TOK_RIGHT_PAR:
             reduction_res = reduce_par(expr_stack);
@@ -279,11 +286,11 @@ ErrorCode reduce_binary(Stack *expr_stack, TokType op_type, AstExprType expr_typ
     return OK;
 }
 
-ErrorCode reduce_identifier(Stack *expr_stack) {
-    TokType rule[] = { TOK_PREC_OPEN, TOK_IDENTIFIER };
+ErrorCode reduce_identifier(Stack *expr_stack, TokType id_type, AstExprType expr_type) {
+    TokType rule[] = { TOK_PREC_OPEN, id_type };
     if (!stack_is_sequence_on_top(expr_stack, rule, RULE_SIZE(rule))) return SYNTACTIC_ERROR;
 
-    AstExpression *expr = ast_expr_create(EX_ID, 0);
+    AstExpression *expr = ast_expr_create(expr_type, 0);
     if (expr_stack == NULL) return INTERNAL_ERROR;
 
     Token top;
@@ -371,6 +378,37 @@ ErrorCode reduce_par(Stack *expr_stack) {
 
     // Push expr back
     if (!stack_push(expr_stack, top)) return INTERNAL_ERROR;
+
+    return OK;
+}
+
+ErrorCode reduce_literal(Stack *expr_stack, TokType lit_type, AstExprType expr_type) {
+    TokType rule[] = { TOK_PREC_OPEN, lit_type };
+    if (!stack_is_sequence_on_top(expr_stack, rule, RULE_SIZE(rule))) return SYNTACTIC_ERROR;
+
+    AstExpression *expr = ast_expr_create(expr_type, 0);
+    if (expr_stack == NULL) return INTERNAL_ERROR;
+
+    Token top;
+    // Pop literal
+    stack_top(expr_stack, &top);
+    stack_pop(expr_stack);
+    // Pop <
+    stack_pop(expr_stack);
+
+    switch (expr_type) {
+    case EX_STRING:
+        expr->string_val = top.string_val; break;
+    case EX_INT:
+        expr->int_val = top.int_val; break;
+    case EX_DOUBLE:
+        expr->double_val = top.double_val; break;
+    default:
+        break;
+    }
+
+    Token expr_tok = { .type = TOK_E, .expr_val = expr };
+    if (!stack_push(expr_stack, expr_tok)) return INTERNAL_ERROR;
 
     return OK;
 }
