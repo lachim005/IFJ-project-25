@@ -25,7 +25,7 @@ typedef struct string {
 String *str_init();
 
 /// Appends a given string to a string. Returns true if the operation was successfull
-bool str_append_string(String *str, char *str_to_append);
+bool str_append_string(String *str, const char *str_to_append);
 
 /// Appends a given character to a string. Returns true if the operation was successfull
 bool str_append_char(String *str, char ch);

@@ -29,7 +29,7 @@ String *str_init() {
     return str;
 }
 
-bool str_append_string(String *str, char *str_to_append) {
+bool str_append_string(String *str, const char *str_to_append) {
     if (str == NULL || str_to_append == NULL) {
         return false;
     }

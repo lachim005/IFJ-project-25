@@ -60,6 +60,9 @@ Symtable *symtable_init(void) {
         free(st);
         return NULL;
     }
+    st->scope_stack_count = 0;
+    st->scope_stack_capacity = ST_SCOPE_STACK_INITIAL_CAPACITY;
+    
     return st;
 }
 
@@ -69,10 +72,12 @@ void symtable_free(Symtable *st) {
     for (size_t i = 0; i < st->capacity; ++i) {
         if (st->state[i] == SLOT_OCCUPIED && st->data[i].key) {
             free(st->data[i].key);
+            str_free(&st->data[i].name);
         }
     }
     free(st->data);
     free(st->state);
+    free(st->scope_stack);
     free(st);
 }
 
@@ -173,7 +178,9 @@ SymtableItem *symtable_insert(Symtable *st, const char *key) {
         st->data[use_idx].key = malloc(strlen(key) + 1);
         if (!st->data[use_idx].key) return NULL;
         strcpy(st->data[use_idx].key, key);
-        st->data[use_idx].name.val = NULL;
+        st->data[use_idx].name = str_init();
+        if (!st->data[use_idx].name) return NULL;
+        str_append_string(st->data[use_idx].name, key);
         st->data[use_idx].type = SYM_VAR;
         st->state[use_idx] = SLOT_OCCUPIED;
         st->size++;
@@ -189,8 +196,8 @@ int scope_id_counter = 0;
 
 bool enter_scope(Symtable *st) {
     if (st->scope_stack_count == st->scope_stack_capacity) {
-        st->capacity <<= 1;
-        int *new_st = realloc(st->scope_stack, sizeof(int) * st->capacity );
+        st->scope_stack_capacity <<= 1;
+        int *new_st = realloc(st->scope_stack, sizeof(int) * st->scope_stack_capacity);
         if (new_st == NULL) return false;
         st->scope_stack = new_st;
     }
@@ -222,30 +229,226 @@ bool find_local_var(Symtable *st, char *var_name, SymtableItem **out_item) {
     // Assumes format var_name@scope_id
     String *s = str_init();
     if (s == NULL) return false;
+    
     for (int i = st->scope_stack_count - 1; i >= 0; i--) {
         // Constructs symtable name
+        str_clear(s);
         str_append_string(s, var_name);
         str_append_char(s, '@');
-        if (!append_scope_id(s, st->scope_stack[i])) return false;
+        if (!append_scope_id(s, st->scope_stack[i])) {
+            str_free(&s);
+            return false;
+        }
 
         SymtableItem *it = symtable_find(st, s->val);
         if (it != NULL) {
             *out_item = it;
+            str_free(&s);
             return true;
         }
     }
+    
     // Not found
+    *out_item = NULL;
+    str_free(&s);
     return true;
-    out_item = NULL;
 }
 
 SymtableItem *add_var_at_current_scope(Symtable *st, char *var_name) {
     // Assumes format var_name@scope_id
     String *s = str_init();
-    if (s == NULL) return false;
+    if (s == NULL) return NULL;
+    
     // Constructs symtable name
     str_append_string(s, var_name);
     str_append_char(s, '@');
-    if (!append_scope_id(s, current_scope(st))) return false;
-    return symtable_insert(st, s->val);
+    if (!append_scope_id(s, current_scope(st))) {
+        str_free(&s);
+        return NULL;
+    }
+    
+    SymtableItem *result = symtable_insert(st, s->val);
+    str_free(&s);
+    return result;
+}
+
+bool contains_var_at_current_scope(Symtable *st, char *var_name) {
+    // Assumes format var_name@scope_id
+    String *s = str_init();
+    if (s == NULL) return false;
+    
+    // Constructs symtable name
+    str_append_string(s, var_name);
+    str_append_char(s, '@');
+    if (!append_scope_id(s, current_scope(st))) {
+        str_free(&s);
+        return false;
+    }
+    
+    bool result = symtable_contains(st, s->val);
+    str_free(&s);
+    return result;
+}
+
+SymtableItem *symtable_add_getter(Symtable *st, char *var_name, bool is_defined) {
+    // Assumes format var_name@scope_id
+    String *s = str_init();
+    if (s == NULL) return NULL;
+
+    // Constructs symtable name
+    str_append_string(s, var_name);
+    str_append_char(s, '!');
+
+    SymtableItem *result = symtable_insert(st, s->val);
+    str_free(&s);
+
+    if (result == NULL)
+        return NULL;
+
+    str_clear(result->name);
+    str_append_string(result->name, var_name);
+    result->is_defined = is_defined;
+    result->param_count = 0;
+    result->type = SYM_GETTER;
+
+    return result;
+}
+
+bool symtable_contains_getter(Symtable *st, char *var_name, SymtableItem **out_item) {
+    // Assumes format var_name!
+    String *s = str_init();
+    if (s == NULL) return false;
+
+    // Constructs symtable name
+    str_append_string(s, var_name);
+    str_append_char(s, '!');
+
+    bool result = symtable_contains(st, s->val);
+    str_free(&s);
+
+    if (out_item) {
+        *out_item = symtable_find(st, s->val);
+    }
+    return result;
+}
+
+SymtableItem *symtable_add_setter(Symtable *st, char *var_name, bool is_defined) {
+    // Assumes format var_name@scope_id
+    String *s = str_init();
+    if (s == NULL) return NULL;
+
+    // Constructs symtable name
+    str_append_string(s, var_name);
+    str_append_char(s, '?');
+
+    SymtableItem *result = symtable_insert(st, s->val);
+    str_free(&s);
+
+    if (result == NULL)
+        return NULL;
+
+    str_clear(result->name);
+    str_append_string(result->name, var_name);
+    result->is_defined = is_defined;
+    result->param_count = 1;
+    result->type = SYM_SETTER;
+
+    return result;
+}
+
+bool symtable_contains_setter(Symtable *st, char *var_name, SymtableItem **out_item) {
+    // Assumes format var_name?
+    String *s = str_init();
+    if (s == NULL) return false;
+
+    // Constructs symtable name
+    str_append_string(s, var_name);
+    str_append_char(s, '?');
+
+    bool result = symtable_contains(st, s->val);
+    str_free(&s);
+
+    if (out_item) {
+        *out_item = symtable_find(st, s->val);
+    }
+
+    return result;
+}
+
+SymtableItem *symtable_add_function(Symtable *st, char *var_name, int param_count, bool is_defined) {
+    // Assumes format var_name@scope_id
+    String *s = str_init();
+    if (s == NULL) return NULL;
+
+    // Constructs symtable name
+    str_append_string(s, var_name);
+    str_append_char(s, '$');
+
+    // Append param count
+    char buf[64];
+    int written = snprintf(buf, 64, "%d", param_count);
+    if (written >= 64) {
+        str_free(&s);
+        return NULL;
+    }
+    str_append_string(s, buf);
+
+    SymtableItem *result = symtable_insert(st, s->val);
+    str_free(&s);
+
+    if (result == NULL)
+        return NULL;
+
+    str_clear(result->name);
+    str_append_string(result->name, var_name);
+    result->is_defined = is_defined;
+    result->param_count = (size_t)param_count;
+    result->type = SYM_FUNCTION;
+    return result;
+}
+
+bool symtable_contains_function(Symtable *st, char *var_name, int param_count, SymtableItem **out_item) {
+    // Assumes format var_name$param_count
+    String *s = str_init();
+    if (s == NULL) return false;
+
+    // Constructs symtable name
+    str_append_string(s, var_name);
+    str_append_char(s, '$');
+
+    // Append param count
+    char buf[64];
+    int written = snprintf(buf, 64, "%d", param_count);
+    if (written >= 64) {
+        str_free(&s);
+        return false;
+    }
+    str_append_string(s, buf);
+
+    bool result = symtable_contains(st, s->val);
+    if (out_item) {
+        *out_item = symtable_find(st, s->val);
+    }
+
+    str_free(&s);
+    return result;
+}
+
+void symtable_increment_undefined_items_counter(Symtable *st) {
+    if (st) {
+        st->undefined_items_counter++;
+    }
+}
+
+void symtable_decrement_undefined_items_counter(Symtable *st) {
+    if (st && st->undefined_items_counter > 0) {
+        st->undefined_items_counter--;
+    }
+}
+
+size_t symtable_get_undefined_items_count(Symtable *st) {
+    if (st) {
+        return st->undefined_items_counter;
+    }
+    return 0;
 }
