@@ -42,9 +42,17 @@ struct ast_expression {
     /// Identifier for EX_ID or EX_FUN
     String id;
     /// Subtrees for operands or function parameters
-    AstExpression *params;
+    AstExpression **params;
+    /// Number of children in params, 1 - unary, 2 - binary, 3 - ternary, everything for functions (0 - N)
+    size_t child_count;
     /// Expression type
     AstExprType type;
+    /// Value for literals
+    union {
+        String *string_val;
+        int int_val;
+        double double_val;
+    };
 };
 
 typedef struct ast_scope AstScope;
