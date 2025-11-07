@@ -71,7 +71,7 @@ int calculate_table_idx(TokType type){
     }
 }
 Lexer *lex;
-ErrorCode parse_expression(Lexer *lexer) {
+ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr) {
     Stack *expr_stack;
     Stack *op_stack;
     lex = lexer;
@@ -82,29 +82,55 @@ ErrorCode parse_expression(Lexer *lexer) {
     Token token;
     token.type = TOK_DOLLAR;
     stack_push(expr_stack, token);
+    Token last_used_token = { .type = TOK_KW_CLASS }; // just some non-relevant initial value
+    Token stack_token;
 
     while(1) {
-        if(lexer_get_token(lexer, &token) != ERR_LEX_OK){
-            return LEXICAL_ERROR;
-        } // read next token
-        
-        // token is from the lexer now
-        int col = calculate_table_idx(token.type);
+        if(last_used_token.type != TOK_DOLLAR){
+            if(lexer_get_token(lexer, &token) != ERR_LEX_OK){
+                return LEXICAL_ERROR;
+            } // read next token
+        }
+        if(token.type != TOK_DOLLAR){
+            if(token.type == TOK_EOL && eol_possible(last_used_token)){
+                continue;
+            } // skip EOLs in expressions if they can be there
+            
+            else if(token.type == TOK_EOL && !eol_possible(last_used_token)){
+                lexer_unget_token(lexer, token);
+                token.type = TOK_DOLLAR;
+            } // unget token if EOL is not allowed so parser can handle end of expression, set token to DOLLAR to finish parsing
+        }
+        if((token.type > TOK_OP_IS && token.type < TOK_LEFT_PAR) || (token.type > TOK_RIGHT_PAR && token.type < TOK_DOLLAR)){
+            lexer_unget_token(lexer, token);
+            token.type = TOK_DOLLAR;
+        } // invalid token in expression
 
         stack_find_term(expr_stack, op_stack); // pops items until topmost terminal is found
-        stack_top(expr_stack, &token); // topmost terminal is now in token
+        stack_top(expr_stack, &stack_token); // topmost terminal is now in token
         push_whole_stack(op_stack, expr_stack); // pushes back all popped items
-        // token is from the top of the stack now
-        int row = calculate_table_idx(token.type);
+
+        if(stack_token.type == TOK_DOLLAR && token.type == TOK_RIGHT_PAR){
+            lexer_unget_token(lexer, token);
+            token.type = TOK_DOLLAR;
+        } // ')' acts as end of expression if there is no matching '('
+        
+        int col = calculate_table_idx(token.type);
+        int row = calculate_table_idx(stack_token.type);
+
+        if(token.type == TOK_DOLLAR && stack_token.type == TOK_DOLLAR){
+            break;
+        } // end of expression
 
         char relation = precedence_table[row][col];
+
         switch (relation)
         {
         case '<':
             shift(expr_stack, op_stack, token);
             break;
         case '>':
-            reduce(expr_stack, op_stack, token);
+            reduce(expr_stack, op_stack);
             break;
         case '=':
             stack_push(expr_stack, token);
@@ -114,7 +140,27 @@ ErrorCode parse_expression(Lexer *lexer) {
         default:
             break;
         }
+        if(token.type != TOK_EOL) {
+            last_used_token = token;
+        } // store last used token for EOL check
     }
+
+    if(expr_stack->top != 2 || !stack_empty(op_stack)){ // should contain only DOLLAR and E
+        return SYNTACTIC_ERROR;
+    }
+
+    stack_top(expr_stack, &token);
+    *out_expr = token.expr_val;
+    stack_destroy(expr_stack);
+    stack_destroy(op_stack);
+    return OK;
+}
+
+bool eol_possible(Token token){
+    if(token.type <= TOK_OP_PLUS && token.type <= TOK_OP_IS){
+        return true;
+    } // EOL muze byt za vsemi operatory a za dalsim EOL
+    return false;
 }
 
 bool shift(Stack *expr_stack, Stack *op_stack, Token token) {
@@ -130,7 +176,7 @@ bool shift(Stack *expr_stack, Stack *op_stack, Token token) {
 
 }
 
-bool reduce(Stack *expr_stack, Stack *op_stack, Token token) {
+bool reduce(Stack *expr_stack, Stack *op_stack) {
     stack_find_term(expr_stack, op_stack);
     Token top_token;
     stack_top(op_stack, &top_token);
@@ -215,6 +261,26 @@ ErrorCode reduce_binary(Stack *op_stack, Token *left, Token *right, Token *opera
 
 ErrorCode reduce_plus(Stack *expr_stack, Stack *op_stack) {
     // Implementation of reduce for plus operator
+    Token right;
+    Token left;
+    Token op;
+    // gets the whole handle for reduction
+    reduce_binary(op_stack, &left, &right, &op);
+
+    if(left.type != TOK_E || right.type != TOK_E || op.type != TOK_OP_PLUS){
+        return SYNTACTIC_ERROR;
+    }
+
+    // create new AST node for addition
+    AstExpression *add_expr = ast_expr_create(EX_ADD, 2);
+    add_expr->params[0] = left.expr_val;
+    add_expr->params[1] = right.expr_val;
+    Token E_token;
+    E_token.type = TOK_E;
+    E_token.expr_val = add_expr;
+
+    stack_push(expr_stack, E_token); // push the new expression node, reduces E + E -> E
+
 }
 
 ErrorCode reduce_minus(Stack *expr_stack, Stack *op_stack) {

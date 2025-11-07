@@ -26,7 +26,6 @@ typedef enum tok_type {
     TOK_OP_MINUS, // -
     TOK_OP_MULT, // *
     TOK_OP_DIV, // /
-    TOK_OP_DOT, // .
     TOK_OP_GREATER, // >
     TOK_OP_LESS, // <
     TOK_OP_GREATER_EQ, // >=
@@ -37,10 +36,11 @@ typedef enum tok_type {
     TOK_OP_OR, // ||
     TOK_OP_COLON, // :
     TOK_OP_QUESTION_MARK, // ?
-    TOK_OP_DOUBLE_DOT, // ..
-    TOK_OP_TRIPLE_DOT, // ...
     TOK_OP_NOT, // !
     TOK_OP_IS, // include in keywords table!
+    TOK_OP_DOT, // .
+    TOK_OP_DOUBLE_DOT, // ..
+    TOK_OP_TRIPLE_DOT, // ...
     // Keywords
     TOK_KW_CLASS,
     TOK_KW_IF,
