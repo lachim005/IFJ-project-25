@@ -12,6 +12,13 @@
 #include "string.h"
 #include <stdlib.h>
 
+typedef enum data_type {
+    DT_NULL,
+    DT_NUM,
+    DT_STRING,
+    DT_BOOL,
+} DataType;
+
 /// Type of expression
 typedef enum ast_expr_type {
     EX_ID,
@@ -36,6 +43,7 @@ typedef enum ast_expr_type {
     EX_DOUBLE,
     EX_STRING,
     EX_NEGATE, // Unary -
+    EX_DATA_TYPE,
 } AstExprType;
 
 /// Structure holding expression
@@ -54,6 +62,7 @@ struct ast_expression {
         String *string_val;
         int int_val;
         double double_val;
+        DataType data_type;
     };
 };
 AstExpression *ast_expr_create(AstExprType type, size_t child_count);

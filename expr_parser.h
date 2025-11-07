@@ -37,3 +37,5 @@ ErrorCode reduce_ternary(Stack *expr_stack);
 ErrorCode reduce_par(Stack *expr_stack);
 
 ErrorCode reduce_literal(Stack *expr_stack, TokType lit_type, AstExprType expr_type);
+
+ErrorCode reduce_data_type(Stack *expr_stack, TokType data_type);
