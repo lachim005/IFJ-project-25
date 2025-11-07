@@ -85,12 +85,12 @@ ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr) {
     Token last_used_token = { .type = TOK_KW_CLASS }; // just some non-relevant initial value
     Token stack_token;
 
+    if(last_used_token.type != TOK_DOLLAR){
+        if(lexer_get_token(lexer, &token) != ERR_LEX_OK){
+            return LEXICAL_ERROR;
+        } // read next token
+    }
     while(1) {
-        if(last_used_token.type != TOK_DOLLAR){
-            if(lexer_get_token(lexer, &token) != ERR_LEX_OK){
-                return LEXICAL_ERROR;
-            } // read next token
-        }
         if(token.type != TOK_DOLLAR){
             if(token.type == TOK_EOL && eol_possible(last_used_token)){
                 continue;
@@ -128,6 +128,11 @@ ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr) {
         {
         case '<':
             shift(expr_stack, op_stack, token);
+            if(last_used_token.type != TOK_DOLLAR){
+                if(lexer_get_token(lexer, &token) != ERR_LEX_OK){
+                    return LEXICAL_ERROR;
+                } // read next token
+            }
             break;
         case '>':
             reduce(expr_stack, op_stack);
@@ -179,7 +184,7 @@ bool shift(Stack *expr_stack, Stack *op_stack, Token token) {
 bool reduce(Stack *expr_stack, Stack *op_stack) {
     stack_find_term(expr_stack, op_stack);
     Token top_token;
-    stack_top(op_stack, &top_token);
+    stack_top(expr_stack, &top_token);
     stack_find_type(expr_stack, op_stack, TOK_PREC_OPEN); // gets the whole handle for reduction (on op_stack is for example 'E | : | E | ? | E', from the top)
     stack_pop(expr_stack); // remove the '<' marker from expr_stack
     switch(top_token.type){
@@ -246,7 +251,7 @@ bool reduce(Stack *expr_stack, Stack *op_stack) {
             reduce_dollar(expr_stack, op_stack);
             break;
     }
-
+    return OK;
 }
 
 ErrorCode reduce_binary(Stack *op_stack, Token *left, Token *right, Token *operator) {
@@ -257,6 +262,7 @@ ErrorCode reduce_binary(Stack *op_stack, Token *left, Token *right, Token *opera
     stack_pop(op_stack);
     stack_top(op_stack, right); // right.type == TOK_E
     stack_pop(op_stack);
+    return OK;
 }
 
 ErrorCode reduce_plus(Stack *expr_stack, Stack *op_stack) {
@@ -281,10 +287,12 @@ ErrorCode reduce_plus(Stack *expr_stack, Stack *op_stack) {
 
     stack_push(expr_stack, E_token); // push the new expression node, reduces E + E -> E
 
+    return OK;
 }
 
 ErrorCode reduce_minus(Stack *expr_stack, Stack *op_stack) {
     // Implementation of reduce for minus operator
+    return OK;
 } 
 
 ErrorCode reduce_mult(Stack *expr_stack, Stack *op_stack) {
@@ -308,6 +316,7 @@ ErrorCode reduce_mult(Stack *expr_stack, Stack *op_stack) {
     E_token.expr_val = mult_expr;
 
     stack_push(expr_stack, E_token); // push the new expression node, reduces E * E -> E
+    return OK;
 
 }
 
@@ -333,6 +342,7 @@ ErrorCode reduce_div(Stack *expr_stack, Stack *op_stack) {
 
     stack_push(expr_stack, E_token); // push the new expression node, reduces E / E -> E
 
+    return OK;
 }
 
 ErrorCode reduce_greater(Stack *expr_stack, Stack *op_stack) {
@@ -355,6 +365,7 @@ ErrorCode reduce_greater(Stack *expr_stack, Stack *op_stack) {
     E_token.expr_val = g_expr;
 
     stack_push(expr_stack, E_token); // push the new expression node, reduces E > E -> E
+    return OK;
 }
 
 ErrorCode reduce_less(Stack *expr_stack, Stack *op_stack) {
@@ -377,6 +388,7 @@ ErrorCode reduce_less(Stack *expr_stack, Stack *op_stack) {
     E_token.expr_val = l_expr;
 
     stack_push(expr_stack, E_token); // push the new expression node, reduces E < E -> E
+    return OK;
 }
 
 ErrorCode reduce_greater_eq(Stack *expr_stack, Stack *op_stack) {
@@ -399,6 +411,7 @@ ErrorCode reduce_greater_eq(Stack *expr_stack, Stack *op_stack) {
     E_token.expr_val = ge_expr;
 
     stack_push(expr_stack, E_token); // push the new expression node, reduces E >= E -> E
+    return OK;
 }
 
 ErrorCode reduce_less_eq(Stack *expr_stack, Stack *op_stack) {
@@ -421,6 +434,7 @@ ErrorCode reduce_less_eq(Stack *expr_stack, Stack *op_stack) {
     E_token.expr_val = le_expr;
 
     stack_push(expr_stack, E_token); // push the new expression node, reduces E <= E -> E
+    return OK;
 }
 
 ErrorCode reduce_eq(Stack *expr_stack, Stack *op_stack) {
@@ -443,6 +457,7 @@ ErrorCode reduce_eq(Stack *expr_stack, Stack *op_stack) {
     E_token.expr_val = eq_expr;
 
     stack_push(expr_stack, E_token); // push the new expression node, reduces E == E -> E
+    return OK;
 }
 
 ErrorCode reduce_not_eq(Stack *expr_stack, Stack *op_stack) {
@@ -465,6 +480,7 @@ ErrorCode reduce_not_eq(Stack *expr_stack, Stack *op_stack) {
     E_token.expr_val = ne_expr;
 
     stack_push(expr_stack, E_token); // push the new expression node, reduces E != E -> E
+    return OK;
 }
 
 ErrorCode reduce_and(Stack *expr_stack, Stack *op_stack) {
@@ -487,6 +503,7 @@ ErrorCode reduce_and(Stack *expr_stack, Stack *op_stack) {
     E_token.expr_val = and_expr;
 
     stack_push(expr_stack, E_token); // push the new expression node, reduces E && E -> E
+    return OK;
 }
 
 ErrorCode reduce_or(Stack *expr_stack, Stack *op_stack) {
@@ -509,6 +526,7 @@ ErrorCode reduce_or(Stack *expr_stack, Stack *op_stack) {
     E_token.expr_val = or_expr;
 
     stack_push(expr_stack, E_token); // push the new expression node, reduces E || E -> E
+    return OK;
 }
 
 ErrorCode reduce_operand(Stack *expr_stack, Stack *op_stack, Token top_token) {
@@ -519,6 +537,7 @@ ErrorCode reduce_operand(Stack *expr_stack, Stack *op_stack, Token top_token) {
         // Handle identifier or global variable, TODO: FUNCTIONS, rekursive calls
         String *id = top_token.string_val;
         expr = ast_expr_create(EX_ID, 0);
+        expr->id = id;
     } else if (top_token.type == TOK_LIT_INT) {
         // Handle integer literal
         expr = ast_expr_create(EX_INT, 0);
@@ -542,6 +561,7 @@ ErrorCode reduce_operand(Stack *expr_stack, Stack *op_stack, Token top_token) {
     E_token.pos_line = top_token.pos_line; 
     E_token.pos_char = top_token.pos_char;
     stack_push(expr_stack, E_token); // push the new expression node 
+    return OK;
 }
 
 ErrorCode reduce_parentheses(Stack *expr_stack, Stack *op_stack) {
@@ -566,6 +586,7 @@ ErrorCode reduce_parentheses(Stack *expr_stack, Stack *op_stack) {
     if(temp.type != TOK_RIGHT_PAR){
         return SYNTACTIC_ERROR;
     }
+    return OK;
 }
 
 ErrorCode reduce_is(Stack *expr_stack, Stack *op_stack) {
@@ -588,6 +609,7 @@ ErrorCode reduce_is(Stack *expr_stack, Stack *op_stack) {
     E_token.expr_val = is_expr;
 
     stack_push(expr_stack, E_token); // push the new expression node, reduces E is E -> E
+    return OK;
 }
 
 ErrorCode reduce_question_mark(Stack *expr_stack, Stack *op_stack) {
@@ -619,6 +641,7 @@ ErrorCode reduce_colon(Stack *expr_stack, Stack *op_stack) {
     E_token.expr_val = ternary_expr;
 
     stack_push(expr_stack, E_token); // push the new expression node, reduces E ? E : E -> E
+    return OK;
 }
 
 ErrorCode reduce_ternary(Stack *op_stack, 
@@ -634,6 +657,7 @@ ErrorCode reduce_ternary(Stack *op_stack,
     stack_pop(op_stack);
     stack_top(op_stack, false_expr); // false_expr.type == TOK_E
     stack_pop(op_stack);
+    return OK;
 }
 
 ErrorCode reduce_not(Stack *expr_stack, Stack *op_stack) {
@@ -653,6 +677,7 @@ ErrorCode reduce_not(Stack *expr_stack, Stack *op_stack) {
     E_token.expr_val = not_expr;
 
     stack_push(expr_stack, E_token); // push the new expression node, reduces !E -> E
+    return OK;
 }
 
 ErrorCode reduce_unary(Stack *op_stack, Token *operand, Token *operator) {
@@ -661,6 +686,7 @@ ErrorCode reduce_unary(Stack *op_stack, Token *operand, Token *operator) {
     stack_pop(op_stack);
     stack_top(op_stack, operand); // operand.type == TOK_E
     stack_pop(op_stack);
+    return OK;
 }
 
 ErrorCode reduce_dollar(Stack *expr_stack, Stack *op_stack) {

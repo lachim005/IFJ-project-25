@@ -26,6 +26,8 @@ ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr);
 
 ErrorCode reduce_unary(Stack *op_stack, Token *operand, Token *operator);
 
+bool eol_possible(Token token);
+
 ErrorCode reduce_binary(Stack *op_stack, Token *left, Token *right, Token *op);
 
 ErrorCode reduce_ternary(Stack *op_stack, Token *cond, Token *true_expr, Token *false_expr, Token *question, Token *colon);
