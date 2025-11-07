@@ -129,6 +129,11 @@ ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr) {
             break;
         case '=':
             if (!stack_push(expr_stack, token)) return INTERNAL_ERROR;
+            if(last_used_token.type != TOK_DOLLAR){
+                if(lexer_get_token(lexer, &token) != ERR_LEX_OK){
+                    return LEXICAL_ERROR;
+                } // read next token
+            }
             break;
         case ' ':
             return SYNTACTIC_ERROR;
@@ -182,6 +187,10 @@ bool reduce(Stack *expr_stack, Stack *op_stack) {
             break;
         case TOK_OP_MINUS:
             reduction_res = reduce_binary(expr_stack, TOK_OP_MINUS, EX_SUB);
+            if (reduction_res != OK)
+            {
+                reduction_res = reduce_unary_prefix_op(expr_stack, TOK_OP_MINUS, EX_NEGATE);
+            }
             break;
         case TOK_OP_MULT:
             reduction_res = reduce_binary(expr_stack, TOK_OP_MULT, EX_MUL);
@@ -221,8 +230,8 @@ bool reduce(Stack *expr_stack, Stack *op_stack) {
         case TOK_LIT_DOUBLE:
         case TOK_LIT_STRING:
             break;
-        case TOK_LEFT_PAR:
         case TOK_RIGHT_PAR:
+            reduction_res = reduce_par(expr_stack);
             break;
         case TOK_OP_IS:
             reduction_res = reduce_binary(expr_stack, TOK_OP_IS, EX_IS);
@@ -230,10 +239,10 @@ bool reduce(Stack *expr_stack, Stack *op_stack) {
         case TOK_OP_QUESTION_MARK:
             break;
         case TOK_OP_COLON:
+            reduction_res = reduce_ternary(expr_stack);
             break;
         case TOK_OP_NOT:
-            break;
-        case TOK_DOLLAR:
+            reduction_res = reduce_unary_prefix_op(expr_stack, TOK_OP_NOT, EX_NOT);
             break;
         default:
             return SYNTACTIC_ERROR;
@@ -241,9 +250,11 @@ bool reduce(Stack *expr_stack, Stack *op_stack) {
     return reduction_res;
 }
 
+#define RULE_SIZE(rule) sizeof(rule) / sizeof(TokType)
+
 ErrorCode reduce_binary(Stack *expr_stack, TokType op_type, AstExprType expr_type) {
     TokType rule[] = { TOK_PREC_OPEN, TOK_E, op_type, TOK_E };
-    if (!stack_is_sequence_on_top(expr_stack, rule, 4)) return SYNTACTIC_ERROR;
+    if (!stack_is_sequence_on_top(expr_stack, rule, RULE_SIZE(rule))) return SYNTACTIC_ERROR;
 
     AstExpression *expr = ast_expr_create(expr_type, 2);
     if (expr_stack == NULL) return INTERNAL_ERROR;
@@ -270,7 +281,7 @@ ErrorCode reduce_binary(Stack *expr_stack, TokType op_type, AstExprType expr_typ
 
 ErrorCode reduce_identifier(Stack *expr_stack) {
     TokType rule[] = { TOK_PREC_OPEN, TOK_IDENTIFIER };
-    if (!stack_is_sequence_on_top(expr_stack, rule, 2)) return SYNTACTIC_ERROR;
+    if (!stack_is_sequence_on_top(expr_stack, rule, RULE_SIZE(rule))) return SYNTACTIC_ERROR;
 
     AstExpression *expr = ast_expr_create(EX_ID, 0);
     if (expr_stack == NULL) return INTERNAL_ERROR;
@@ -283,6 +294,83 @@ ErrorCode reduce_identifier(Stack *expr_stack) {
 
     Token expr_tok = { .type = TOK_E, .expr_val = expr };
     if (!stack_push(expr_stack, expr_tok)) return INTERNAL_ERROR;
+
+    return OK;
+}
+
+ErrorCode reduce_unary_prefix_op(Stack *expr_stack, TokType op_type, AstExprType expr_type) {
+    TokType rule[] = { TOK_PREC_OPEN, op_type, TOK_E };
+    if (!stack_is_sequence_on_top(expr_stack, rule, RULE_SIZE(rule))) return SYNTACTIC_ERROR;
+
+    AstExpression *expr = ast_expr_create(expr_type, 1);
+    if (expr_stack == NULL) return INTERNAL_ERROR;
+
+    Token top;
+    // Pop right side
+    stack_top(expr_stack, &top);
+    stack_pop(expr_stack);
+    expr->params[0] = top.expr_val;
+    // Pop operator
+    stack_pop(expr_stack);
+    // Pop <
+    stack_pop(expr_stack);
+
+    Token expr_tok = { .type = TOK_E, .expr_val = expr };
+    if (!stack_push(expr_stack, expr_tok)) return INTERNAL_ERROR;
+
+    return OK;
+}
+
+ErrorCode reduce_ternary(Stack *expr_stack) {
+    TokType rule[] = { TOK_PREC_OPEN, TOK_E, TOK_OP_QUESTION_MARK, TOK_E, TOK_OP_COLON, TOK_E };
+    if (!stack_is_sequence_on_top(expr_stack, rule, RULE_SIZE(rule))) return SYNTACTIC_ERROR;
+
+    AstExpression *expr = ast_expr_create(EX_TERNARY, 3);
+    if (expr_stack == NULL) return INTERNAL_ERROR;
+
+    Token top;
+    // Pop false expr
+    stack_top(expr_stack, &top);
+    stack_pop(expr_stack);
+    expr->params[2] = top.expr_val;
+    // Pop :
+    stack_pop(expr_stack);
+    // Pop true expr
+    stack_top(expr_stack, &top);
+    stack_pop(expr_stack);
+    expr->params[1] = top.expr_val;
+    // Pop ?
+    stack_pop(expr_stack);
+    // Pop condition expr
+    stack_top(expr_stack, &top);
+    stack_pop(expr_stack);
+    expr->params[0] = top.expr_val;
+    // Pop <
+    stack_pop(expr_stack);
+
+    Token expr_tok = { .type = TOK_E, .expr_val = expr };
+    if (!stack_push(expr_stack, expr_tok)) return INTERNAL_ERROR;
+
+    return OK;
+}
+
+ErrorCode reduce_par(Stack *expr_stack) {
+    TokType rule[] = { TOK_PREC_OPEN, TOK_LEFT_PAR, TOK_E, TOK_RIGHT_PAR };
+    if (!stack_is_sequence_on_top(expr_stack, rule, RULE_SIZE(rule))) return SYNTACTIC_ERROR;
+
+    Token top;
+    // Pop )
+    stack_pop(expr_stack);
+    // Pop expr
+    stack_top(expr_stack, &top);
+    stack_pop(expr_stack);
+    // Pop (
+    stack_pop(expr_stack);
+    // Pop <
+    stack_pop(expr_stack);
+
+    // Push expr back
+    if (!stack_push(expr_stack, top)) return INTERNAL_ERROR;
 
     return OK;
 }
