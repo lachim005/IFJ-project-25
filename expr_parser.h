@@ -24,48 +24,8 @@ bool eol_possible(Token token);
 
 ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr);
 
-ErrorCode reduce_unary(Stack *op_stack, Token *operand, Token *operator);
-
 bool eol_possible(Token token);
 
-ErrorCode reduce_binary(Stack *op_stack, Token *left, Token *right, Token *op);
+ErrorCode reduce_binary(Stack *expr_stack, TokType op_type, AstExprType expr_type);
 
-ErrorCode reduce_ternary(Stack *op_stack, Token *cond, Token *true_expr, Token *false_expr, Token *question, Token *colon);
-
-ErrorCode reduce_plus(Stack *expr_stack, Stack *op_stack);
-
-ErrorCode reduce_minus(Stack *expr_stack, Stack *op_stack);
-
-ErrorCode reduce_mult(Stack *expr_stack, Stack *op_stack);
-
-ErrorCode reduce_div(Stack *expr_stack, Stack *op_stack);
-
-ErrorCode reduce_greater(Stack *expr_stack, Stack *op_stack);
-
-ErrorCode reduce_less(Stack *expr_stack, Stack *op_stack);
-
-ErrorCode reduce_greater_eq(Stack *expr_stack, Stack *op_stack);
-
-ErrorCode reduce_less_eq(Stack *expr_stack, Stack *op_stack);
-
-ErrorCode reduce_eq(Stack *expr_stack, Stack *op_stack);
-
-ErrorCode reduce_not_eq(Stack *expr_stack, Stack *op_stack);
-
-ErrorCode reduce_and(Stack *expr_stack, Stack *op_stack);
-
-ErrorCode reduce_or(Stack *expr_stack, Stack *op_stack);
-
-ErrorCode reduce_operand(Stack *expr_stack, Stack *op_stack, Token top_token);
-
-ErrorCode reduce_parentheses(Stack *expr_stack, Stack *op_stack);
-
-ErrorCode reduce_is(Stack *expr_stack, Stack *op_stack);
-
-ErrorCode reduce_question_mark(Stack *expr_stack, Stack *op_stack);
-
-ErrorCode reduce_colon(Stack *expr_stack, Stack *op_stack);
-
-ErrorCode reduce_not(Stack *expr_stack, Stack *op_stack);
-
-ErrorCode reduce_dollar(Stack *expr_stack, Stack *op_stack);
+ErrorCode reduce_identifier(Stack *expr_stack);

@@ -137,3 +137,12 @@ bool push_whole_stack(Stack *src, Stack *dst) {
     }
     return false;
 }
+
+bool stack_is_sequence_on_top(Stack *stack, TokType rule[], size_t rule_size) {
+    if (rule_size > stack->top) return false;
+    for (size_t i = 1; i <= rule_size; i++) {
+        unsigned stack_index = stack->top - i;
+        if (stack->items[stack_index].type != rule[rule_size - i]) return false;
+    }
+    return true;
+}

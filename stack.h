@@ -32,3 +32,5 @@ bool stack_find_type(Stack *stack, Stack *out_stack, TokType type);
 bool stack_find_term(Stack *stack, Stack *out_stack);
 
 bool push_whole_stack(Stack *src, Stack *dst);
+
+bool stack_is_sequence_on_top(Stack *stack, TokType rule[], size_t rule_size);
