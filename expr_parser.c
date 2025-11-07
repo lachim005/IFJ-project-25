@@ -157,7 +157,7 @@ ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr) {
 }
 
 bool eol_possible(Token token){
-    if(token.type <= TOK_OP_PLUS && token.type <= TOK_OP_IS){
+    if(token.type >= TOK_OP_PLUS && token.type <= TOK_OP_IS){
         return true;
     } // EOL muze byt za vsemi operatory a za dalsim EOL
     return false;

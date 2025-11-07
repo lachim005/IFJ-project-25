@@ -20,7 +20,9 @@ int calculate_table_idx(TokType type);
 
 void add_to_stack(Stack *expr_stack, Token token);
 
-ErrorCode parse_expression(Lexer *lexer);
+bool eol_possible(Token token);
+
+ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr);
 
 ErrorCode reduce_unary(Stack *op_stack, Token *operand, Token *operator);
 
