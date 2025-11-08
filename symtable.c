@@ -62,6 +62,7 @@ Symtable *symtable_init(void) {
     }
     st->scope_stack_count = 0;
     st->scope_stack_capacity = ST_SCOPE_STACK_INITIAL_CAPACITY;
+    st->undefined_items_counter = 0;
     
     return st;
 }

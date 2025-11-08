@@ -17,6 +17,11 @@
     return code; \
 } while(0)
 
+#define INIT_TOKEN(token, tok_type) do { \
+    (token).type = (tok_type); \
+    (token).string_val = NULL; \
+} while(0)
+
 #define CHECK_TOKEN(lexer, token) do { \
     token_free(&token); \
     if(lexer_get_token(lexer, &token) != ERR_LEX_OK) { \
@@ -169,7 +174,7 @@ bool add_builtin_functions(Symtable *symtab) {
 /// Rule: import "ifj25" for Ifj
 ErrorCode check_prologue(Lexer *lexer) {
     Token token;
-    token.type = TOK_KW_IFJ;
+    INIT_TOKEN(token, TOK_KW_IFJ);
 
     CHECK_TOKEN_SKIP_NEWLINE(lexer, token);
     if (token.type != TOK_KW_IMPORT)
@@ -193,7 +198,7 @@ ErrorCode check_prologue(Lexer *lexer) {
 /// Checks class Program { ... }
 ErrorCode check_class_program(Lexer *lexer, Symtable *symtable) {
     Token token;
-    token.type = TOK_KW_CLASS;
+    INIT_TOKEN(token, TOK_KW_CLASS);
 
     CHECK_TOKEN_SKIP_NEWLINE(lexer, token);
     if (token.type != TOK_KW_CLASS)
@@ -222,7 +227,7 @@ ErrorCode check_class_program(Lexer *lexer, Symtable *symtable) {
 /// Checks the body of a class
 ErrorCode check_class_body(Lexer *lexer, Symtable *symtable) {
     Token token;
-    token.type = TOK_IDENTIFIER;
+    INIT_TOKEN(token, TOK_IDENTIFIER);
     
     while (true) {
         CHECK_TOKEN_SKIP_NEWLINE(lexer, token);
@@ -262,7 +267,7 @@ ErrorCode check_class_body(Lexer *lexer, Symtable *symtable) {
 /// Checks the global variable declaration
 ErrorCode check_global_var(Lexer *lexer, Symtable *symtable, String *var_name) {
     Token token;
-    token.type = TOK_GLOBAL_VAR;    // Add variable to symbol table with redefinition check
+    INIT_TOKEN(token, TOK_GLOBAL_VAR);    // Add variable to symbol table with redefinition check
     
     CHECK_TOKEN(lexer, token);
     if (token.type == TOK_OP_ASSIGN) {
@@ -296,7 +301,7 @@ ErrorCode check_global_var(Lexer *lexer, Symtable *symtable, String *var_name) {
 /// Checks statics (static functions and variables)
 ErrorCode check_statics(Lexer *lexer, Symtable *symtable) {
     Token identifier;
-    identifier.type = TOK_IDENTIFIER;
+    INIT_TOKEN(identifier, TOK_IDENTIFIER);
 
     CHECK_TOKEN(lexer, identifier);
     if (identifier.type != TOK_IDENTIFIER)
@@ -308,7 +313,7 @@ ErrorCode check_statics(Lexer *lexer, Symtable *symtable) {
     }
 
     Token token;
-    token.type = TOK_OP_ASSIGN;
+    INIT_TOKEN(token, TOK_OP_ASSIGN);
     CHECK_TOKEN(lexer, token);
     
     // Setter: static identifier = (val) { ... }
@@ -359,7 +364,7 @@ ErrorCode checks_setter(Lexer *lexer, Symtable *globaltable, Symtable *localtabl
     ADD_SETTER(globaltable, identifier.string_val->val, identifier);
 
     Token token;
-    token.type = TOK_OP_ASSIGN;
+    INIT_TOKEN(token, TOK_OP_ASSIGN);
 
     CHECK_TOKEN(lexer, token);
     if (token.type != TOK_LEFT_PAR) {
@@ -417,7 +422,7 @@ ErrorCode check_getter(Lexer *lexer, Symtable *globaltable, Symtable *localtable
     ADD_GETTER(globaltable, identifier.string_val->val, identifier);
 
     Token token;
-    token.type = TOK_LEFT_BRACE;
+    INIT_TOKEN(token, TOK_LEFT_BRACE);
 
     CHECK_TOKEN(lexer, token);
     if (token.type != TOK_LEFT_BRACE) {
@@ -452,7 +457,7 @@ ErrorCode check_function(Lexer *lexer, Symtable *globaltable, Symtable *localtab
     enter_scope(localtable);
 
     Token token;
-    token.type = TOK_LEFT_PAR;
+    INIT_TOKEN(token, TOK_LEFT_PAR);
 
     CHECK_TOKEN(lexer, token);
     if (token.type != TOK_LEFT_PAR) {
@@ -520,7 +525,7 @@ ErrorCode check_function(Lexer *lexer, Symtable *globaltable, Symtable *localtab
 /// Checks body
 ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable) {
     Token token;
-    token.type = TOK_IDENTIFIER;
+    INIT_TOKEN(token, TOK_IDENTIFIER);
 
     while (true) {
         CHECK_TOKEN_SKIP_NEWLINE(lexer, token);
@@ -624,7 +629,7 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable) 
 /// Checks local variable declaration
 ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localtable) {
     Token identifier;
-    identifier.type = TOK_IDENTIFIER;
+    INIT_TOKEN(identifier, TOK_IDENTIFIER);
 
     CHECK_TOKEN(lexer, identifier);
     if (identifier.type != TOK_IDENTIFIER) {
@@ -634,7 +639,7 @@ ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localta
     // Check if is assigned
     Token token;
     DataType expr_type = DT_UNKNOWN;
-    token.type = TOK_OP_ASSIGN;
+    INIT_TOKEN(token, TOK_OP_ASSIGN);
 
     CHECK_TOKEN(lexer, token);
     if (token.type == TOK_OP_ASSIGN) {
@@ -667,7 +672,7 @@ ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localta
 /// Checks assignment or function call
 ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable, Symtable *localtable, Token identifier) {
     Token token;
-    token.type = TOK_OP_ASSIGN;
+    INIT_TOKEN(token, TOK_OP_ASSIGN);
 
     CHECK_TOKEN(lexer, token);
     if (token.type == TOK_OP_ASSIGN) {
@@ -729,7 +734,7 @@ ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable,
 /// Checks if statement
 ErrorCode check_if_statement(Lexer *lexer, Symtable *globaltable, Symtable *localtable) {
     Token token;
-    token.type = TOK_KW_IF;
+    INIT_TOKEN(token, TOK_KW_IF);
 
     CHECK_TOKEN(lexer, token);
     if (token.type != TOK_LEFT_PAR) {
@@ -817,7 +822,7 @@ ErrorCode check_if_statement(Lexer *lexer, Symtable *globaltable, Symtable *loca
 /// Checks while statement
 ErrorCode check_while_statement(Lexer *lexer, Symtable *globaltable, Symtable *localtable) {
     Token token;
-    token.type = TOK_KW_WHILE;
+    INIT_TOKEN(token, TOK_KW_WHILE);
 
     CHECK_TOKEN(lexer, token);
     if (token.type != TOK_LEFT_PAR) {
@@ -877,7 +882,7 @@ ErrorCode check_while_statement(Lexer *lexer, Symtable *globaltable, Symtable *l
 /// Checks return statement
 ErrorCode check_return_statement(Lexer *lexer, Symtable *globaltable, Symtable *localtable) {
     Token token;
-    token.type = TOK_KW_RETURN;
+    INIT_TOKEN(token, TOK_KW_RETURN);
 
     // Parse return expression
     AstExpression *expr;
@@ -1348,7 +1353,7 @@ ErrorCode parse() {
         return SYNTACTIC_ERROR;
     }
 
-    ErrorCode ec = check_class_body(lexer, symtable);
+    ErrorCode ec = check_class_program(lexer, symtable);
     if (ec != OK) {
         symtable_free(symtable);
         lexer_free(lexer);

@@ -68,6 +68,7 @@ bool lexer_init(Lexer *lexer, FILE *input_stream) {
     lexer->last_char_was_newline = false;
     lexer->buf1 = buf1;
     lexer->buf2 = buf2;
+    lexer->no_ungot_tokens = 0;
 
     return true;
 
