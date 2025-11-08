@@ -1368,7 +1368,7 @@ ErrorCode parse() {
 int main() {
     ErrorCode ec = parse();
     if (ec != OK) {
-        fprintf(stderr, "Error: %s\n", get_error_message(ec));
+        fprintf(stderr, "Error: %d\n", ec);
         return ec;
     }
     return 0;
