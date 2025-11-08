@@ -14,7 +14,7 @@
 
 bool reduce(Stack *expr_stack, Stack *op_stack);
 
-bool shift(Stack *expr_stack, Stack *op_stack, Token token);
+ErrorCode shift(Stack *expr_stack, Stack *op_stack, Token token, Lexer *lexer);
 
 int calculate_table_idx(TokType type);
 
@@ -39,3 +39,5 @@ ErrorCode reduce_par(Stack *expr_stack);
 ErrorCode reduce_literal(Stack *expr_stack, TokType lit_type, AstExprType expr_type);
 
 ErrorCode reduce_data_type(Stack *expr_stack, TokType data_type);
+
+ErrorCode reduce_function_call(Stack *expr_stack, Lexer *lexer, String *id);

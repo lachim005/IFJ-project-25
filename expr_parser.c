@@ -9,6 +9,7 @@
 #include "expr_parser.h"
 #include "ast.h"
 #include "error.h"
+#include "lexer.h"
 #include "token.h"
 
 #define DEFAULT_CAPACITY 100
@@ -87,7 +88,7 @@ ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr) {
     Token token;
     token.type = TOK_DOLLAR;
     stack_push(expr_stack, token);
-    Token last_used_token = { .type = TOK_KW_CLASS }; // just some non-relevant initial value
+    Token last_used_token = { .type = TOK_OP_PLUS }; // just some non-relevant initial value
     Token stack_token;
 
     if(lexer_get_token(lexer, &token) != ERR_LEX_OK){
@@ -99,10 +100,17 @@ ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr) {
         stack_top(expr_stack, &stack_token); // topmost terminal is now in token
         push_whole_stack(op_stack, expr_stack); // pushes back all popped items
 
-        if(stack_token.type == TOK_DOLLAR && token.type == TOK_RIGHT_PAR){
+        // Checking if we have reached the end
+        if((stack_token.type == TOK_DOLLAR && token.type == TOK_RIGHT_PAR)
+            || token.type == TOK_COMMA
+            || (token.type == TOK_EOL && !eol_possible(last_used_token))) {
             lexer_unget_token(lexer, token);
             token.type = TOK_DOLLAR;
-        } // ')' acts as end of expression if there is no matching '('
+        }
+        if (token.type == TOK_EOL) {
+            if (lexer_get_token(lexer, &token) != ERR_LEX_OK) return LEXICAL_ERROR;
+            continue;
+        }
 
         int col = calculate_table_idx(token.type);
         int row = calculate_table_idx(stack_token.type);
@@ -111,14 +119,19 @@ ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr) {
             break;
         } // end of expression
 
+        if(token.type != TOK_EOL) {
+            last_used_token = token;
+        } // store last used token for EOL check
+
         char relation = precedence_table[row][col];
 
-        ErrorCode reduce_res;
+        ErrorCode result;
 
         switch (relation)
         {
         case '<':
-            if (!shift(expr_stack, op_stack, token)) return INTERNAL_ERROR;
+            result = shift(expr_stack, op_stack, token, lexer);
+            if (result != OK) return result;
             if(last_used_token.type != TOK_DOLLAR){
                 if(lexer_get_token(lexer, &token) != ERR_LEX_OK){
                     return LEXICAL_ERROR;
@@ -126,8 +139,8 @@ ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr) {
             }
             break;
         case '>':
-            reduce_res = reduce(expr_stack, op_stack);
-            if (reduce_res != OK) return reduce_res;
+            result = reduce(expr_stack, op_stack);
+            if (result != OK) return result;
             break;
         case '=':
             if (!stack_push(expr_stack, token)) return INTERNAL_ERROR;
@@ -142,9 +155,6 @@ ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr) {
         default:
             break;
         }
-        if(token.type != TOK_EOL) {
-            last_used_token = token;
-        } // store last used token for EOL check
     }
 
     if(expr_stack->top != 2 || !stack_empty(op_stack)){ // should contain only DOLLAR and E
@@ -165,15 +175,27 @@ bool eol_possible(Token token){
     return false;
 }
 
-bool shift(Stack *expr_stack, Stack *op_stack, Token token) {
+ErrorCode shift(Stack *expr_stack, Stack *op_stack, Token token, Lexer *lexer) {
+    if (token.type == TOK_IDENTIFIER) {
+        // Could be a function
+        Token next_tok;
+        if (lexer_get_token(lexer, &next_tok) != ERR_LEX_OK) return LEXICAL_ERROR;
+        if (next_tok.type == TOK_LEFT_PAR) {
+            // This, is a function!
+            reduce_function_call(expr_stack, lexer, token.string_val);
+            return OK;
+        } else {
+            lexer_unget_token(lexer, next_tok);
+        }
+    }
     if(stack_find_term(expr_stack, op_stack)){
         Token less = { .type = TOK_PREC_OPEN };
         stack_push(expr_stack, less); // inserts '<' after the topmost terminal
         push_whole_stack(op_stack, expr_stack); // pushes back all popped items
         stack_push(expr_stack, token); // pushes the current token onto the stack
-        return true;
+        return OK;
     }
-    return false;
+    return INTERNAL_ERROR;
 }
 
 bool reduce(Stack *expr_stack, Stack *op_stack) {
@@ -451,6 +473,68 @@ ErrorCode reduce_data_type(Stack *expr_stack, TokType data_type) {
 
     Token expr_tok = { .type = TOK_E, .expr_val = expr };
     if (!stack_push(expr_stack, expr_tok)) return INTERNAL_ERROR;
+
+    return OK;
+}
+
+ErrorCode reduce_function_call(Stack *expr_stack, Lexer *lexer, String *id) {
+    Token tok;
+    do {
+        if (lexer_get_token(lexer, &tok) != ERR_LEX_OK) return LEXICAL_ERROR;
+    } while (tok.type == TOK_EOL);
+
+    if (tok.type == TOK_RIGHT_PAR) {
+        // No parameters
+        AstExpression *fun_call = ast_expr_create(EX_FUN, 0);
+        if (fun_call == NULL) return INTERNAL_ERROR;
+        fun_call->id = id;
+        Token fun_call_tok = { .type = TOK_E, .expr_val = fun_call };
+        if (!stack_push(expr_stack, fun_call_tok)) return INTERNAL_ERROR;
+        return OK;
+    }
+    lexer_unget_token(lexer, tok);
+
+    unsigned param_cnt = 0;
+
+    while (1) {
+        // Parse parameter
+        AstExpression *expr;
+        ErrorCode par_res = parse_expression(lexer, &expr);
+        if (par_res != OK) return par_res;
+        Token expr_token = { .type = TOK_E, .expr_val = expr };
+        if (!stack_push(expr_stack, expr_token)) return INTERNAL_ERROR;
+        param_cnt++;
+
+        // Get next token
+        do {
+            if (lexer_get_token(lexer, &tok) != ERR_LEX_OK) return LEXICAL_ERROR;
+        } while (tok.type == TOK_EOL);
+
+        if (tok.type == TOK_RIGHT_PAR) {
+            // End of function call
+            break;
+        }
+        // More parameters, next has to be a comma
+        if (tok.type != TOK_COMMA){
+            token_free(&tok);
+            return SYNTACTIC_ERROR;
+        }
+    }
+
+    AstExpression *fun_call = ast_expr_create(EX_FUN, param_cnt);
+    if (fun_call == NULL) return INTERNAL_ERROR;
+    fun_call->id = id;
+
+    // Adds params
+    for (unsigned i = 1; i <= param_cnt; i++) {
+        Token param_tok;
+        stack_top(expr_stack, &param_tok);
+        stack_pop(expr_stack);
+        fun_call->params[param_cnt - i] = param_tok.expr_val;
+    }
+
+    Token fun_call_tok = { .type = TOK_E, .expr_val = fun_call };
+    if (!stack_push(expr_stack, fun_call_tok)) return INTERNAL_ERROR;
 
     return OK;
 }
