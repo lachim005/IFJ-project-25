@@ -27,6 +27,9 @@ typedef enum data_type {
 #define IS_NUM(dt) \
     ((dt) == DT_NUM || (dt) == DT_INT || (dt) == DT_DOUBLE)
 
+#define IS_DATA_TYPE(dt) \
+    (IS_NUM(dt) || (dt) == DT_STRING || (dt) == DT_BOOL || (dt) == DT_NULL)
+
 /// Type of expression
 typedef enum ast_expr_type {
     EX_ID,

@@ -181,6 +181,8 @@ SymtableItem *symtable_insert(Symtable *st, const char *key) {
         st->data[use_idx].name = str_init();
         if (!st->data[use_idx].name) return NULL;
         str_append_string(st->data[use_idx].name, key);
+        st->data[use_idx].data_type = DT_UNKNOWN;
+        st->data[use_idx].is_defined = true;
         st->data[use_idx].type = SYM_VAR;
         st->state[use_idx] = SLOT_OCCUPIED;
         st->size++;
@@ -228,7 +230,7 @@ bool append_scope_id(String *s, int scope) {
 bool find_local_var(Symtable *st, char *var_name, SymtableItem **out_item) {
     // Assumes format var_name@scope_id
     String *s = str_init();
-    if (s == NULL) return false;
+    if (s == NULL) return true;
     
     for (int i = st->scope_stack_count - 1; i >= 0; i--) {
         // Constructs symtable name
@@ -254,7 +256,7 @@ bool find_local_var(Symtable *st, char *var_name, SymtableItem **out_item) {
     return true;
 }
 
-SymtableItem *add_var_at_current_scope(Symtable *st, char *var_name) {
+SymtableItem *add_var_at_current_scope(Symtable *st, char *var_name, DataType data_type) {
     // Assumes format var_name@scope_id
     String *s = str_init();
     if (s == NULL) return NULL;
@@ -269,6 +271,13 @@ SymtableItem *add_var_at_current_scope(Symtable *st, char *var_name) {
     
     SymtableItem *result = symtable_insert(st, s->val);
     str_free(&s);
+    if (result == NULL) {
+        return NULL;
+    }
+
+    str_clear(result->name);
+    str_append_string(result->name, var_name);
+    result->data_type = data_type;
     return result;
 }
 
@@ -432,6 +441,34 @@ bool symtable_contains_function(Symtable *st, char *var_name, int param_count, S
 
     str_free(&s);
     return result;
+}
+
+SymtableItem *symtable_add_global_var(Symtable *st, char *var_name, DataType data_type, bool is_defined) {
+    SymtableItem *result = symtable_insert(st, var_name);
+    if (result == NULL) {
+        return NULL;
+    }
+
+    str_clear(result->name);
+    str_append_string(result->name, var_name);
+    result->data_type = data_type;
+    result->is_defined = is_defined;
+    result->type = SYM_GLOBAL_VAR;
+    return result;
+}
+
+bool symtable_contains_global_var(Symtable *st, char *var_name, SymtableItem **out_item) {
+    SymtableItem *item = symtable_find(st, var_name);
+    if (item != NULL && item->type == SYM_GLOBAL_VAR) {
+        if (out_item) {
+            *out_item = item;
+        }
+        return true;
+    }
+    if (out_item) {
+        *out_item = NULL;
+    }
+    return false;
 }
 
 void symtable_increment_undefined_items_counter(Symtable *st) {

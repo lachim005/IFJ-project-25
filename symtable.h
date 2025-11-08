@@ -11,6 +11,7 @@
 #define _SYMTABLE_H_
 
 #include "string.h"
+#include "ast.h"
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -32,6 +33,7 @@ typedef struct symtable_item {
     SymType type;
     size_t param_count;
     bool is_defined;
+    DataType data_type;
 } SymtableItem;
 
 typedef struct symtable {
@@ -75,7 +77,7 @@ int current_scope(Symtable *st);
 bool find_local_var(Symtable *st, char *var_name, SymtableItem **out_item);
 
 /// Adds a new entry to the symtable for the var in the current scope. Returns the new entry or NULL if something fails
-SymtableItem *add_var_at_current_scope(Symtable *st, char *var_name);
+SymtableItem *add_var_at_current_scope(Symtable *st, char *var_name, DataType data_type);
 
 /// Checks if the variable is declared in the current scope
 bool contains_var_at_current_scope(Symtable *st, char *var_name);
@@ -100,6 +102,12 @@ bool symtable_contains_setter(Symtable *st, char *var_name, SymtableItem **out_i
 
 /// Checks if a function with the given name and parameter count exists in the symtable
 bool symtable_contains_function(Symtable *st, char *var_name, int param_count, SymtableItem **out_item);
+
+/// Adds a new entry to the symtable for the global variable. Returns the new entry or NULL if something fails
+SymtableItem *symtable_add_global_var(Symtable *st, char *var_name, DataType data_type, bool is_defined);
+
+/// Checks if a global variable with the given name exists in the symtable
+bool symtable_contains_global_var(Symtable *st, char *var_name, SymtableItem **out_item);
 
 /// Increments the undefined items counter
 void symtable_increment_undefined_items_counter(Symtable *st);

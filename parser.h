@@ -63,4 +63,7 @@ ErrorCode check_while_statement(Lexer *lexer, Symtable *globaltable, Symtable *l
 /// Checks return statement
 ErrorCode check_return_statement(Lexer *lexer, Symtable *globaltable, Symtable *localtable);
 
+/// Semantic analysis of expression - checks definitions and type compatibility
+ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, Symtable *localtable, DataType *out_type);
+
 #endif

@@ -91,11 +91,11 @@
 } while(0)
 
 /// Macro for adding variable to symbol table with redefinition check
-#define ADD_VARIABLE(symtable, name, error_token) do { \
+#define ADD_VARIABLE(symtable, name, error_token, type) do { \
     if (contains_var_at_current_scope(symtable, name)) { \
         RETURN_CODE(SEM_REDEFINITION, error_token); \
     } \
-    SymtableItem *new_item = add_var_at_current_scope(symtable, name); \
+    SymtableItem *new_item = add_var_at_current_scope(symtable, name, type); \
     if (new_item == NULL) { \
         RETURN_CODE(INTERNAL_ERROR, error_token); \
     } \
@@ -103,27 +103,26 @@
 } while(0)
 
 /// Macro for adding global variable to symbol table with redefinition check
-#define ADD_GLOBAL_VARIABLE(symtable, name, error_token) do { \
-    SymtableItem *existing_item = symtable_find(symtable, name); \
-    if (existing_item != NULL) { \
-        if (existing_item->is_defined) { \
+#define ADD_GLOBAL_VARIABLE(symtable, name, error_token, type) do { \
+    SymtableItem *existing_item = NULL; \
+    if (symtable_contains_global_var(symtable, name, &existing_item)) { \
+        if (existing_item != NULL && existing_item->is_defined) { \
             RETURN_CODE(SEM_REDEFINITION, error_token); \
         } \
-        if (!existing_item->is_defined) { \
+        if (existing_item != NULL && !existing_item->is_defined) { \
             existing_item->is_defined = 1; \
             symtable_decrement_undefined_items_counter(symtable); \
         } \
     } else { \
-        SymtableItem *new_item = symtable_insert(symtable, name); \
+        SymtableItem *new_item = symtable_add_global_var(symtable, name, type, 1); \
         if (new_item == NULL) { \
             RETURN_CODE(INTERNAL_ERROR, error_token); \
         } \
-        new_item->is_defined = 1; \
     } \
 } while(0)
 
 /// Macro for checking variable expression - checks if variable exists locally or as setter globally
-#define CHECK_VARIABLE_EXPRESSION(localtable, globaltable, name, error_token) do { \
+#define CHECK_VARIABLE_EXPRESSION(localtable, globaltable, name, error_token, expr_type) do { \
     SymtableItem *local_var = NULL; \
     if (!find_local_var(localtable, name, &local_var)) { \
         RETURN_CODE(INTERNAL_ERROR, error_token); \
@@ -137,6 +136,8 @@
             } \
             symtable_increment_undefined_items_counter(globaltable); \
         } \
+    } else { \
+        local_var->data_type = expr_type; \
     } \
 } while(0)
 
@@ -261,10 +262,7 @@ ErrorCode check_class_body(Lexer *lexer, Symtable *symtable) {
 /// Checks the global variable declaration
 ErrorCode check_global_var(Lexer *lexer, Symtable *symtable, String *var_name) {
     Token token;
-    token.type = TOK_GLOBAL_VAR;
-    
-    // Add variable to symbol table with redefinition check
-    ADD_GLOBAL_VARIABLE(symtable, var_name->val, token);
+    token.type = TOK_GLOBAL_VAR;    // Add variable to symbol table with redefinition check
     
     CHECK_TOKEN(lexer, token);
     if (token.type == TOK_OP_ASSIGN) {
@@ -274,6 +272,17 @@ ErrorCode check_global_var(Lexer *lexer, Symtable *symtable, String *var_name) {
         if (ec != OK) {
             RETURN_CODE(ec, token);
         }
+
+        DataType expr_type;
+        // Check expression type compatibility
+        ec = semantic_check_expression(expr, symtable, NULL, &expr_type);
+        if (ec != OK) {
+            RETURN_CODE(ec, token);
+        }
+
+        // Add variable to symbol table with redefinition check
+        ADD_GLOBAL_VARIABLE(symtable, var_name->val, token, expr_type);
+
         CHECK_TOKEN(lexer, token);
     }
 
@@ -363,7 +372,7 @@ ErrorCode checks_setter(Lexer *lexer, Symtable *globaltable, Symtable *localtabl
     }
 
     // Insert parameter into local symbol table
-    if (add_var_at_current_scope(localtable, token.string_val->val) == NULL) {
+    if (add_var_at_current_scope(localtable, token.string_val->val, DT_UNKNOWN) == NULL) {
         RETURN_CODE(INTERNAL_ERROR, token);
     }
 
@@ -463,7 +472,7 @@ ErrorCode check_function(Lexer *lexer, Symtable *globaltable, Symtable *localtab
         }
 
         // Insert parameter into local symbol table
-        if (add_var_at_current_scope(localtable, token.string_val->val) == NULL) {
+        if (add_var_at_current_scope(localtable, token.string_val->val, DT_UNKNOWN) == NULL) {
             RETURN_CODE(INTERNAL_ERROR, token);
         }
         param_count++;
@@ -594,11 +603,20 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable) 
 
                 break;
 
-            default:
-                ec = parse_expression(lexer, NULL);
+            default: {
+                AstExpression *expr;
+                ec = parse_expression(lexer, &expr);
                 if (ec != OK) {
                     RETURN_CODE(ec, token);
                 }
+
+                // Analyze expression type compatibility
+                DataType expr_type;
+                ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
+                if (ec != OK) {
+                    RETURN_CODE(ec, token);
+                }
+            }
         }
     }
 }
@@ -615,6 +633,7 @@ ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localta
 
     // Check if is assigned
     Token token;
+    DataType expr_type = DT_UNKNOWN;
     token.type = TOK_OP_ASSIGN;
 
     CHECK_TOKEN(lexer, token);
@@ -622,6 +641,12 @@ ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localta
         // Parse assignment expression
         AstExpression *expr;
         ErrorCode ec = parse_expression(lexer, &expr);
+        if (ec != OK) {
+            RETURN_CODE(ec, token);
+        }
+
+        // Check expression type compatibility
+        ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
         if (ec != OK) {
             RETURN_CODE(ec, token);
         }
@@ -634,7 +659,7 @@ ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localta
     }
 
     // Add variable to symbol table with redefinition check
-    ADD_VARIABLE(localtable, identifier.string_val->val, identifier);
+    ADD_VARIABLE(localtable, identifier.string_val->val, identifier, expr_type);
 
     RETURN_CODE(OK, token);
 }
@@ -646,7 +671,6 @@ ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable,
 
     CHECK_TOKEN(lexer, token);
     if (token.type == TOK_OP_ASSIGN) {
-        CHECK_VARIABLE_EXPRESSION(localtable, globaltable, identifier.string_val->val, identifier);
         // Find variable in symbol tables
         // Parse assignment expression
         AstExpression *expr;
@@ -654,6 +678,16 @@ ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable,
         if (ec != OK) {
             RETURN_CODE(ec, token);
         }
+
+        // Check expression type compatibility
+        DataType expr_type;
+        ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
+        if (ec != OK) {
+            RETURN_CODE(ec, token);
+        }
+
+        // Check variable existence and update its type if necessary
+        CHECK_VARIABLE_EXPRESSION(localtable, globaltable, identifier.string_val->val, identifier, expr_type);
 
         CHECK_TOKEN(lexer, token);
     } else if (token.type == TOK_LEFT_PAR) {
@@ -671,6 +705,13 @@ ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable,
         // Parse function call expression
         AstExpression *expr;
         ErrorCode ec = parse_expression(lexer, &expr);
+        if (ec != OK) {
+            RETURN_CODE(ec, token);
+        }
+
+        // Check expression type compatibility
+        DataType expr_type;
+        ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
         if (ec != OK) {
             RETURN_CODE(ec, token);
         }
@@ -698,6 +739,13 @@ ErrorCode check_if_statement(Lexer *lexer, Symtable *globaltable, Symtable *loca
     // Parse condition expression
     AstExpression *expr;
     ErrorCode ec = parse_expression(lexer, &expr);
+    if (ec != OK) {
+        RETURN_CODE(ec, token);
+    }
+
+    // Check expression type compatibility
+    DataType expr_type;
+    ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
     if (ec != OK) {
         RETURN_CODE(ec, token);
     }
@@ -783,6 +831,13 @@ ErrorCode check_while_statement(Lexer *lexer, Symtable *globaltable, Symtable *l
         RETURN_CODE(ec, token);
     }
 
+    // Check expression type compatibility
+    DataType expr_type;
+    ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
+    if (ec != OK) {
+        RETURN_CODE(ec, token);
+    }
+
     CHECK_TOKEN(lexer, token);
     if (token.type != TOK_RIGHT_PAR) {
         RETURN_CODE(SYNTACTIC_ERROR, token);
@@ -831,12 +886,440 @@ ErrorCode check_return_statement(Lexer *lexer, Symtable *globaltable, Symtable *
         RETURN_CODE(ec, token);
     }
 
+    // Check expression type compatibility
+    DataType expr_type;
+    ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
+    if (ec != OK) {
+        RETURN_CODE(ec, token);
+    }
+
     CHECK_TOKEN(lexer, token);
     if (token.type != TOK_EOL) {
         RETURN_CODE(SYNTACTIC_ERROR, token);
     }
 
     RETURN_CODE(OK, token);
+}
+
+/// Semantic analysis of expression - checks definitions and type compatibility
+/// Returns error code and inferred type through out_type parameter
+ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, Symtable *localtable, DataType *out_type) {
+    if (expr == NULL) {
+        if (out_type != NULL) {
+            *out_type = DT_UNKNOWN;
+        }
+        return OK;
+    }
+
+    // Result type
+    DataType result_type = DT_UNKNOWN;
+    ErrorCode ec = OK;
+
+    switch (expr->type) {
+        case EX_ID: {
+            SymtableItem *local_var = NULL;
+            if (!find_local_var(localtable, expr->id->val, &local_var)) {
+                return INTERNAL_ERROR;
+            }
+
+            if (local_var != NULL) {
+                result_type = local_var->data_type;
+                break;
+            } 
+
+            // Check getter
+            SymtableItem *getter_item = NULL;
+            if (symtable_contains_getter(globaltable, expr->id->val, &getter_item)) {
+                result_type = DT_UNKNOWN; // Getter return type is unknown
+                break;
+            }
+
+            // Create new getter entry
+            SymtableItem *new_getter = symtable_add_getter(globaltable, expr->id->val, 0);
+            if (new_getter == NULL) {
+                return INTERNAL_ERROR;
+            }
+
+            symtable_increment_undefined_items_counter(globaltable);
+            result_type = DT_UNKNOWN;
+
+            break;
+        }
+
+        case EX_GLOBAL_ID: {
+            SymtableItem *global_var = NULL;
+            if (!symtable_contains_global_var(globaltable, expr->id->val, &global_var)) {
+                return INTERNAL_ERROR;
+            }
+
+            if (global_var != NULL) {
+                result_type = global_var->data_type;
+                break;
+            } 
+
+            // Create new global variable entry
+            SymtableItem *new_global_var = symtable_add_global_var(globaltable, expr->id->val, DT_UNKNOWN, 0);
+            if (new_global_var == NULL) {
+                return INTERNAL_ERROR;
+            }
+
+            symtable_increment_undefined_items_counter(globaltable);
+            result_type = DT_UNKNOWN;
+
+            break;
+        }
+
+        case EX_FUN: {
+            // Check function existence
+            SymtableItem *function_item = NULL;
+            if (!symtable_contains_function(globaltable, expr->id->val, expr->child_count, &function_item)) {
+                // Create new function entry
+                SymtableItem *new_function = symtable_add_function(globaltable, expr->id->val, expr->child_count, 0);
+                if (new_function == NULL) {
+                    return INTERNAL_ERROR;
+                }
+                symtable_increment_undefined_items_counter(globaltable);
+            }
+
+            // Check argument expressions
+            for (int i = 0; i < expr->child_count; i++) {
+                DataType arg_type;
+                ec = semantic_check_expression(expr->params[i], globaltable, localtable, &arg_type);
+                if (ec != OK) {
+                    return ec;
+                }
+            }
+
+            result_type = DT_UNKNOWN; // Function return type is unknown
+            break;
+        }
+
+        case EX_ADD:
+        case EX_SUB:
+        case EX_MUL:
+        case EX_DIV:
+            if (expr->child_count != 2) {
+                return INTERNAL_ERROR;
+            }
+
+            DataType left_type;
+            ec = semantic_check_expression(expr->params[0], globaltable, localtable, &left_type);
+            if (ec != OK) {
+                return ec;
+            }
+
+            DataType right_type;
+            ec = semantic_check_expression(expr->params[1], globaltable, localtable, &right_type);
+            if (ec != OK) {
+                return ec;
+            }
+
+            if (left_type == DT_BOOL || right_type == DT_BOOL) {
+                return SEM_TYPE_COMPAT;
+            }
+
+            if (left_type == DT_NULL || right_type == DT_NULL) {
+                return SEM_TYPE_COMPAT;
+            }
+
+            if (left_type == DT_UNKNOWN && right_type == DT_UNKNOWN) {
+                result_type = DT_UNKNOWN;
+                break;
+            }
+    
+            if (expr->type == EX_ADD) {
+                // String concatenation
+                if (left_type == DT_STRING && right_type == DT_STRING) {
+                    result_type = DT_STRING;
+                    break;
+                }
+                if (left_type == IS_NUM(left_type) && right_type == IS_NUM(right_type)) {
+                    result_type = (left_type == DT_DOUBLE || right_type == DT_DOUBLE) ? DT_DOUBLE : DT_INT;
+                    break;
+                }
+
+                if (left_type == DT_STRING && right_type == DT_UNKNOWN) {
+                    result_type = DT_UNKNOWN;
+                    break;
+                }
+
+                if ((left_type == DT_UNKNOWN || right_type == DT_UNKNOWN) && !(left_type == DT_STRING || right_type == DT_STRING)) {
+                    result_type = DT_UNKNOWN;
+                    break;
+                }
+
+                return SEM_TYPE_COMPAT;
+            }
+
+            if (expr->type == EX_MUL) {
+                if (IS_NUM(left_type) && IS_NUM(right_type)) {
+                    result_type = (left_type == DT_DOUBLE || right_type == DT_DOUBLE) ? DT_DOUBLE : DT_INT;
+                    break;
+                }
+
+                if ((left_type == DT_STRING && right_type == DT_INT)) {
+                    result_type = DT_STRING;
+                    break;
+                }
+
+                if (left_type == DT_STRING && right_type == DT_UNKNOWN) {
+                    result_type = DT_UNKNOWN;
+                    break;
+                }
+
+                if ((left_type == DT_UNKNOWN || right_type == DT_UNKNOWN) && !(left_type == DT_STRING || right_type == DT_STRING)) {
+                    result_type = DT_UNKNOWN;
+                    break;
+                }
+
+                return SEM_TYPE_COMPAT;
+            }
+
+            if (expr->type == EX_SUB || expr->type == EX_DIV) {
+                if (IS_NUM(left_type) && IS_NUM(right_type)) {
+                    result_type = (left_type == DT_DOUBLE || right_type == DT_DOUBLE) ? DT_DOUBLE : DT_INT;
+                    break;
+                }
+
+                if ((left_type == DT_UNKNOWN || right_type == DT_UNKNOWN)) {
+                    result_type = DT_UNKNOWN;
+                    break;
+                }
+
+                return SEM_TYPE_COMPAT;
+            }
+
+            break;
+
+    case EX_LESS:
+    case EX_GREATER:
+    case EX_LESS_EQ:
+    case EX_GREATER_EQ: {
+        if (expr->child_count != 2) {
+            return INTERNAL_ERROR;
+        }
+
+        DataType left_type;
+        ec = semantic_check_expression(expr->params[0], globaltable, localtable, &left_type);
+        if (ec != OK) {
+            return ec;
+        }
+
+        DataType right_type;
+        ec = semantic_check_expression(expr->params[1], globaltable, localtable, &right_type);
+        if (ec != OK) {
+            return ec;
+        }
+
+        if (left_type == DT_STRING || right_type == DT_STRING) {
+            return SEM_TYPE_COMPAT;
+        }
+
+        if (left_type == DT_NULL || right_type == DT_NULL) {
+            return SEM_TYPE_COMPAT;
+        }
+
+        if (left_type == DT_BOOL || right_type == DT_BOOL) {
+            return SEM_TYPE_COMPAT;
+        }
+
+        if ((left_type == DT_UNKNOWN || right_type == DT_UNKNOWN)) {
+            result_type = DT_UNKNOWN;
+            break;
+        }
+
+        if (IS_NUM(left_type) && IS_NUM(right_type)) {
+            result_type = DT_BOOL;
+            break;
+        }
+
+        return SEM_TYPE_COMPAT;
+    }
+
+    case EX_EQ:
+    case EX_NOT_EQ: {
+        if (expr->child_count != 2) {
+            return INTERNAL_ERROR;
+        }
+
+        DataType left_type;
+        ec = semantic_check_expression(expr->params[0], globaltable, localtable, &left_type);
+        if (ec != OK) {
+            return ec;
+        }
+
+        DataType right_type;
+        ec = semantic_check_expression(expr->params[1], globaltable, localtable, &right_type);
+        if (ec != OK) {
+            return ec;
+        }
+
+        result_type = DT_BOOL;
+        break;
+    }
+
+    case EX_AND:
+    case EX_OR: {
+        if (expr->child_count != 2) {
+            return INTERNAL_ERROR;
+        }
+
+        DataType left_type;
+        ec = semantic_check_expression(expr->params[0], globaltable, localtable, &left_type);
+        if (ec != OK) {
+            return ec;
+        } 
+        DataType right_type;
+        ec = semantic_check_expression(expr->params[1], globaltable, localtable, &right_type);
+        if (ec != OK) {
+            return ec;
+        }
+
+        if (left_type == DT_BOOL && right_type == DT_BOOL) {
+            result_type = DT_BOOL;
+            break;
+        }
+
+        return SEM_TYPE_COMPAT;
+    }
+
+    case EX_IS: {
+        if (expr->child_count != 2) {
+            return INTERNAL_ERROR;
+        }
+
+        DataType left_type;
+        ec = semantic_check_expression(expr->params[0], globaltable, localtable, &left_type);
+        if (ec != OK) {
+            return ec;
+        } 
+        DataType right_type;
+        ec = semantic_check_expression(expr->params[1], globaltable, localtable, &right_type);
+        if (ec != OK) {
+            return ec;
+        }
+
+        if (right_type == EX_DATA_TYPE) {
+            result_type = DT_BOOL;
+            break;
+        }
+
+        return SEM_TYPE_COMPAT;
+    }
+
+    case EX_TERNARY: {
+        if (expr->child_count != 3) {
+            return INTERNAL_ERROR;
+        }
+
+        DataType cond_type;
+        ec = semantic_check_expression(expr->params[0], globaltable, localtable, &cond_type);
+        if (ec != OK) {
+            return ec;
+        }
+
+        DataType true_type;
+        ec = semantic_check_expression(expr->params[1], globaltable, localtable, &true_type);
+        if (ec != OK) {
+            return ec;
+        }
+
+        DataType false_type;
+        ec = semantic_check_expression(expr->params[2], globaltable, localtable, &false_type);
+        if (ec != OK) {
+            return ec;
+        }
+
+        if (cond_type != DT_BOOL && cond_type != DT_UNKNOWN) {
+            return SEM_TYPE_COMPAT;
+        }
+
+        if (true_type == false_type) {
+            result_type = true_type;
+            break;
+        }
+
+        if (IS_DATA_TYPE(true_type) && IS_DATA_TYPE(false_type)) {
+            result_type = DT_UNKNOWN;
+            break;
+        }
+
+        if (true_type == DT_UNKNOWN || false_type == DT_UNKNOWN) {
+            result_type = DT_UNKNOWN;
+            break;
+        }
+
+        return SEM_TYPE_COMPAT;
+    }
+
+    case EX_NOT:
+        if (expr->child_count != 1) {
+            return INTERNAL_ERROR;
+        }
+
+        DataType child_type;
+        ec = semantic_check_expression(expr->params[0], globaltable, localtable, &child_type);
+        if (ec != OK) {
+            return ec;
+        }
+
+        result_type = DT_BOOL;
+
+        return SEM_TYPE_COMPAT;
+
+    case EX_INT:
+        result_type = DT_INT;
+        break;
+
+    case EX_DOUBLE:
+        result_type = DT_DOUBLE;
+        break;
+
+    case EX_BOOL:
+        result_type = DT_BOOL;
+        break;
+
+    case EX_NULL:
+        result_type = DT_NULL;
+        break;
+
+    case EX_STRING:
+        result_type = DT_STRING;
+        break;
+
+    case EX_NEGATE: {
+        if (expr->child_count != 1) {
+            return INTERNAL_ERROR;
+        }
+
+        DataType child_type;
+        ec = semantic_check_expression(expr->params[0], globaltable, localtable, &child_type);
+        if (ec != OK) {
+            return ec;
+        }
+
+        if (IS_NUM(child_type)) {
+            result_type = child_type;
+            break;
+        }
+
+        if (child_type == DT_UNKNOWN) {
+            result_type = DT_UNKNOWN;
+            break;
+        }
+
+        return SEM_TYPE_COMPAT;
+    }
+
+    case EX_DATA_TYPE:
+        result_type = DT_UNKNOWN;
+        break;
+
+    default:
+        return INTERNAL_ERROR;
+    }
+
+    return OK;
 }
 
 ErrorCode parse() {
