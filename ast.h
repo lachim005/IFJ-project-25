@@ -64,8 +64,6 @@ typedef enum ast_expr_type {
 /// Structure holding expression
 typedef struct ast_expression AstExpression;
 struct ast_expression {
-    /// Identifier for EX_ID or EX_FUN
-    String *id;
     /// Subtrees for operands or function parameters
     AstExpression **params;
     /// Number of children in params, 1 - unary, 2 - binary, 3 - ternary, everything for functions (0 - N)

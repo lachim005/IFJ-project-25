@@ -339,7 +339,7 @@ ErrorCode reduce_identifier(Stack *expr_stack, TokType id_type, AstExprType expr
     stack_top(expr_stack, &top);
     stack_pop(expr_stack); // Pop id
     stack_pop(expr_stack); // Pop <
-    expr->id = top.string_val;
+    expr->string_val = top.string_val;
 
     Token expr_tok = { .type = TOK_E, .expr_val = expr };
     if (!stack_push(expr_stack, expr_tok)) return INTERNAL_ERROR;
@@ -501,7 +501,7 @@ ErrorCode reduce_function_call(Stack *expr_stack, Lexer *lexer, String *id) {
         // No parameters
         AstExpression *fun_call = ast_expr_create(EX_FUN, 0);
         if (fun_call == NULL) return INTERNAL_ERROR;
-        fun_call->id = id;
+        fun_call->string_val = id;
         Token fun_call_tok = { .type = TOK_E, .expr_val = fun_call };
         if (!stack_push(expr_stack, fun_call_tok)) return INTERNAL_ERROR;
         return OK;
@@ -537,7 +537,7 @@ ErrorCode reduce_function_call(Stack *expr_stack, Lexer *lexer, String *id) {
 
     AstExpression *fun_call = ast_expr_create(EX_FUN, param_cnt);
     if (fun_call == NULL) return INTERNAL_ERROR;
-    fun_call->id = id;
+    fun_call->string_val = id;
 
     // Adds params
     for (unsigned i = 1; i <= param_cnt; i++) {
