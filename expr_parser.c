@@ -65,6 +65,7 @@ int calculate_table_idx(TokType type){
     case TOK_LIT_INT: case TOK_LIT_DOUBLE: case TOK_LIT_STRING:
     case TOK_TYPE_NULL: case TOK_TYPE_NUM: case TOK_TYPE_STRING: case TOK_TYPE_BOOL:
     case TOK_KW_TRUE: case TOK_KW_FALSE: case TOK_KW_NULL:
+    case TOK_KW_IFJ:
         return 12; // operands
     case TOK_LEFT_PAR: return 13; // (
     case TOK_RIGHT_PAR: return 14; // )
@@ -183,11 +184,12 @@ ErrorCode shift(Stack *expr_stack, Stack *op_stack, Token token, Lexer *lexer) {
         if (lexer_get_token(lexer, &next_tok) != ERR_LEX_OK) return LEXICAL_ERROR;
         if (next_tok.type == TOK_LEFT_PAR) {
             // This, is a function!
-            reduce_function_call(expr_stack, lexer, token.string_val);
-            return OK;
+            return reduce_function_call(expr_stack, lexer, token.string_val);
         } else {
             lexer_unget_token(lexer, next_tok);
         }
+    } else if (token.type == TOK_KW_IFJ) {
+        return reduce_buildtin_call(expr_stack, lexer);
     }
     if(stack_find_term(expr_stack, op_stack)){
         Token less = { .type = TOK_PREC_OPEN };
@@ -547,6 +549,41 @@ ErrorCode reduce_function_call(Stack *expr_stack, Lexer *lexer, String *id) {
 
     Token fun_call_tok = { .type = TOK_E, .expr_val = fun_call };
     if (!stack_push(expr_stack, fun_call_tok)) return INTERNAL_ERROR;
+
+    return OK;
+}
+
+ErrorCode reduce_buildtin_call(Stack *expr_stack, Lexer *lexer) {
+    // We already covered the 'Ifj' keyword
+    // Now we cover the dot
+    Token tok;
+    if (lexer_get_token(lexer, &tok) != ERR_LEX_OK) return LEXICAL_ERROR;
+    if (tok.type != TOK_OP_DOT) {
+        token_free(&tok);
+        return SYNTACTIC_ERROR;
+    }
+    // Now the id
+    do {
+        if (lexer_get_token(lexer, &tok) != ERR_LEX_OK) return LEXICAL_ERROR;
+    } while (tok.type == TOK_EOL);
+    if (tok.type != TOK_IDENTIFIER) {
+        token_free(&tok);
+        return SYNTACTIC_ERROR;
+    }
+    // And (
+    if (lexer_get_token(lexer, &tok) != ERR_LEX_OK) return LEXICAL_ERROR;
+    if (tok.type != TOK_LEFT_PAR) {
+        token_free(&tok);
+        return SYNTACTIC_ERROR;
+    }
+
+    // This puts the function call to the top of the stack
+    ErrorCode res = reduce_function_call(expr_stack, lexer, tok.string_val);
+    if (res != OK) return res;
+
+    // We have to change it's type to builtin
+    stack_top(expr_stack, &tok);
+    tok.expr_val->type = EX_BUILTIN_FUN;
 
     return OK;
 }

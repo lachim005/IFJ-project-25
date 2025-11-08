@@ -41,3 +41,5 @@ ErrorCode reduce_literal(Stack *expr_stack, TokType lit_type, AstExprType expr_t
 ErrorCode reduce_data_type(Stack *expr_stack, TokType data_type);
 
 ErrorCode reduce_function_call(Stack *expr_stack, Lexer *lexer, String *id);
+
+ErrorCode reduce_buildtin_call(Stack *expr_stack, Lexer *lexer);

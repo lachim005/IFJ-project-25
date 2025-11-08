@@ -57,6 +57,7 @@ typedef enum ast_expr_type {
     EX_STRING,
     EX_NEGATE, // Unary -
     EX_DATA_TYPE,
+    EX_BUILTIN_FUN,
 } AstExprType;
 
 /// Structure holding expression
