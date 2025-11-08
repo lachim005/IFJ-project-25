@@ -1348,10 +1348,11 @@ ErrorCode parse() {
         return SYNTACTIC_ERROR;
     }
 
-    if (check_class_program(lexer, symtable) != OK) {
+    ErrorCode ec = check_class_body(lexer, symtable);
+    if (ec != OK) {
         symtable_free(symtable);
         lexer_free(lexer);
-        return SYNTACTIC_ERROR;
+        return ec;
     }
 
     if (symtable_get_undefined_items_count(symtable) > 0) {
@@ -1365,6 +1366,10 @@ ErrorCode parse() {
 }
 
 int main() {
-    parse();
+    ErrorCode ec = parse();
+    if (ec != OK) {
+        fprintf(stderr, "Error: %s\n", get_error_message(ec));
+        return ec;
+    }
     return 0;
 }
