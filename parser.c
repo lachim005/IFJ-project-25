@@ -152,20 +152,20 @@
 /// Returns true if all functions were successfully added, false otherwise
 bool add_builtin_functions(Symtable *symtab) {
     // I/O functions
-    if (symtable_insert(symtab, "#read_str$0") == NULL) return false;   // Ifj.read_str() -> String | Null
-    if (symtable_insert(symtab, "#read_num$0") == NULL) return false;   // Ifj.read_num() -> Num | Null
-    if (symtable_insert(symtab, "#write$1") == NULL) return false;      // Ifj.write(term) -> Null
+    if (add_builtin_function(symtab, "#read_str", 0, DT_STRING) == NULL) return false;   // Ifj.read_str() -> String | Null
+    if (add_builtin_function(symtab, "#read_num", 0, DT_DOUBLE) == NULL) return false;   // Ifj.read_num() -> Num | Null
+    if (add_builtin_function(symtab, "#write", 1, DT_NULL) == NULL) return false;        // Ifj.write(term) -> Null
 
     // Conversion functions
-    if (symtable_insert(symtab, "#floor$1") == NULL) return false;      // Ifj.floor(Num) -> Num
-    if (symtable_insert(symtab, "#str$1") == NULL) return false;        // Ifj.str(term) -> String
+    if (add_builtin_function(symtab, "#floor", 1, DT_INT) == NULL) return false;         // Ifj.floor(Num) -> Num
+    if (add_builtin_function(symtab, "#str", 1, DT_STRING) == NULL) return false;        // Ifj.str(term) -> String
 
     // String functions
-    if (symtable_insert(symtab, "#length$1") == NULL) return false;     // Ifj.length(String) -> Num
-    if (symtable_insert(symtab, "#substring$3") == NULL) return false;  // Ifj.substring(String, Num, Num) -> String | Null
-    if (symtable_insert(symtab, "#strcmp$2") == NULL) return false;     // Ifj.strcmp(String, String) -> Num
-    if (symtable_insert(symtab, "#ord$2") == NULL) return false;        // Ifj.ord(String, Num) -> Num
-    if (symtable_insert(symtab, "#chr$1") == NULL) return false;        // Ifj.chr(Num) -> String
+    if (add_builtin_function(symtab, "#length", 1, DT_INT) == NULL) return false;        // Ifj.length(String) -> Num
+    if (add_builtin_function(symtab, "#substring", 3, DT_STRING) == NULL) return false;  // Ifj.substring(String, Num, Num) -> String | Null
+    if (add_builtin_function(symtab, "#strcmp", 2, DT_INT) == NULL) return false;        // Ifj.strcmp(String, String) -> Num
+    if (add_builtin_function(symtab, "#ord", 2, DT_INT) == NULL) return false;           // Ifj.ord(String, Num) -> Num
+    if (add_builtin_function(symtab, "#chr", 1, DT_STRING) == NULL) return false;        // Ifj.chr(Num) -> String
 
     return true;
 }
@@ -258,7 +258,7 @@ ErrorCode check_class_body(Lexer *lexer, Symtable *symtable) {
                 }
                 break;
 
-            default:
+            default: 
                 RETURN_CODE(SYNTACTIC_ERROR, token);
         }
     }
@@ -286,7 +286,7 @@ ErrorCode check_global_var(Lexer *lexer, Symtable *symtable, String *var_name) {
         }
 
         // Add variable to symbol table with redefinition check
-        ADD_GLOBAL_VARIABLE(symtable, var_name->val, token, expr_type);
+        ADD_GLOBAL_VARIABLE(symtable, var_name->val, token, DT_UNKNOWN);
 
         CHECK_TOKEN(lexer, token);
     }
@@ -392,7 +392,7 @@ ErrorCode checks_setter(Lexer *lexer, Symtable *globaltable, Symtable *localtabl
     }
 
     // Check setter body
-    ErrorCode ec = check_body(lexer, globaltable, localtable);
+    ErrorCode ec = check_body(lexer, globaltable, localtable, true);
     if (ec != OK) {
         RETURN_CODE(ec, token);
     }
@@ -424,13 +424,8 @@ ErrorCode check_getter(Lexer *lexer, Symtable *globaltable, Symtable *localtable
     Token token;
     INIT_TOKEN(token, TOK_LEFT_BRACE);
 
-    CHECK_TOKEN(lexer, token);
-    if (token.type != TOK_LEFT_BRACE) {
-        RETURN_CODE(SYNTACTIC_ERROR, token);
-    }
-
     // Check getter body
-    ErrorCode ec = check_body(lexer, globaltable, localtable);
+    ErrorCode ec = check_body(lexer, globaltable, localtable, true);
     if (ec != OK) {
         RETURN_CODE(ec, token);
     }
@@ -458,11 +453,6 @@ ErrorCode check_function(Lexer *lexer, Symtable *globaltable, Symtable *localtab
 
     Token token;
     INIT_TOKEN(token, TOK_LEFT_PAR);
-
-    CHECK_TOKEN(lexer, token);
-    if (token.type != TOK_LEFT_PAR) {
-        RETURN_CODE(SYNTACTIC_ERROR, token);
-    }
 
     // Parse function parameters
     int param_count = 0;
@@ -501,7 +491,7 @@ ErrorCode check_function(Lexer *lexer, Symtable *globaltable, Symtable *localtab
     }
 
     // Check function body
-    ErrorCode ec = check_body(lexer, globaltable, localtable);
+    ErrorCode ec = check_body(lexer, globaltable, localtable, true);
     if (ec != OK) {
         RETURN_CODE(ec, token);
     }
@@ -523,7 +513,7 @@ ErrorCode check_function(Lexer *lexer, Symtable *globaltable, Symtable *localtab
 }
 
 /// Checks body
-ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable) {
+ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable, bool known) {
     Token token;
     INIT_TOKEN(token, TOK_IDENTIFIER);
 
@@ -550,14 +540,14 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable) 
                 break;
 
             case TOK_KW_VAR:
-                ec = check_local_var(lexer, globaltable, localtable);
+                ec = check_local_var(lexer, globaltable, localtable, known);
                 if (ec != OK) {
                     RETURN_CODE(ec, token);
                 }
                 break;
 
             case TOK_IDENTIFIER:
-                ec = check_assignment_or_function_call(lexer, globaltable, localtable, token);
+                ec = check_assignment_or_function_call(lexer, globaltable, localtable, token, known);
                 if (ec != OK) {
                     RETURN_CODE(ec, token);
                 }
@@ -588,7 +578,7 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable) 
                 // New scope
                 enter_scope(localtable);
 
-                ec = check_body(lexer, globaltable, localtable);
+                ec = check_body(lexer, globaltable, localtable, known);
                 if (ec != OK) {
                     RETURN_CODE(ec, token);
                 }
@@ -609,6 +599,11 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable) 
                 break;
 
             default: {
+                // Unget token for expression parsing
+                if (!lexer_unget_token(lexer, token)) {
+                    RETURN_CODE(INTERNAL_ERROR, token);
+                }
+
                 AstExpression *expr;
                 ec = parse_expression(lexer, &expr);
                 if (ec != OK) {
@@ -627,7 +622,7 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable) 
 }
 
 /// Checks local variable declaration
-ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localtable) {
+ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localtable, bool known) {
     Token identifier;
     INIT_TOKEN(identifier, TOK_IDENTIFIER);
 
@@ -664,13 +659,17 @@ ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localta
     }
 
     // Add variable to symbol table with redefinition check
-    ADD_VARIABLE(localtable, identifier.string_val->val, identifier, expr_type);
+    if (known) {
+        ADD_VARIABLE(localtable, identifier.string_val->val, identifier, expr_type);
+    } else {
+        ADD_VARIABLE(localtable, identifier.string_val->val, identifier, DT_UNKNOWN);
+    }
 
     RETURN_CODE(OK, token);
 }
 
 /// Checks assignment or function call
-ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable, Symtable *localtable, Token identifier) {
+ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable, Symtable *localtable, Token identifier, bool known) {
     Token token;
     INIT_TOKEN(token, TOK_OP_ASSIGN);
 
@@ -692,7 +691,11 @@ ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable,
         }
 
         // Check variable existence and update its type if necessary
-        CHECK_VARIABLE_EXPRESSION(localtable, globaltable, identifier.string_val->val, identifier, expr_type);
+        if (known) {
+            CHECK_VARIABLE_EXPRESSION(localtable, globaltable, identifier.string_val->val, identifier, expr_type);
+        } else {
+            ADD_VARIABLE(localtable, identifier.string_val->val, identifier, DT_UNKNOWN);
+        }
 
         CHECK_TOKEN(lexer, token);
     } else if (token.type == TOK_LEFT_PAR) {
@@ -707,6 +710,31 @@ ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable,
             return INTERNAL_ERROR;
         }
 
+        // Parse function call expression
+        AstExpression *expr;
+        ErrorCode ec = parse_expression(lexer, &expr);
+        if (ec != OK) {
+            RETURN_CODE(ec, token);
+        }
+
+        // Check expression type compatibility
+        DataType expr_type;
+        ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
+        if (ec != OK) {
+            RETURN_CODE(ec, token);
+        }
+
+        CHECK_TOKEN(lexer, token);
+    } else {
+        // Unget token for expression parsing
+        if (!lexer_unget_token(lexer, token)) {
+            RETURN_CODE(INTERNAL_ERROR, token);
+        }
+
+        if (!lexer_unget_token(lexer, identifier)) {
+            RETURN_CODE(INTERNAL_ERROR, token);
+        }
+        
         // Parse function call expression
         AstExpression *expr;
         ErrorCode ec = parse_expression(lexer, &expr);
@@ -769,7 +797,7 @@ ErrorCode check_if_statement(Lexer *lexer, Symtable *globaltable, Symtable *loca
     enter_scope(localtable);
 
     // Check if body
-    ec = check_body(lexer, globaltable, localtable);
+    ec = check_body(lexer, globaltable, localtable, false);
     if (ec != OK) {
         RETURN_CODE(ec, token);
     }
@@ -794,7 +822,7 @@ ErrorCode check_if_statement(Lexer *lexer, Symtable *globaltable, Symtable *loca
         enter_scope(localtable);
 
         // Check else body
-        ec = check_body(lexer, globaltable, localtable);
+        ec = check_body(lexer, globaltable, localtable, false);
         if (ec != OK) {
             RETURN_CODE(ec, token);
         }
@@ -857,7 +885,7 @@ ErrorCode check_while_statement(Lexer *lexer, Symtable *globaltable, Symtable *l
     enter_scope(localtable);
 
     // Check while body
-    ec = check_body(lexer, globaltable, localtable);
+    ec = check_body(lexer, globaltable, localtable, false);
     if (ec != OK) {
         RETURN_CODE(ec, token);
     }
@@ -1027,6 +1055,10 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
                 return SEM_TYPE_COMPAT;
             }
 
+            if (left_type == DT_TYPE || right_type == DT_TYPE) {
+                return SEM_TYPE_COMPAT;
+            }
+
             if (left_type == DT_UNKNOWN && right_type == DT_UNKNOWN) {
                 result_type = DT_UNKNOWN;
                 break;
@@ -1038,7 +1070,8 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
                     result_type = DT_STRING;
                     break;
                 }
-                if (left_type == IS_NUM(left_type) && right_type == IS_NUM(right_type)) {
+                
+                if (IS_NUM(left_type) && IS_NUM(right_type)) {
                     result_type = (left_type == DT_DOUBLE || right_type == DT_DOUBLE) ? DT_DOUBLE : DT_INT;
                     break;
                 }
@@ -1128,6 +1161,10 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
             return SEM_TYPE_COMPAT;
         }
 
+        if (left_type == DT_TYPE || right_type == DT_TYPE) {
+            return SEM_TYPE_COMPAT;
+        }
+
         if ((left_type == DT_UNKNOWN || right_type == DT_UNKNOWN)) {
             result_type = DT_UNKNOWN;
             break;
@@ -1198,13 +1235,14 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
         if (ec != OK) {
             return ec;
         } 
+
         DataType right_type;
         ec = semantic_check_expression(expr->params[1], globaltable, localtable, &right_type);
         if (ec != OK) {
             return ec;
         }
 
-        if (right_type == EX_DATA_TYPE) {
+        if (right_type == DT_TYPE) {
             result_type = DT_BOOL;
             break;
         }
@@ -1317,11 +1355,34 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
     }
 
     case EX_DATA_TYPE:
-        result_type = DT_UNKNOWN;
+        result_type = DT_TYPE;
         break;
+
+    case EX_BUILTIN_FUN: {
+        // Check argument expressions
+        for (int i = 0; i < expr->child_count; i++) {
+            DataType arg_type;
+            ec = semantic_check_expression(expr->params[i], globaltable, localtable, &arg_type);
+            if (ec != OK) {
+                return ec;
+            }
+        }
+
+        SymtableItem *builtin_item = NULL;
+        if (!symtable_contains_builtin_function(globaltable, expr->id->val, expr->child_count, &builtin_item)) {
+            return SEM_UNDEFINED;
+        }
+
+        result_type = builtin_item->data_type;
+        break;
+    }
 
     default:
         return INTERNAL_ERROR;
+    }
+
+    if (out_type != NULL) {
+        *out_type = result_type;
     }
 
     return OK;

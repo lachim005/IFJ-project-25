@@ -46,13 +46,13 @@ ErrorCode check_getter(Lexer *lexer, Symtable *globaltable, Symtable *localtable
 ErrorCode check_function(Lexer *lexer, Symtable *globaltable, Symtable *localtable, Token identifier);
 
 /// Checks function body
-ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable);
+ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable, bool known);
 
 /// Checks local variable declaration
-ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localtable);
+ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localtable, bool known);
 
 /// Checks assignment or function call
-ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable, Symtable *localtable, Token identifier);
+ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable, Symtable *localtable, Token identifier, bool known);
 
 /// Checks if statement
 ErrorCode check_if_statement(Lexer *lexer, Symtable *globaltable, Symtable *localtable);

@@ -22,6 +22,7 @@ typedef enum data_type {
     DT_UNKNOWN,
     DT_INT,
     DT_DOUBLE,
+    DT_TYPE
 } DataType;
 
 #define IS_NUM(dt) \
