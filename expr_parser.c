@@ -64,6 +64,7 @@ int calculate_table_idx(TokType type){
     case TOK_IDENTIFIER: case TOK_GLOBAL_VAR:
     case TOK_LIT_INT: case TOK_LIT_DOUBLE: case TOK_LIT_STRING:
     case TOK_TYPE_NULL: case TOK_TYPE_NUM: case TOK_TYPE_STRING: case TOK_TYPE_BOOL:
+    case TOK_KW_TRUE: case TOK_KW_FALSE: case TOK_KW_NULL:
         return 12; // operands
     case TOK_LEFT_PAR: return 13; // (
     case TOK_RIGHT_PAR: return 14; // )
@@ -261,6 +262,15 @@ bool reduce(Stack *expr_stack, Stack *op_stack) {
         case TOK_LIT_STRING:
             reduction_res = reduce_literal(expr_stack, TOK_LIT_STRING, EX_STRING);
             break;
+        case TOK_KW_TRUE:
+            reduction_res = reduce_literal(expr_stack, TOK_KW_TRUE, EX_BOOL);
+            break;
+        case TOK_KW_FALSE:
+            reduction_res = reduce_literal(expr_stack, TOK_KW_FALSE, EX_BOOL);
+            break;
+        case TOK_KW_NULL:
+            reduction_res = reduce_literal(expr_stack, TOK_KW_NULL, EX_NULL);
+            break;
         case TOK_RIGHT_PAR:
             reduction_res = reduce_par(expr_stack);
             break;
@@ -433,6 +443,8 @@ ErrorCode reduce_literal(Stack *expr_stack, TokType lit_type, AstExprType expr_t
         expr->int_val = top.int_val; break;
     case EX_DOUBLE:
         expr->double_val = top.double_val; break;
+    case EX_BOOL:
+        expr->bool_val = top.type == TOK_KW_TRUE;
     default:
         break;
     }

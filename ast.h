@@ -49,6 +49,8 @@ typedef enum ast_expr_type {
     EX_NOT,
     EX_INT,
     EX_DOUBLE,
+    EX_BOOL,
+    EX_NULL,
     EX_STRING,
     EX_NEGATE, // Unary -
     EX_DATA_TYPE,
@@ -70,6 +72,7 @@ struct ast_expression {
         String *string_val;
         int int_val;
         double double_val;
+        bool bool_val;
         DataType data_type;
     };
 };
