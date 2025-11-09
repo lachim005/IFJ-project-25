@@ -517,6 +517,7 @@ bool symtable_contains_builtin_function(Symtable *st, const char *name, int para
     String *s = str_init();
     if (s == NULL) return false;
 
+    str_append_char(s, '#');
     str_append_string(s, name);
     str_append_char(s, '$');
 

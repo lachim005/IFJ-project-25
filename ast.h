@@ -5,12 +5,16 @@
  * Authors:
  * Michal Šebesta (xsebesm00)
  * Vojtěch Borýsek (xborysv00)
+ * Tomáš Hanák (xhanakt00)
  */
 #ifndef _AST_H_
 #define _AST_H_
 
 #include "string.h"
 #include <stdlib.h>
+
+// Forward declaration to avoid circular dependency
+typedef struct symtable Symtable;
 
 typedef enum data_type {
     DT_NULL,
@@ -79,55 +83,206 @@ struct ast_expression {
         DataType data_type;
     };
 };
-AstExpression *ast_expr_create(AstExprType type, size_t child_count);
 
-typedef struct ast_scope AstScope;
+// Forward declarations
+typedef struct ast_block AstBlock;
 typedef struct ast_statement AstStatement;
+typedef struct ast_function AstFunction;
+typedef struct ast_getter AstGetter;
+typedef struct ast_setter AstSetter;
+typedef struct ast_variable AstVariable;
+typedef struct ast_function_call AstFunctionCall;
+typedef struct ast_if_statement AstIfStatement;
+typedef struct ast_while_statement AstWhileStatement;
 
 /// Statement type, used to tag the union in AstStatement
 typedef enum ast_statement_type {
-    ST_SCOPE,
-    // ...
+    ST_ROOT,
+    ST_BLOCK,
+    ST_IF,
+    ST_WHILE,
+    ST_RETURN,
+    ST_LOCAL_VAR,
+    ST_GLOBAL_VAR,
+    ST_FUNC_CALL,
+    ST_FUNCTION,
+    ST_GETTER,
+    ST_SETTER,
+    ST_BUILTIN_CALL,
+    ST_END
 } AstStatementType;
 
-/// Statement if
-typedef struct ast_st_if {
-    /// Condition inside if
+/// Structure holding a block with a statement list
+typedef struct ast_block {
+    /// First statement in the block
+    AstStatement *statements;
+} AstBlock;
+
+/// Structure holding a function
+typedef struct ast_function {
+    /// Name of the function
+    String *name;
+
+    /// Number of parameters
+    size_t param_count;
+
+    /// Name of parameters
+    String **param_names;
+
+    /// Function body
+    AstBlock *body;
+
+    /// SymTable for local variables
+    Symtable *symtable;
+} AstFunction;
+
+/// Structure holding a getter
+typedef struct ast_getter {
+    /// Name of the getter
+    String *name;
+
+    /// Body of the getter
+    AstBlock *body;
+} AstGetter;
+
+/// Structure holding a setter
+typedef struct ast_setter {
+    /// Name of the setter
+    String *name;
+
+    /// Name of the parameter
+    String *param_name;
+
+    /// Body of the setter
+    AstBlock *body;
+} AstSetter;
+
+/// Structure holding a var
+typedef struct ast_variable {
+    /// Name of the variable
+    String *name;
+
+    /// Expression assigned to the variable
+    AstExpression *expression;
+} AstVariable;
+
+/// Structure holding a function call
+typedef struct ast_function_call {
+    /// Name of the function
+    String *name;
+
+    /// Arguments expressions
+    AstExpression *arguments;
+
+    /// Number of arguments
+    size_t argument_count;
+} AstFunctionCall;
+
+/// Structure holding a if statement
+typedef struct ast_if_statement {
+    /// Condition expression
     AstExpression *condition;
-    /// Statement to execute if the condition is true
-    AstStatement *st_true;
-    /// Statement to execute if the condition is false
-    AstStatement *st_false;
-} AstStIf;
+
+    /// True branch
+    AstBlock *true_branch;
+
+    /// False branch
+    AstBlock *false_branch;
+} AstIfStatement;
+
+typedef struct ast_while_statement {
+    /// Condition expression
+    AstExpression *condition;
+
+    /// Body of the while loop
+    AstBlock *body;
+} AstWhileStatement;
 
 /// Stucture representing a statement
 typedef struct ast_statement {
     /// Statement type
     AstStatementType type;
+
+    /// Next statement in the statement list
+    AstStatement *next;
+
+    /// Union holding specific statement data
     union {
-        AstScope *st_scope;
-        AstStIf *st_if;
-        // ...
+        AstBlock *block;
+        AstIfStatement *if_st;
+        AstWhileStatement *while_st;
+        AstExpression *return_expr;
+        AstVariable *local_var;
+        AstVariable *global_var;
+        AstFunctionCall *func_call;
+        AstFunction *function;
+        AstGetter *getter;
+        AstSetter *setter;
+        AstFunctionCall *builtin_call;
     };
 } AstStatement;
 
-/// Structure holding a scope with a statement list
-typedef struct ast_scope {
-    // TODO: Symtable
-    // TODO: Statement list
-} AstScope;
+// AST creation functions
 
-/// Structure holding a function
-typedef struct ast_function {
-    /// Body of the function
-    AstExpression *body;
-    // TODO: Metadata
-} AstFunction;
+/// Creates a new AST expression node
+AstExpression *ast_expr_create(AstExprType type, size_t child_count);
 
-/// Structure holding the whole program
-typedef struct ast_program {
-    // TODO: Symtable for global vars
-    // TODO: FunctionList
-} AstProgram;
+/// Initializes a new AST statement
+AstStatement *ast_statement_init();
+
+/// Creates a new AST block
+AstBlock *ast_block_create();
+
+/// Adds an if statement to the AST
+bool ast_add_if_statement(AstStatement *statement, AstExpression *condition);
+
+/// Adds an else branch to an existing if statement
+bool ast_add_else_branch(AstStatement *if_statement);
+
+/// Adds a while statement to the AST
+bool ast_add_while_statement(AstStatement *statement, AstExpression *condition);
+
+/// Adds a return statement to the AST
+bool ast_add_return_statement(AstStatement *statement, AstExpression *return_expr);
+
+/// Adds a local variable to the AST
+bool ast_add_local_var(AstStatement *statement, char *name, AstExpression *expression);
+
+/// Adds a global variable to the AST
+bool ast_add_global_var(AstStatement *statement, char *name, AstExpression *expression);
+
+/// Adds a function call to the AST
+bool ast_add_func_call(AstStatement *statement, char *name, AstExpression *arguments);
+
+/// Adds a getter to the AST
+bool ast_add_getter(AstStatement *statement, char *name);
+
+/// Adds a setter to the AST
+bool ast_add_setter(AstStatement *statement, char *name, char *param_name);
+
+/// Adds a builtin function call to the AST
+bool ast_add_builtin_call(AstStatement *statement, char *name, AstExpression *arguments);
+
+/// Adds a function to the AST program
+bool ast_add_function(AstStatement *statement, char *name, size_t param_count, Symtable *symtable, String **param_names);
+
+// AST cleanup functions
+
+/// Frees an AST expression recursively
+void ast_expr_free(AstExpression *expr);
+
+/// Frees an AST statement recursively
+void ast_statement_free(AstStatement *statement);
+
+/// Frees an AST block recursively
+void ast_block_free(AstBlock *block);
+
+/// Frees the entire AST starting from the root statement
+void ast_free(AstStatement *root);
+
+// AST printing functions
+
+/// Prints the entire AST tree to stdout with indentation
+void ast_print(AstStatement *root);
 
 #endif // !_AST_H_
