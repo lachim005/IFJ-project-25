@@ -1,4 +1,5 @@
 #include "ast.h"
+#include "symtable.h"
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -341,7 +342,7 @@ bool ast_add_func_call(AstStatement *statement, char *name, AstExpression *argum
 }
 
 /// Adds a getter to the AST
-bool ast_add_getter(AstStatement *statement, char *name) {
+bool ast_add_getter(AstStatement *statement, char *name, Symtable *symtable) {
     // Check if statement is NULL or not EMPTY
     if (statement == NULL || statement->type != ST_END) {
         return false;
@@ -375,6 +376,7 @@ bool ast_add_getter(AstStatement *statement, char *name) {
     // Fill AstGetter structure
     getter->name = getter_name;
     getter->body = body;
+    getter->symtable = symtable;
 
     // Set statement type and union
     statement->type = ST_GETTER;
@@ -397,7 +399,7 @@ bool ast_add_getter(AstStatement *statement, char *name) {
 }
 
 /// Adds a setter to the AST
-bool ast_add_setter(AstStatement *statement, char *name, char *param_name) {
+bool ast_add_setter(AstStatement *statement, char *name, char *param_name, Symtable *symtable) {
     // Check if statement is NULL or not EMPTY
     if (statement == NULL || statement->type != ST_END) {
         return false;
@@ -446,6 +448,7 @@ bool ast_add_setter(AstStatement *statement, char *name, char *param_name) {
     setter->name = setter_name;
     setter->param_name = setter_param_name;
     setter->body = body;
+    setter->symtable = symtable;
 
     // Set statement type and union
     statement->type = ST_SETTER;
@@ -586,7 +589,7 @@ void ast_expr_free(AstExpression *expr) {
     }
     free(expr->params);
 
-    // Free string value if it's a string expression
+    // Free string value if its a string expression
     if (expr->type == EX_STRING || expr->type == EX_ID || expr->type == EX_GLOBAL_ID) {
         str_free(&expr->string_val);
     }
@@ -668,7 +671,7 @@ void ast_statement_free(AstStatement *statement) {
                 }
                 
                 ast_block_free(statement->function->body);
-                // Note: symtable is freed elsewhere, not owned by AST
+                symtable_free(statement->function->symtable);
                 free(statement->function);
             }
             break;
@@ -677,6 +680,7 @@ void ast_statement_free(AstStatement *statement) {
             if (statement->getter != NULL) {
                 str_free(&statement->getter->name);
                 ast_block_free(statement->getter->body);
+                symtable_free(statement->getter->symtable);
                 free(statement->getter);
             }
             break;
@@ -686,6 +690,7 @@ void ast_statement_free(AstStatement *statement) {
                 str_free(&statement->setter->name);
                 str_free(&statement->setter->param_name);
                 ast_block_free(statement->setter->body);
+                symtable_free(statement->setter->symtable);
                 free(statement->setter);
             }
             break;

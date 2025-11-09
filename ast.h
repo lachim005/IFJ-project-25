@@ -143,6 +143,9 @@ typedef struct ast_getter {
 
     /// Body of the getter
     AstBlock *body;
+
+    /// SymTable for local variables
+    Symtable *symtable;
 } AstGetter;
 
 /// Structure holding a setter
@@ -155,6 +158,9 @@ typedef struct ast_setter {
 
     /// Body of the setter
     AstBlock *body;
+
+    /// SymTable for local variables
+    Symtable *symtable;
 } AstSetter;
 
 /// Structure holding a var
@@ -255,10 +261,10 @@ bool ast_add_global_var(AstStatement *statement, char *name, AstExpression *expr
 bool ast_add_func_call(AstStatement *statement, char *name, AstExpression *arguments);
 
 /// Adds a getter to the AST
-bool ast_add_getter(AstStatement *statement, char *name);
+bool ast_add_getter(AstStatement *statement, char *name, Symtable *symtable);
 
 /// Adds a setter to the AST
-bool ast_add_setter(AstStatement *statement, char *name, char *param_name);
+bool ast_add_setter(AstStatement *statement, char *name, char *param_name, Symtable *symtable);
 
 /// Adds a builtin function call to the AST
 bool ast_add_builtin_call(AstStatement *statement, char *name, AstExpression *arguments);

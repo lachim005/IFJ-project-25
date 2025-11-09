@@ -387,7 +387,6 @@ ErrorCode check_statics(Lexer *lexer, Symtable *symtable, AstStatement *statemen
         ErrorCode ec = checks_setter(lexer, symtable, new_symtable, identifier, statement);
         if (ec != OK) {
             token_free(&identifier);
-            symtable_free(new_symtable);
             RETURN_CODE(ec, token);
         }
     }
@@ -396,7 +395,6 @@ ErrorCode check_statics(Lexer *lexer, Symtable *symtable, AstStatement *statemen
         ErrorCode ec = check_getter(lexer, symtable, new_symtable, identifier, statement);
         if (ec != OK) {
             token_free(&identifier);
-            symtable_free(new_symtable);
             RETURN_CODE(ec, token);
         }
     }
@@ -405,7 +403,6 @@ ErrorCode check_statics(Lexer *lexer, Symtable *symtable, AstStatement *statemen
         ErrorCode ec = check_function(lexer, symtable, new_symtable, identifier, statement);
         if (ec != OK) {
             token_free(&identifier);
-            symtable_free(new_symtable);
             RETURN_CODE(ec, token);
         }
     }
@@ -461,7 +458,7 @@ ErrorCode checks_setter(Lexer *lexer, Symtable *globaltable, Symtable *localtabl
     }
 
     // Add setter parameter to AST
-    if (ast_add_setter(statement, identifier.string_val->val, param_name.string_val->val) == false) {
+    if (ast_add_setter(statement, identifier.string_val->val, param_name.string_val->val, localtable) == false) {
         RETURN_CODE(INTERNAL_ERROR, param_name);
     }
 
@@ -500,7 +497,7 @@ ErrorCode check_getter(Lexer *lexer, Symtable *globaltable, Symtable *localtable
     INIT_TOKEN(token, TOK_LEFT_BRACE);
 
     // Add getter to AST
-    if (ast_add_getter(statement, identifier.string_val->val) == false) {
+    if (ast_add_getter(statement, identifier.string_val->val, localtable) == false) {
         RETURN_CODE(INTERNAL_ERROR, identifier);
     }
 
@@ -1120,12 +1117,15 @@ ErrorCode check_return_statement(Lexer *lexer, Symtable *globaltable, Symtable *
         RETURN_CODE(INTERNAL_ERROR, token);
     }
 
-    CHECK_TOKEN(lexer, token);
-    if (token.type != TOK_EOL) {
-        RETURN_CODE(SYNTACTIC_ERROR, token);
+    Token new_token;
+    INIT_TOKEN(new_token, TOK_EOL);
+
+    CHECK_TOKEN(lexer, new_token);
+    if (new_token.type != TOK_EOL) {
+        RETURN_CODE(SYNTACTIC_ERROR, new_token);
     }
 
-    RETURN_CODE(OK, token);
+    RETURN_CODE(OK, new_token);
 }
 
 /// Semantic analysis of expression - checks definitions and type compatibility
