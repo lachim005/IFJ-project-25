@@ -64,6 +64,9 @@ bool symtable_contains(Symtable *st, const char *key);
 /// Inserts an item in the symtable with the key. Returns a pointer to the new item or NULL if it is not created.
 SymtableItem *symtable_insert(Symtable *st, const char *key);
 
+/// Executes fun for each item in the symtable and passes par to it as a parameter
+void symtable_foreach(Symtable *st, void (*fun)(SymtableItem*, void*), void *par);
+
 /// Pushes a new scope to the scope stack. Returns false if the stack outgrows the capacity and realloc fails
 bool enter_scope(Symtable *st);
 

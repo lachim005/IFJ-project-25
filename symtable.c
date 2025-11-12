@@ -194,6 +194,13 @@ SymtableItem *symtable_insert(Symtable *st, const char *key) {
     return NULL;
 }
 
+void symtable_foreach(Symtable *st, void (*fun)(SymtableItem*, void*), void *par) {
+    for (unsigned i = 0; i < st->capacity; i++) {
+        if (st->state[i] != SLOT_OCCUPIED) continue;
+        fun(st->data + i, par);
+    }
+}
+
 // Global counter for scope ids, so every scope has a unique id
 int scope_id_counter = 0;
 
