@@ -118,26 +118,30 @@
     } \
 } while(0)
 
-/// Macro for checking variable expression - checks if variable exists locally or as setter globally
-#define CHECK_VARIABLE_EXPRESSION(localtable, globaltable, name, error_token, expr_type) do { \
-    SymtableItem *local_var = NULL; \
-    if (!find_local_var(localtable, name, &local_var)) { \
-        RETURN_CODE(INTERNAL_ERROR, error_token); \
-    } \
-    if (local_var == NULL) { \
-        SymtableItem *setter_item = NULL; \
-        if (!symtable_contains_setter(globaltable, name, &setter_item)) { \
-            SymtableItem *new_setter = symtable_add_setter(globaltable, name, 0); \
-            if (new_setter == NULL) { \
-                RETURN_CODE(INTERNAL_ERROR, error_token); \
-            } \
-            symtable_increment_undefined_items_counter(globaltable); \
-        } \
-    } else { \
-        local_var->data_type = expr_type; \
-    } \
-} while(0)
+/// Helper function for checking variable expression - checks if variable exists
+ErrorCode check_variable_expression(Symtable *localtable, Symtable *globaltable, char *name, Token error_token, DataType expr_type, AstStatementType *type_out) {
+    SymtableItem *local_var = NULL;
+    if (!find_local_var(localtable, name, &local_var)) {
+        return INTERNAL_ERROR;
+    }
 
+    if (local_var == NULL) {
+        SymtableItem *setter_item = NULL;
+        if (!symtable_contains_setter(globaltable, name, &setter_item)) {
+            SymtableItem *new_setter = symtable_add_setter(globaltable, name, 0);
+            if (new_setter == NULL) {
+                return INTERNAL_ERROR;
+            }
+            symtable_increment_undefined_items_counter(globaltable);
+        }
+        *type_out = ST_SETTER;
+    } else {
+        local_var->data_type = expr_type;
+        *type_out = ST_LOCAL_VAR;
+    }
+
+    return OK;
+}
 
 /// Initializes a parameter list
 ParamList *param_list_init() {
@@ -346,15 +350,38 @@ ErrorCode check_global_var(Lexer *lexer, Symtable *globaltable, Symtable *localt
             RETURN_CODE(ec, token);
         }
 
+        // Add global variable to AST
+        if (ast_add_global_var(statement, var_name->val, expr) == false) {
+            RETURN_CODE(INTERNAL_ERROR, token);
+        }
+
         // Add variable to symbol table with redefinition check
         ADD_GLOBAL_VARIABLE(globaltable, var_name->val, token, DT_UNKNOWN);
 
         CHECK_TOKEN(lexer, token);
-    }
+    } else {
+        // No assignment, unget the token for further processing
+        if (!lexer_unget_token(lexer, token)) {
+            RETURN_CODE(INTERNAL_ERROR, token);
+        }
 
-    // Add global variable to AST
-    if (ast_add_global_var(statement, var_name->val, expr) == false) {
-        RETURN_CODE(INTERNAL_ERROR, token);
+        // Parse assignment expression
+        ErrorCode ec = parse_expression(lexer, &expr);
+        if (ec != OK) {
+            RETURN_CODE(ec, token);
+        }
+
+        DataType expr_type;
+        // Check expression type compatibility
+        ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
+        if (ec != OK) {
+            RETURN_CODE(ec, token);
+        }
+
+        // Add global variable to AST
+        if (ast_add_inline_expression(statement, expr) == false) {
+            RETURN_CODE(INTERNAL_ERROR, token);
+        }
     }
 
     if (token.type != TOK_EOL) {
@@ -653,6 +680,7 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable, 
                 if (ec != OK) {
                     RETURN_CODE(ec, token);
                 }
+                statement = statement->next;
                 break;
 
             case TOK_KW_IF:
@@ -671,14 +699,6 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable, 
                 statement = statement->next;
                 break;
 
-            case TOK_KW_IFJ:
-                ec = check_ifj_statement(lexer, globaltable, localtable, token, statement);
-                if (ec != OK) {
-                    RETURN_CODE(ec, token);
-                }
-                statement = statement->next;
-                break;
-
             case TOK_KW_RETURN:
                 ec = check_return_statement(lexer, globaltable, localtable, statement);
                 if (ec != OK) {
@@ -691,8 +711,12 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable, 
                 // New scope
                 enter_scope(localtable);
 
-                AstStatement *block_body = NULL;
-                ec = check_body(lexer, globaltable, localtable, known, block_body);
+                // Add block to AST
+                if (ast_add_block(statement) == false) {
+                    RETURN_CODE(INTERNAL_ERROR, token);
+                }
+
+                ec = check_body(lexer, globaltable, localtable, known, statement->block->statements);
                 if (ec != OK) {
                     RETURN_CODE(ec, token);
                 }
@@ -709,6 +733,8 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable, 
 
                 // Exit scope
                 exit_scope(localtable);
+
+                statement = statement->next;
 
                 break;
 
@@ -730,6 +756,13 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable, 
                 if (ec != OK) {
                     RETURN_CODE(ec, token);
                 }
+
+                // Add expression statement to AST
+                if (ast_add_inline_expression(statement, expr) == false) {
+                    RETURN_CODE(INTERNAL_ERROR, token);
+                }
+
+                statement = statement->next;
             }
         }
     }
@@ -814,36 +847,27 @@ ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable,
         }
 
         // Check variable existence and update its type if necessary
+        ErrorCode evc;
+        AstStatementType stmt_type;
         if (known) {
-            CHECK_VARIABLE_EXPRESSION(localtable, globaltable, identifier.string_val->val, identifier, expr_type);
+            evc = check_variable_expression(localtable, globaltable, identifier.string_val->val, identifier, expr_type, &stmt_type);
         } else {
-            CHECK_VARIABLE_EXPRESSION(localtable, globaltable, identifier.string_val->val, identifier, DT_UNKNOWN);
+            evc = check_variable_expression(localtable, globaltable, identifier.string_val->val, identifier, DT_UNKNOWN, &stmt_type);
+        }
+        if (evc != OK) {
+            RETURN_CODE(evc, identifier);
         }
 
-        CHECK_TOKEN(lexer, token);
-    } else if (token.type == TOK_LEFT_PAR) {
-        // Function call
-        // Return 2 tokens back for expression parser
-        if (!lexer_unget_token(lexer, token)) {
-            RETURN_CODE(INTERNAL_ERROR, token);
-        }
-
-        if (!lexer_unget_token(lexer, identifier)) {
-            RETURN_CODE(INTERNAL_ERROR, token);
-        }
-
-        // Parse function call expression
-        AstExpression *expr;
-        ErrorCode ec = parse_expression(lexer, &expr);
-        if (ec != OK) {
-            RETURN_CODE(ec, token);
-        }
-
-        // Check expression type compatibility
-        DataType expr_type;
-        ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
-        if (ec != OK) {
-            RETURN_CODE(ec, token);
+        if (stmt_type == ST_SETTER) {
+            // Add setter call to AST
+            if (ast_add_setter_call(statement, identifier.string_val->val, expr) == false) {
+                RETURN_CODE(INTERNAL_ERROR, token);
+            }
+        } else {
+            // Add assignment to AST
+            if (ast_add_local_var(statement, identifier.string_val->val, expr) == false) {
+                RETURN_CODE(INTERNAL_ERROR, token);
+            }
         }
 
         CHECK_TOKEN(lexer, token);
@@ -869,6 +893,11 @@ ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable,
         ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
         if (ec != OK) {
             RETURN_CODE(ec, token);
+        }
+
+        // Add expression statement to AST
+        if (ast_add_inline_expression(statement, expr) == false) {
+            RETURN_CODE(INTERNAL_ERROR, token);
         }
 
         CHECK_TOKEN(lexer, token);
@@ -1037,43 +1066,6 @@ ErrorCode check_while_statement(Lexer *lexer, Symtable *globaltable, Symtable *l
     
     if (token.type != TOK_EOL) {
         RETURN_CODE(SYNTACTIC_ERROR, token);
-    }
-
-    RETURN_CODE(OK, token);
-}
-
-/// Checks Ifj statement (Ifj.read_str(), Ifj.write(...), etc.)
-ErrorCode check_ifj_statement(Lexer *lexer, Symtable *globaltable, Symtable *localtable, Token keyword, AstStatement *statement) {
-    // Unget keyword token for expression parsing
-    if (!lexer_unget_token(lexer, keyword)) {
-        return INTERNAL_ERROR;
-    }
-
-    // Parse Ifj function call expression
-    AstExpression *expr;
-    ErrorCode ec = parse_expression(lexer, &expr);
-    if (ec != OK) {
-        return ec;
-    }
-
-    // Check expression type compatibility
-    DataType expr_type;
-    ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
-    if (ec != OK) {
-        return ec;
-    }
-
-    Token token;
-    INIT_TOKEN(token, TOK_EOL);
-
-    CHECK_TOKEN(lexer, token);
-    if (token.type != TOK_EOL) {
-        RETURN_CODE(SYNTACTIC_ERROR, token);
-    }
-
-    // Add Ifj statement to AST
-    if (ast_add_builtin_call(statement, expr->string_val->val, expr) == false) {
-        RETURN_CODE(INTERNAL_ERROR, token);
     }
 
     RETURN_CODE(OK, token);
@@ -1574,7 +1566,7 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
     return OK;
 }
 
-ErrorCode parse() {
+ErrorCode parse(AstStatement **out_root) {
     Lexer lexer_structure;
     Lexer *lexer = &lexer_structure;
     if (!lexer_init(lexer, stdin)){
@@ -1600,16 +1592,12 @@ ErrorCode parse() {
         return SYNTACTIC_ERROR;
     }
 
-    AstStatement *root = ast_statement_init();
-    ErrorCode ec = check_class_program(lexer, symtable, root->next);
+    ErrorCode ec = check_class_program(lexer, symtable, (*out_root)->next);
     if (ec != OK) {
         symtable_free(symtable);
         lexer_free(lexer);
-        ast_free(root);
         return ec;
     }
-
-    ast_print(root);
 
     if (symtable_get_undefined_items_count(symtable) > 0) {
         return SEM_UNDEFINED;
@@ -1617,16 +1605,24 @@ ErrorCode parse() {
 
     symtable_free(symtable);
     lexer_free(lexer);
-    ast_free(root);
 
     return OK;
 }
 
 int main() {
-    ErrorCode ec = parse();
+    AstStatement *root = ast_statement_init();
+    if (root == NULL) {
+        fprintf(stderr, "Error: %d\n", INTERNAL_ERROR);
+        return INTERNAL_ERROR;
+    }
+    
+    ErrorCode ec = parse(&root);
     if (ec != OK) {
         fprintf(stderr, "Error: %d\n", ec);
+        ast_free(root);
         return ec;
     }
+    ast_print(root);
+    ast_free(root);
     return 0;
 }

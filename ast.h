@@ -104,11 +104,12 @@ typedef enum ast_statement_type {
     ST_RETURN,
     ST_LOCAL_VAR,
     ST_GLOBAL_VAR,
+    ST_SETTER_CALL,
     ST_FUNC_CALL,
     ST_FUNCTION,
     ST_GETTER,
     ST_SETTER,
-    ST_BUILTIN_CALL,
+    ST_EXPRESSION,
     ST_END
 } AstStatementType;
 
@@ -220,11 +221,11 @@ typedef struct ast_statement {
         AstExpression *return_expr;
         AstVariable *local_var;
         AstVariable *global_var;
-        AstFunctionCall *func_call;
+        AstVariable *setter_call;
         AstFunction *function;
         AstGetter *getter;
         AstSetter *setter;
-        AstFunctionCall *builtin_call;
+        AstExpression *expression;
     };
 } AstStatement;
 
@@ -257,20 +258,23 @@ bool ast_add_local_var(AstStatement *statement, char *name, AstExpression *expre
 /// Adds a global variable to the AST
 bool ast_add_global_var(AstStatement *statement, char *name, AstExpression *expression);
 
-/// Adds a function call to the AST
-bool ast_add_func_call(AstStatement *statement, char *name, AstExpression *arguments);
-
 /// Adds a getter to the AST
 bool ast_add_getter(AstStatement *statement, char *name, Symtable *symtable);
 
 /// Adds a setter to the AST
 bool ast_add_setter(AstStatement *statement, char *name, char *param_name, Symtable *symtable);
 
-/// Adds a builtin function call to the AST
-bool ast_add_builtin_call(AstStatement *statement, char *name, AstExpression *arguments);
-
 /// Adds a function to the AST program
 bool ast_add_function(AstStatement *statement, char *name, size_t param_count, Symtable *symtable, String **param_names);
+
+/// Adds a setter call to the AST
+bool ast_add_setter_call(AstStatement *statement, char *name, AstExpression *expression);
+
+/// Adds a block to the AST
+bool ast_add_block(AstStatement *statement);
+
+/// Adds an inline expression to the AST
+bool ast_add_inline_expression(AstStatement *statement, AstExpression *expression);
 
 // AST cleanup functions
 

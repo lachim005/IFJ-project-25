@@ -293,54 +293,6 @@ bool ast_add_global_var(AstStatement *statement, char *name, AstExpression *expr
     return true;
 }
 
-/// Adds a function call to the AST
-bool ast_add_func_call(AstStatement *statement, char *name, AstExpression *arguments) {
-    // Check if statement is NULL or not EMPTY
-    if (statement == NULL || statement->type != ST_END) {
-        return false;
-    }
-
-    // Create function name as String
-    String *func_name = str_init();
-    if (func_name == NULL) {
-        return false;
-    }
-    if (!str_append_string(func_name, name)) {
-        str_free(&func_name);
-        return false;
-    }
-
-    // Create AstFunctionCall structure
-    AstFunctionCall *func_call = malloc(sizeof(AstFunctionCall));
-    if (func_call == NULL) {
-        str_free(&func_name);
-        return false;
-    }
-
-    // Fill AstFunctionCall structure
-    func_call->name = func_name;
-    func_call->arguments = arguments;
-
-
-    // Set statement type and union
-    statement->type = ST_FUNC_CALL;
-    statement->func_call = func_call;
-    
-    // Allocate next element if not already allocated
-    if (statement->next == NULL) {
-        statement->next = malloc(sizeof(AstStatement));
-        if (statement->next == NULL) {
-            str_free(&func_name);
-            free(func_call);
-            return false;
-        }
-        statement->next->type = ST_END;
-        statement->next->next = NULL;
-    }
-
-    return true;
-}
-
 /// Adds a getter to the AST
 bool ast_add_getter(AstStatement *statement, char *name, Symtable *symtable) {
     // Check if statement is NULL or not EMPTY
@@ -471,53 +423,6 @@ bool ast_add_setter(AstStatement *statement, char *name, char *param_name, Symta
     return true;
 }
 
-/// Adds a builtin function call to the AST
-bool ast_add_builtin_call(AstStatement *statement, char *name, AstExpression *arguments) {
-    // Check if statement is NULL or not EMPTY
-    if (statement == NULL || statement->type != ST_END) {
-        return false;
-    }
-
-    // Create function name as String
-    String *func_name = str_init();
-    if (func_name == NULL) {
-        return false;
-    }
-    if (!str_append_string(func_name, name)) {
-        str_free(&func_name);
-        return false;
-    }
-
-    // Create AstFunctionCall structure
-    AstFunctionCall *func_call = malloc(sizeof(AstFunctionCall));
-    if (func_call == NULL) {
-        str_free(&func_name);
-        return false;
-    }
-
-    // Fill AstFunctionCall structure
-    func_call->name = func_name;
-    func_call->arguments = arguments;
-
-    // Set statement type and union (using ST_BUILTIN_CALL type)
-    statement->type = ST_BUILTIN_CALL;
-    statement->func_call = func_call;
-    
-    // Allocate next element if not already allocated
-    if (statement->next == NULL) {
-        statement->next = malloc(sizeof(AstStatement));
-        if (statement->next == NULL) {
-            str_free(&func_name);
-            free(func_call);
-            return false;
-        }
-        statement->next->type = ST_END;
-        statement->next->next = NULL;
-    }
-
-    return true;
-}
-
 /// Adds a function to the AST program
 bool ast_add_function(AstStatement *statement, char *name, size_t param_count, Symtable *symtable, String **param_names) {
     // Check if statement is NULL or not EMPTY
@@ -568,6 +473,105 @@ bool ast_add_function(AstStatement *statement, char *name, size_t param_count, S
             str_free(&func_name);
             free(body);
             free(function);
+            return false;
+        }
+        statement->next->type = ST_END;
+        statement->next->next = NULL;
+    }
+
+    return true;
+}
+
+/// Adds a setter call to the AST
+bool ast_add_setter_call(AstStatement *statement, char *name, AstExpression *expression) {
+    // Check if statement is NULL or not EMPTY
+    if (statement == NULL || statement->type != ST_END) {
+        return false;
+    }  
+    // Create setter call name as String
+    String *setter_name = str_init();
+    if (setter_name == NULL) {
+        return false;
+    }
+
+    if (!str_append_string(setter_name, name)) {
+        str_free(&setter_name);
+        return false;
+    } 
+
+    // Create AstVariable structure for setter call
+    AstVariable *setter_call = malloc(sizeof(AstVariable));
+    if (setter_call == NULL) {
+        str_free(&setter_name);
+        return false;
+    }
+
+    // Fill AstVariable structure
+    setter_call->name = setter_name;
+    setter_call->expression = expression;
+
+    // Set statement type and union
+    statement->type = ST_SETTER_CALL;
+    statement->setter_call = setter_call;
+    
+    // Allocate next element if not already allocated
+    if (statement->next == NULL) {
+        statement->next = malloc(sizeof(AstStatement));
+        if (statement->next == NULL) {
+            str_free(&setter_name);
+            free(setter_call);
+            return false;
+        }
+        statement->next->type = ST_END;
+        statement->next->next = NULL;
+    }
+
+    return true;
+}
+
+/// Adds a block to the AST
+bool ast_add_block(AstStatement *statement) {
+    // Check if statement is NULL or not EMPTY
+    if (statement == NULL || statement->type != ST_END) {
+        return false;
+    }
+
+    // Set statement type and union
+    statement->type = ST_BLOCK;
+    statement->block = ast_block_create();
+
+    if (statement->block == NULL) {
+        return false;
+    }
+
+    // Allocate next element if not already allocated
+    if (statement->next == NULL) {
+        statement->next = malloc(sizeof(AstStatement));
+        if (statement->next == NULL) {
+            return false;
+        }
+        statement->next->type = ST_END;
+        statement->next->next = NULL;
+    }
+
+    return true;
+}
+
+/// Adds an inline expression to the AST
+bool ast_add_inline_expression(AstStatement *statement, AstExpression *expression) {
+    // Check if statement is NULL or not EMPTY
+    if (statement == NULL || statement->type != ST_END) {
+        return false;
+    }
+
+    // Set statement type and union
+    statement->type = ST_EXPRESSION;
+    statement->expression = expression;
+    
+    // Allocate next element if not already allocated
+    if (statement->next == NULL) {
+        statement->next = malloc(sizeof(AstStatement));
+        if (statement->next == NULL) {
             return false;
         }
         statement->next->type = ST_END;
@@ -649,12 +653,11 @@ void ast_statement_free(AstStatement *statement) {
             }
             break;
 
-        case ST_FUNC_CALL:
-        case ST_BUILTIN_CALL:
-            if (statement->func_call != NULL) {
-                str_free(&statement->func_call->name);
-                ast_expr_free(statement->func_call->arguments);
-                free(statement->func_call);
+        case ST_SETTER_CALL:
+            if (statement->setter_call != NULL) {
+                str_free(&statement->setter_call->name);
+                ast_expr_free(statement->setter_call->expression);
+                free(statement->setter_call);
             }
             break;
 
@@ -732,6 +735,7 @@ static void ast_print_indent(int indent) {
 // Forward declarations
 static void ast_print_block(AstBlock *block, int indent);
 static void ast_print_statement(AstStatement *statement, int indent);
+static void ast_print_expression(AstExpression *expr);
 
 // Helper function for printing block
 static void ast_print_block(AstBlock *block, int indent) {
@@ -739,6 +743,49 @@ static void ast_print_block(AstBlock *block, int indent) {
         return;
     }
     ast_print_statement(block->statements, indent);
+}
+
+// Print an expression tree recursively (simple readable form)
+static void ast_print_expression(AstExpression *expr) {
+    if (expr == NULL) {
+        printf("(null expression)\n");
+        return;
+    }
+
+    switch (expr->type) {
+        case EX_ID:
+            // For AST printing replace identifier text with the generic label
+            printf("EXPRESSION\n");
+            break;
+        case EX_GLOBAL_ID:
+            // For AST printing replace global identifier text with the generic label
+            printf("EXPRESSION\n");
+            break;
+        case EX_STRING:
+            // For AST printing replace string literal text with the generic label
+            printf("EXPRESSION\n");
+            break;
+        case EX_INT:
+            printf("%d\n", expr->int_val);
+            break;
+        case EX_DOUBLE:
+            printf("%f\n", expr->double_val);
+            break;
+        case EX_BOOL:
+            printf("%s\n", expr->bool_val ? "true" : "false");
+            break;
+        case EX_NULL:
+            printf("null\n");
+            break;
+        default:
+            // For non-leaf nodes (operators, function calls, etc.) don't print labels,
+            // just recurse into children so only leaf values appear in output.
+            break;
+    }
+
+    for (size_t i = 0; i < expr->child_count; i++) {
+        ast_print_expression(expr->params[i]);
+    }
 }
 
 // Helper function for printing statement
@@ -832,6 +879,15 @@ static void ast_print_statement(AstStatement *statement, int indent) {
             printf("RETURN\n");
             break;
 
+        case ST_SETTER_CALL:
+            if (statement->setter_call != NULL) {
+                if (statement->setter_call->expression != NULL) {
+                    // print only the expression (no labels or additional text)
+                    ast_print_expression(statement->setter_call->expression);
+                }
+            }
+            break;
+
         case ST_LOCAL_VAR:
             if (statement->local_var != NULL) {
                 printf("LOCAL_VAR: %s\n", 
@@ -850,23 +906,9 @@ static void ast_print_statement(AstStatement *statement, int indent) {
             }
             break;
 
-        case ST_FUNC_CALL:
-            if (statement->func_call != NULL) {
-                printf("FUNC_CALL: %s (args: %zu)\n", 
-                       statement->func_call->name ? statement->func_call->name->val : "?",
-                       statement->func_call->argument_count);
-            } else {
-                printf("FUNC_CALL: (null)\n");
-            }
-            break;
-
-        case ST_BUILTIN_CALL:
-            if (statement->builtin_call != NULL) {
-                printf("BUILTIN_CALL: %s (args: %zu)\n", 
-                       statement->builtin_call->name ? statement->builtin_call->name->val : "?",
-                       statement->builtin_call->argument_count);
-            } else {
-                printf("BUILTIN_CALL: (null)\n");
+        case ST_EXPRESSION:
+            if (statement->expression != NULL) {
+                ast_print_expression(statement->expression);
             }
             break;
 

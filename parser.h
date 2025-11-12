@@ -17,7 +17,7 @@
 #include <stdbool.h>
 
 /// Main parsing function
-ErrorCode parse();
+ErrorCode parse(AstStatement **out_root);
 
 /// Adds all builtin functions to the symbol table
 bool add_builtin_functions(Symtable *symtab);
@@ -61,11 +61,11 @@ ErrorCode check_if_statement(Lexer *lexer, Symtable *globaltable, Symtable *loca
 /// Checks while statement
 ErrorCode check_while_statement(Lexer *lexer, Symtable *globaltable, Symtable *localtable, AstStatement *statement);
 
-/// Checks Ifj statement
-ErrorCode check_ifj_statement(Lexer *lexer, Symtable *globaltable, Symtable *localtable, Token keyword, AstStatement *statement);
-
 /// Checks return statement
 ErrorCode check_return_statement(Lexer *lexer, Symtable *globaltable, Symtable *localtable, AstStatement *statement);
+
+/// Checks variable expression: if a local variable exists set its type
+ErrorCode check_variable_expression(Symtable *localtable, Symtable *globaltable, char *name, Token error_token, DataType expr_type, AstStatementType *type_out);
 
 /// Semantic analysis of expression - checks definitions and type compatibility
 ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, Symtable *localtable, DataType *out_type);
