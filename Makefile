@@ -10,6 +10,9 @@ CFLAGS += -Wall -Wextra -pedantic
 # CFLAGS += -Werror
 # CFLAGS += -O3
 
+# Debugging
+CFLAGS += -g -DCG_DEBUG
+
 main: main.o ast.o code_generator.o expr_parser.o lexer.o parser.o stack.o string.o symtable.o token.o
 
 .PHONY: clean

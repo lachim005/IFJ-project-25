@@ -240,7 +240,7 @@ bool find_local_var(Symtable *st, char *var_name, SymtableItem **out_item) {
         return true;
     }
 
-    // Assumes format var_name@scope_id
+    // Assumes format var_name?scope_id
     String *s = str_init();
     if (s == NULL) return false;
     
@@ -248,7 +248,7 @@ bool find_local_var(Symtable *st, char *var_name, SymtableItem **out_item) {
         // Constructs symtable name
         str_clear(s);
         str_append_string(s, var_name);
-        str_append_char(s, '@');
+        str_append_char(s, '?');
         if (!append_scope_id(s, st->scope_stack[i])) {
             str_free(&s);
             return false;
@@ -269,13 +269,13 @@ bool find_local_var(Symtable *st, char *var_name, SymtableItem **out_item) {
 }
 
 SymtableItem *add_var_at_current_scope(Symtable *st, char *var_name, DataType data_type) {
-    // Assumes format var_name@scope_id
+    // Assumes format var_name?scope_id
     String *s = str_init();
     if (s == NULL) return NULL;
     
     // Constructs symtable name
     str_append_string(s, var_name);
-    str_append_char(s, '@');
+    str_append_char(s, '?');
     if (!append_scope_id(s, current_scope(st))) {
         str_free(&s);
         return NULL;
@@ -294,13 +294,13 @@ SymtableItem *add_var_at_current_scope(Symtable *st, char *var_name, DataType da
 }
 
 bool contains_var_at_current_scope(Symtable *st, char *var_name) {
-    // Assumes format var_name@scope_id
+    // Assumes format var_name?scope_id
     String *s = str_init();
     if (s == NULL) return false;
     
     // Constructs symtable name
     str_append_string(s, var_name);
-    str_append_char(s, '@');
+    str_append_char(s, '?');
     if (!append_scope_id(s, current_scope(st))) {
         str_free(&s);
         return false;
@@ -312,7 +312,7 @@ bool contains_var_at_current_scope(Symtable *st, char *var_name) {
 }
 
 SymtableItem *symtable_add_getter(Symtable *st, char *var_name, bool is_defined) {
-    // Assumes format var_name@scope_id
+    // Assumes format var_name!
     String *s = str_init();
     if (s == NULL) return NULL;
 
@@ -356,13 +356,13 @@ bool symtable_contains_getter(Symtable *st, char *var_name, SymtableItem **out_i
 }
 
 SymtableItem *symtable_add_setter(Symtable *st, char *var_name, bool is_defined) {
-    // Assumes format var_name@scope_id
+    // Assumes format var_name*
     String *s = str_init();
     if (s == NULL) return NULL;
 
     // Constructs symtable name
     str_append_string(s, var_name);
-    str_append_char(s, '?');
+    str_append_char(s, '*');
 
     SymtableItem *result = symtable_insert(st, s->val);
     str_free(&s);
@@ -380,13 +380,13 @@ SymtableItem *symtable_add_setter(Symtable *st, char *var_name, bool is_defined)
 }
 
 bool symtable_contains_setter(Symtable *st, char *var_name, SymtableItem **out_item) {
-    // Assumes format var_name?
+    // Assumes format var_name*
     String *s = str_init();
     if (s == NULL) return false;
 
     // Constructs symtable name
     str_append_string(s, var_name);
-    str_append_char(s, '?');
+    str_append_char(s, '*');
 
     bool result = symtable_contains(st, s->val);
 
@@ -400,7 +400,7 @@ bool symtable_contains_setter(Symtable *st, char *var_name, SymtableItem **out_i
 }
 
 SymtableItem *symtable_add_function(Symtable *st, char *var_name, int param_count, bool is_defined) {
-    // Assumes format var_name@scope_id
+    // Assumes format var_name$param_count
     String *s = str_init();
     if (s == NULL) return NULL;
 

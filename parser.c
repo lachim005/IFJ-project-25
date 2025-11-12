@@ -507,8 +507,7 @@ ErrorCode checks_setter(Lexer *lexer, Symtable *globaltable, Symtable *localtabl
         RETURN_CODE(SYNTACTIC_ERROR, token);
     }
 
-    // Exits the scope for the setter
-    exit_scope(localtable);
+    // We leave the last scope so we can find arguments
 
     RETURN_CODE(OK, token);
 }
@@ -545,8 +544,7 @@ ErrorCode check_getter(Lexer *lexer, Symtable *globaltable, Symtable *localtable
         RETURN_CODE(SYNTACTIC_ERROR, token);
     }
 
-    // Exits the scope for the getter
-    exit_scope(localtable);
+    // We leave the last scope so we can find arguments
 
     RETURN_CODE(OK, token);
 }
@@ -634,8 +632,7 @@ ErrorCode check_function(Lexer *lexer, Symtable *globaltable, Symtable *localtab
         RETURN_CODE(SYNTACTIC_ERROR, token);
     }
 
-    // Exits the scope for the function
-    exit_scope(localtable);
+    // We leave the last scope so we can find arguments
 
     RETURN_CODE(OK, token);
 }
