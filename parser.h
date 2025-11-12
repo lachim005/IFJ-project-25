@@ -17,7 +17,7 @@
 #include <stdbool.h>
 
 /// Main parsing function
-ErrorCode parse(AstStatement **out_root);
+ErrorCode parse(Lexer *lexer, AstStatement **out_root, Symtable **out_global_symtable);
 
 /// Adds all builtin functions to the symbol table
 bool add_builtin_functions(Symtable *symtab);

@@ -47,7 +47,6 @@ typedef enum lexer_status {
 } ErrLex; // Lexer? More like LexERR
 
 /// Opens the given file and prepares the given lexer structure. Returns false if something went wrong
-/// TODO: Error return codes?
 bool lexer_init(Lexer *lexer, FILE *input_stream);
 
 /// Frees the inside of the given lexer structure

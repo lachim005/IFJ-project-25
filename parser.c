@@ -7,6 +7,7 @@
  */
 
 #include "parser.h"
+#include "ast.h"
 #include "error.h"
 #include "symtable.h"
 #include "expr_parser.h"
@@ -1566,63 +1567,46 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
     return OK;
 }
 
-ErrorCode parse(AstStatement **out_root) {
-    Lexer lexer_structure;
-    Lexer *lexer = &lexer_structure;
-    if (!lexer_init(lexer, stdin)){
+ErrorCode parse(Lexer *lexer, AstStatement **out_root, Symtable **out_global_symtable) {
+    AstStatement *root = ast_statement_init();
+    if (root == NULL) {
         return INTERNAL_ERROR;
     }
 
     Symtable *symtable = symtable_init();
     if (symtable == NULL) {
-        lexer_free(lexer);
+        ast_free(root);
         return INTERNAL_ERROR;
     }
 
     // Add all builtin functions
     if (!add_builtin_functions(symtable)) {
         symtable_free(symtable);
-        lexer_free(lexer);
+        ast_free(root);
         return INTERNAL_ERROR;
     }
 
     if (check_prologue(lexer) != OK) {
         symtable_free(symtable);
-        lexer_free(lexer);
+        ast_free(root);
         return SYNTACTIC_ERROR;
     }
 
-    ErrorCode ec = check_class_program(lexer, symtable, (*out_root)->next);
+    ErrorCode ec = check_class_program(lexer, symtable, (root)->next);
     if (ec != OK) {
         symtable_free(symtable);
-        lexer_free(lexer);
+        ast_free(root);
         return ec;
     }
 
     if (symtable_get_undefined_items_count(symtable) > 0) {
+        symtable_free(symtable);
+        ast_free(root);
         return SEM_UNDEFINED;
     }
 
-    symtable_free(symtable);
-    lexer_free(lexer);
+    *out_global_symtable = symtable;
+    *out_root = root;
 
     return OK;
-}
-
-int main() {
-    AstStatement *root = ast_statement_init();
-    if (root == NULL) {
-        fprintf(stderr, "Error: %d\n", INTERNAL_ERROR);
-        return INTERNAL_ERROR;
-    }
-    
-    ErrorCode ec = parse(&root);
-    if (ec != OK) {
-        fprintf(stderr, "Error: %d\n", ec);
-        ast_free(root);
-        return ec;
-    }
-    ast_print(root);
-    ast_free(root);
-    return 0;
 }
