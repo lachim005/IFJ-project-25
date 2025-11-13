@@ -15,21 +15,143 @@ do {\
 #define DEBUG_WRITE(output, ...)
 #endif
 
-/// Generates code for defining a global variable
+ErrorCode generate_compound_statement(FILE *output, AstBlock *st) {
+    for (AstStatement *cur = st->statements; cur->type != ST_END; cur = cur->next) {
+        CG_ASSERT(generate_statement(output, cur) == OK);
+    }
+    return OK;
+}
+
+ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
+    switch (st->type) {
+    case EX_ID:
+        fprintf(output, "PUSHS LF@%s\n", st->string_val->val);
+        return OK;
+    case EX_GLOBAL_ID:
+        fprintf(output, "PUSHS GF@%s\n", st->string_val->val);
+        return OK;
+    case EX_FUN:
+        return OK;
+    case EX_INT:
+        fprintf(output, "PUSHS int@%d\n", st->int_val);
+        return OK;
+    case EX_DOUBLE:
+        fprintf(output, "PUSHS float@%lf\n", st->double_val);
+        return OK;
+    case EX_BOOL:
+        fprintf(output, "PUSHS bool@%s\n", st->bool_val ? "true" : "false");
+        return OK;
+    case EX_NULL:
+        fprintf(output, "PUSHS nil@nil\n");
+        return OK;
+    case EX_TERNARY:
+        return OK;
+    case EX_NOT:
+        return OK;
+    case EX_IS:
+        return OK;
+    case EX_STRING:
+        return OK;
+    case EX_NEGATE:
+        return OK;
+    case EX_DATA_TYPE:
+        return OK;
+    case EX_BUILTIN_FUN:
+        return OK;
+    case EX_AND:
+        return OK;
+    case EX_OR:
+        return OK;
+    default:
+        break;
+    }
+
+    // The rest are just binary operators
+    // TODO: type check
+    generate_expression_evaluation(output, st->params[0]);
+    generate_expression_evaluation(output, st->params[1]);
+    switch (st->type) {
+    case EX_ADD:
+        fprintf(stdout, "ADDS\n"); break;
+    case EX_SUB:
+        fprintf(stdout, "SUBS\n"); break;
+    case EX_MUL:
+        fprintf(stdout, "MULS\n"); break;
+    case EX_DIV:
+        fprintf(stdout, "DIVS\n"); break;
+    case EX_GREATER:
+        fprintf(stdout, "GTS\n"); break;
+    case EX_LESS:
+        fprintf(stdout, "LTS\n"); break;
+    case EX_GREATER_EQ:
+        fprintf(stdout, "LTS\nNOTS\n"); break;
+    case EX_LESS_EQ:
+        fprintf(stdout, "GTS\nNOTS\n"); break;
+    case EX_EQ:
+        fprintf(stdout, "EQS\n"); break;
+    case EX_NOT_EQ:
+        fprintf(stdout, "EQS\nNOTS\n"); break;
+    default:
+        return INTERNAL_ERROR;
+    }
+    return OK;
+}
+
+ErrorCode generate_var_assignment(FILE *output, char *scope, AstVariable *st) {
+    CG_ASSERT(generate_expression_evaluation(output, st->expression) == OK);
+    fprintf(output, "POPS %s@%s\n", scope, st->name->val);
+    return OK;
+}
+
+ErrorCode generate_setter_assignment(FILE *output, AstVariable *st) {
+    CG_ASSERT(generate_expression_evaluation(output, st->expression) == OK);
+    fprintf(output, "CALL $%s\n", st->name->val);
+    return OK;
+}
+
+ErrorCode generate_return_statement(FILE *output, AstExpression *expr) {
+    CG_ASSERT(generate_expression_evaluation(output, expr) == OK);
+    fprintf(output, "POPFRAME\nRETURN\n");
+    return OK;
+}
+
+ErrorCode generate_statement(FILE *output, AstStatement *st) {
+    switch (st->type) {
+    case ST_BLOCK:
+        return generate_compound_statement(output, st->block);
+    case ST_IF:
+        break;
+    case ST_WHILE:
+        break;
+    case ST_RETURN:
+        return generate_return_statement(output, st->return_expr);
+    case ST_LOCAL_VAR:
+        return generate_var_assignment(output, "LF", st->local_var);
+    case ST_GLOBAL_VAR:
+        return generate_var_assignment(output, "GF", st->global_var);
+    case ST_SETTER_CALL:
+        return generate_setter_assignment(output, st->setter_call);
+    case ST_EXPRESSION:
+        return generate_expression_evaluation(output, st->expression);
+    default:
+        // return INTERNAL_ERROR;
+        return OK;
+    }
+    return OK;
+}
+
 void declare_global_var(SymtableItem *item, void *par) {
     if (item->type != SYM_GLOBAL_VAR) return;
 
     fprintf((FILE*)par, "DEFVAR GF@%s\n", item->key);
 }
 
-/// Generates code for defining a local variable
 void declare_local_var(SymtableItem *item, void *par) {
     if (item->type != SYM_VAR) return;
 
     fprintf((FILE*)par, "DEFVAR LF@%s\n", item->key);
 }
 
-// Stores function parameters into local variables
 ErrorCode store_function_parameters(FILE *output, AstFunction *fun) {
     DEBUG_WRITE(output, "\n# Store parameters into variables\n");
     for (size_t i = fun->param_count; i > 0; i--) {
@@ -42,7 +164,6 @@ ErrorCode store_function_parameters(FILE *output, AstFunction *fun) {
     return OK;
 }
 
-/// Generates code for function/getter/setter body
 ErrorCode define_function(FILE *output, AstFunction *fun) {
     // Function label
     DEBUG_WRITE(output, "\n\n################\n""# DEFINITION OF FUNCTION '%s' with %zu parameters\n################\n", fun->name->val, fun->param_count);
@@ -59,8 +180,10 @@ ErrorCode define_function(FILE *output, AstFunction *fun) {
     CG_ASSERT(store_function_parameters(output, fun) == OK);
 
     // Generate code for statements
+    DEBUG_WRITE(output, "\n# Function body\n");
     for (AstStatement *cur = fun->body->statements; cur->type != ST_END; cur = cur->next) {
-        // TODO
+        CG_ASSERT(generate_statement(output, cur) == OK);
+        DEBUG_WRITE(output, "#---------\n");
     }
 
     // Default return
