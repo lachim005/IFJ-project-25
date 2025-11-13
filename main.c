@@ -16,8 +16,8 @@ int main() {
     Lexer lexer;
     if (!lexer_init(&lexer, stdin)) return INTERNAL_ERROR;
 
-    AstStatement *ast_root;
-    Symtable *glob_symtable;
+    AstStatement *ast_root = NULL;
+    Symtable *glob_symtable = NULL;
     ErrorCode ec = parse(&lexer, &ast_root, &glob_symtable);
 
     lexer_free(&lexer);
