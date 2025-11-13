@@ -27,6 +27,23 @@ ErrorCode generate_compound_statement(FILE *output, AstBlock *st) {
     return OK;
 }
 
+ErrorCode generate_if_statement(FILE *output, AstIfStatement *st) {
+    unsigned expr_id = internal_names_cntr++;
+    CG_ASSERT(generate_expression_evaluation(output, st->condition) == OK);
+    fprintf(output, "PUSHS bool@true\n"
+                    "JUMPIFNEQS $&&if_false_branch%u\n",
+                    expr_id);
+    generate_compound_statement(output, st->true_branch);
+    fprintf(output, "JUMP $&&if_end%u\n"
+                    "LABEL $&&if_false_branch%u\n",
+                    expr_id, expr_id);
+    if (st->false_branch != NULL) {
+        generate_compound_statement(output, st->false_branch);
+    }
+    fprintf(output, "LABEL $&&if_end%u\n", expr_id);
+    return OK;
+}
+
 ErrorCode generate_function_call(FILE *output, AstExpression *call) {
     for (unsigned i = 0; i < call->child_count; i++) {
         CG_ASSERT(generate_expression_evaluation(output, call->params[i]) == OK);
@@ -360,7 +377,7 @@ ErrorCode generate_statement(FILE *output, AstStatement *st) {
     case ST_BLOCK:
         return generate_compound_statement(output, st->block);
     case ST_IF:
-        break;
+        return generate_if_statement(output, st->if_st);
     case ST_WHILE:
         break;
     case ST_RETURN:
