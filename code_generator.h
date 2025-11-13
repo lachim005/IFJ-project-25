@@ -34,6 +34,9 @@ ErrorCode generate_ternary_expr(FILE *output, AstExpression *ex);
 /// Converts a given input string to the IFJcode25 literal format
 ErrorCode convert_string(char *input, String **out);
 
+/// Generates code for a builtin function call
+ErrorCode generate_builtin_function_call(FILE *output, AstExpression *ex);
+
 /// Generates code which will evaluate the given expression
 /// Leaves the resulting value at the top of the stack
 ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st);
