@@ -30,9 +30,22 @@ ErrorCode generate_compound_statement(FILE *output, AstBlock *st) {
 ErrorCode generate_if_statement(FILE *output, AstIfStatement *st) {
     unsigned expr_id = internal_names_cntr++;
     CG_ASSERT(generate_expression_evaluation(output, st->condition) == OK);
-    fprintf(output, "PUSHS bool@true\n"
-                    "JUMPIFNEQS $&&if_false_branch%u\n",
-                    expr_id);
+    fprintf(output, "POPS GF@&&inter1\n"
+                    // Check if null
+                    "PUSHS GF@&&inter1\n"
+                    "PUSHS nil@nil\n"
+                    "JUMPIFEQS $&&if_false_branch%u\n"
+                    // Check if bool
+                    "PUSHS GF@&&inter1\n"
+                    "TYPES\n"
+                    "PUSHS string@bool\n"
+                    "JUMPIFNEQS $&&if_true_branch%u\n"
+                    // Check if false
+                    "PUSHS GF@&&inter1\n"
+                    "PUSHS bool@false\n"
+                    "JUMPIFEQS $&&if_false_branch%u\n"
+                    "LABEL $&&if_true_branch%u\n",
+                    expr_id, expr_id, expr_id, expr_id);
     generate_compound_statement(output, st->true_branch);
     fprintf(output, "JUMP $&&if_end%u\n"
                     "LABEL $&&if_false_branch%u\n",
@@ -41,6 +54,33 @@ ErrorCode generate_if_statement(FILE *output, AstIfStatement *st) {
         generate_compound_statement(output, st->false_branch);
     }
     fprintf(output, "LABEL $&&if_end%u\n", expr_id);
+    return OK;
+}
+
+ErrorCode generate_while_statement(FILE *output, AstWhileStatement *st) {
+    unsigned expr_id = internal_names_cntr++;
+    fprintf(output, "LABEL $&&while_cond%u\n", expr_id);
+    CG_ASSERT(generate_expression_evaluation(output, st->condition) == OK);
+    fprintf(output, "POPS GF@&&inter1\n"
+                    // Check if null
+                    "PUSHS GF@&&inter1\n"
+                    "PUSHS nil@nil\n"
+                    "JUMPIFEQS $&&while_end%u\n"
+                    // Check if bool
+                    "PUSHS GF@&&inter1\n"
+                    "TYPES\n"
+                    "PUSHS string@bool\n"
+                    "JUMPIFNEQS $&&while_start%u\n"
+                    // Check if false
+                    "PUSHS GF@&&inter1\n"
+                    "PUSHS bool@false\n"
+                    "JUMPIFEQS $&&while_end%u\n"
+                    "LABEL $&&while_start%u\n",
+                    expr_id, expr_id, expr_id, expr_id);
+    generate_compound_statement(output, st->body);
+    fprintf(output, "JUMP $&&while_cond%u\n"
+                    "LABEL $&&while_end%u\n",
+                    expr_id, expr_id);
     return OK;
 }
 
@@ -367,7 +407,11 @@ ErrorCode generate_setter_assignment(FILE *output, AstVariable *st) {
 }
 
 ErrorCode generate_return_statement(FILE *output, AstExpression *expr) {
-    CG_ASSERT(generate_expression_evaluation(output, expr) == OK);
+    if (expr != NULL) {
+        CG_ASSERT(generate_expression_evaluation(output, expr) == OK);
+    } else {
+        fprintf(output, "PUSHS nil@nil\n");
+    }
     fprintf(output, "POPFRAME\nRETURN\n");
     return OK;
 }
@@ -379,7 +423,7 @@ ErrorCode generate_statement(FILE *output, AstStatement *st) {
     case ST_IF:
         return generate_if_statement(output, st->if_st);
     case ST_WHILE:
-        break;
+        return generate_while_statement(output, st->while_st);
     case ST_RETURN:
         return generate_return_statement(output, st->return_expr);
     case ST_LOCAL_VAR:
@@ -402,7 +446,9 @@ ErrorCode generate_statement(FILE *output, AstStatement *st) {
 void declare_global_var(SymtableItem *item, void *par) {
     if (item->type != SYM_GLOBAL_VAR) return;
 
-    fprintf((FILE*)par, "DEFVAR GF@%s\n", item->key);
+    fprintf((FILE*)par, "DEFVAR GF@%s\n"
+                        "MOVE GF@%s nil@nil\n",
+                        item->key, item->key);
 }
 
 void declare_local_var(SymtableItem *item, void *par) {

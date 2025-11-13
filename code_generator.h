@@ -19,6 +19,9 @@ ErrorCode generate_compound_statement(FILE *output, AstBlock *st);
 /// Generates code for an if statement
 ErrorCode generate_if_statement(FILE *output, AstIfStatement *st);
 
+/// Generates code for a while cycle
+ErrorCode generate_while_statement(FILE *output, AstWhileStatement *st);
+
 /// Generates code for a function call
 ErrorCode generate_function_call(FILE *output, AstExpression *call);
 
