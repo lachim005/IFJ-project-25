@@ -19,6 +19,21 @@ ErrorCode generate_compound_statement(FILE *output, AstBlock *st);
 /// Generates code for a function call
 ErrorCode generate_function_call(FILE *output, AstExpression *call);
 
+/// Generates code for an AND expression ex
+ErrorCode generate_and_expr(FILE *output, AstExpression *ex);
+
+/// Generates code for an OR expression ex
+ErrorCode generate_or_expr(FILE *output, AstExpression *ex);
+
+/// Generates code for an is expression ex
+ErrorCode generate_is_expr(FILE *output, AstExpression *ex);
+
+/// Generates code for a ternary expression ex
+ErrorCode generate_ternary_expr(FILE *output, AstExpression *ex);
+
+/// Converts a given input string to the IFJcode25 literal format
+ErrorCode convert_string(char *input, String **out);
+
 /// Generates code which will evaluate the given expression
 /// Leaves the resulting value at the top of the stack
 ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st);

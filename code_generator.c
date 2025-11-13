@@ -1,6 +1,7 @@
 #include "code_generator.h"
 #include "ast.h"
 #include "error.h"
+#include "string.h"
 #include "symtable.h"
 #include <stdio.h>
 
@@ -14,6 +15,9 @@ do {\
 #else
 #define DEBUG_WRITE(output, ...)
 #endif
+
+// Used for unique names for compiler variables and labels
+unsigned internal_names_cntr = 0;
 
 ErrorCode generate_compound_statement(FILE *output, AstBlock *st) {
     for (AstStatement *cur = st->statements; cur->type != ST_END; cur = cur->next) {
@@ -30,7 +34,121 @@ ErrorCode generate_function_call(FILE *output, AstExpression *call) {
     return OK;
 }
 
+ErrorCode generate_and_expr(FILE *output, AstExpression *ex) {
+    unsigned expr_id = internal_names_cntr++;
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+    // Short circuit
+    fprintf(output, "PUSHS bool@false\n"
+                    "JUMPIFEQS $&&and_short%u\n", expr_id);
+
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
+    fprintf(output, "JUMP $&&and_end%u\n"
+                    "LABEL $&&and_short%u\n"
+                    "PUSHS bool@false\n"
+                    "LABEL $&&and_end%u\n",
+                    expr_id, expr_id, expr_id);
+    return OK;
+}
+
+ErrorCode generate_or_expr(FILE *output, AstExpression *ex) {
+    unsigned expr_id = internal_names_cntr++;
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+    // Short circuit
+    fprintf(output, "PUSHS bool@true\n"
+                    "JUMPIFEQS $&&or_short%u\n", expr_id);
+
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
+    fprintf(output, "JUMP $&&or_end%u\n"
+                    "LABEL $&&or_short%u\n"
+                    "PUSHS bool@true\n"
+                    "LABEL $&&or_end%u\n",
+                    expr_id, expr_id, expr_id);
+    return OK;
+}
+
+ErrorCode generate_is_expr(FILE *output, AstExpression *ex) {
+    unsigned expr_id = internal_names_cntr++;
+    CG_ASSERT(ex->params[1]->type == EX_DATA_TYPE);
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+    if (ex->params[1]->data_type == DT_NUM) {
+        // If the type we are checking is Num, it could be either a float or an int,
+        // so we convert ints into floats
+        fprintf(output, "POPS GF@&&is_val\n"
+                        "TYPE GF@&&is_type GF@&&is_val\n"
+                        "JUMPIFNEQ $&&is_int_conv%u GF@&&is_type string@float\n"
+                        // The type is int, so we can push true and jump to the end
+                        "PUSHS bool@true\n"
+                        "JUMP $&&is_end%u\n"
+                        "LABEL $&&is_int_conv%u\n"
+                        "PUSHS GF@&&is_val\n",
+                        expr_id, expr_id, expr_id);
+    }
+
+    fprintf(output, "TYPES\n");
+
+    char *desired_type = NULL;
+    switch (ex->params[1]->data_type) {
+    case DT_NULL:
+        desired_type = "nil"; break;
+    case DT_NUM:
+        desired_type = "int"; break;
+    case DT_STRING:
+        desired_type = "string"; break;
+    case DT_BOOL:
+        desired_type = "bool"; break;
+    default:
+        return INTERNAL_ERROR;
+    }
+    fprintf(output, "PUSHS string@%s\n"
+                    "EQS\n", desired_type);
+
+    if (ex->params[1]->data_type == DT_NUM) {
+        // We have to add the label that we will jump to in case there is a float
+        fprintf(output, "LABEL $&&is_end%u\n", expr_id);
+    }
+    return OK;
+}
+
+ErrorCode generate_ternary_expr(FILE *output, AstExpression *ex) {
+    unsigned expr_id = internal_names_cntr++;
+
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+    fprintf(output, "PUSHS bool@false\n"
+                    "JUMPIFEQS $&&ternary_false%u\n",
+                    expr_id);
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
+    fprintf(output, "JUMP $&&ternary_end%u\n"
+                    "LABEL $&&ternary_false%u\n",
+                    expr_id, expr_id);
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[2]) == OK);
+    fprintf(output, "LABEL $&&ternary_end%u\n", expr_id);
+
+    internal_names_cntr++;
+    return OK;
+}
+
+ErrorCode convert_string(char *input, String **out) {
+    String *str = str_init();
+    CG_ASSERT(str != NULL);
+    for (unsigned i = 0; input[i] != '\0'; i++) {
+        unsigned char c = input[i];
+        if (c > 32 && c != 35 && c != 92) {
+            // Normal characters - we can print them as they are
+            CG_ASSERT(str_append_char(str, c));
+            continue;
+        }
+        // Others - print their escape sequence
+        char buf[4];
+        CG_ASSERT(snprintf(buf, 4, "%03d", c) <= 4);
+        CG_ASSERT(str_append_char(str, '\\'));
+        CG_ASSERT(str_append_string(str, buf));
+    }
+    *out = str;
+    return OK;
+}
+
 ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
+    String *str; // Used for string literals
     switch (st->type) {
     case EX_ID:
         fprintf(output, "PUSHS LF@%s\n", st->string_val->val);
@@ -47,7 +165,7 @@ ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
         fprintf(output, "PUSHS int@%d\n", st->int_val);
         return OK;
     case EX_DOUBLE:
-        fprintf(output, "PUSHS float@%lf\n", st->double_val);
+        fprintf(output, "PUSHS float@%a\n", st->double_val);
         return OK;
     case EX_BOOL:
         fprintf(output, "PUSHS bool@%s\n", st->bool_val ? "true" : "false");
@@ -56,40 +174,41 @@ ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
         fprintf(output, "PUSHS nil@nil\n");
         return OK;
     case EX_TERNARY:
-        fprintf(output, "PUSHS nil@nil\n");
-        return OK;
+        return generate_ternary_expr(output, st);
     case EX_NOT:
-        fprintf(output, "PUSHS nil@nil\n");
+        CG_ASSERT(generate_expression_evaluation(output, st->params[0]) == OK);
+        fprintf(output, "NOTS\n");
         return OK;
     case EX_IS:
-        fprintf(output, "PUSHS nil@nil\n");
-        return OK;
+        return generate_is_expr(output, st);
     case EX_STRING:
-        fprintf(output, "PUSHS nil@nil\n");
+        CG_ASSERT(convert_string(st->string_val->val, &str) == OK);
+        fprintf(output, "PUSHS string@%s\n", str->val);
+        str_free(&str);
         return OK;
     case EX_NEGATE:
-        fprintf(output, "PUSHS nil@nil\n");
+        fprintf(output, "PUSHS int@0\n");
+        CG_ASSERT(generate_expression_evaluation(output, st->params[0]) == OK);
+        fprintf(output, "SUBS\n");
         return OK;
     case EX_DATA_TYPE:
-        fprintf(output, "PUSHS nil@nil\n");
-        return OK;
+        return INTERNAL_ERROR;
     case EX_BUILTIN_FUN:
+        // TODO:
         fprintf(output, "PUSHS nil@nil\n");
         return OK;
     case EX_AND:
-        fprintf(output, "PUSHS nil@nil\n");
-        return OK;
+        return generate_and_expr(output, st);
     case EX_OR:
-        fprintf(output, "PUSHS nil@nil\n");
-        return OK;
+        return generate_or_expr(output, st);
     default:
         break;
     }
 
     // The rest are just binary operators
     // TODO: type check
-    generate_expression_evaluation(output, st->params[0]);
-    generate_expression_evaluation(output, st->params[1]);
+    CG_ASSERT(generate_expression_evaluation(output, st->params[0]) == OK);
+    CG_ASSERT(generate_expression_evaluation(output, st->params[1]) == OK);
     switch (st->type) {
     case EX_ADD:
         fprintf(stdout, "ADDS\n"); break;
@@ -231,7 +350,10 @@ ErrorCode generate_code(FILE *output, AstStatement *root, Symtable *global_symta
 
     // Declare global variables
     DEBUG_WRITE(output, "\n\n# GLOBAL VARS DECLARATION\n");
-    fprintf(output, "DEFVAR GF@&&void\n");
+    // Declares some compiler variables
+    fprintf(output, "DEFVAR GF@&&void\n"
+                    "DEFVAR GF@&&is_val\n"
+                    "DEFVAR GF@&&is_type\n");
     symtable_foreach(global_symtable, declare_global_var, output);
 
     // Runtime

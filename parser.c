@@ -1505,6 +1505,7 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
         }
 
         result_type = DT_BOOL;
+        break;
 
         return SEM_TYPE_COMPAT;
 
