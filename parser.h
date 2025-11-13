@@ -64,8 +64,14 @@ ErrorCode check_while_statement(Lexer *lexer, Symtable *globaltable, Symtable *l
 /// Checks return statement
 ErrorCode check_return_statement(Lexer *lexer, Symtable *globaltable, Symtable *localtable, AstStatement *statement);
 
+/// Helper for adding getter to symbol table with redefinition check
+ErrorCode add_getter_helper(Symtable *symtable, char *name);
+
+/// Helper for adding setter to symbol table with redefinition check
+ErrorCode add_setter_helper(Symtable *symtable, char *name);
+
 /// Checks variable expression: if a local variable exists set its type
-ErrorCode check_variable_expression(Symtable *localtable, Symtable *globaltable, char *name, Token error_token, DataType expr_type, AstStatementType *type_out);
+ErrorCode check_variable_expression(Symtable *localtable, Symtable *globaltable, char *name, DataType expr_type, AstStatementType *type_out);
 
 /// Semantic analysis of expression - checks definitions and type compatibility
 ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, Symtable *localtable, DataType *out_type);

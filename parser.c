@@ -39,44 +39,6 @@
     } while(token.type == TOK_EOL); \
 } while(0)
 
-/// Macro for adding getter to symbol table with redefinition check
-#define ADD_GETTER(symtable, name, error_token) do { \
-    SymtableItem *existing_item = NULL; \
-    if (symtable_contains_getter(symtable, name, &existing_item)) { \
-        if (existing_item != NULL && existing_item->is_defined) { \
-            RETURN_CODE(SEM_REDEFINITION, error_token); \
-        } \
-        if (existing_item != NULL && !existing_item->is_defined) { \
-            existing_item->is_defined = 1; \
-            symtable_decrement_undefined_items_counter(symtable); \
-        } \
-    } else { \
-        SymtableItem *new_item = symtable_add_getter(symtable, name, 1); \
-        if (new_item == NULL) { \
-            RETURN_CODE(INTERNAL_ERROR, error_token); \
-        } \
-    } \
-} while(0)
-
-/// Macro for adding setter to symbol table with redefinition check
-#define ADD_SETTER(symtable, name, error_token) do { \
-    SymtableItem *existing_item = NULL; \
-    if (symtable_contains_setter(symtable, name, &existing_item)) { \
-        if (existing_item != NULL && existing_item->is_defined) { \
-            RETURN_CODE(SEM_REDEFINITION, error_token); \
-        } \
-        if (existing_item != NULL && !existing_item->is_defined) { \
-            existing_item->is_defined = 1; \
-            symtable_decrement_undefined_items_counter(symtable); \
-        } \
-    } else { \
-        SymtableItem *new_item = symtable_add_setter(symtable, name, 1); \
-        if (new_item == NULL) { \
-            RETURN_CODE(INTERNAL_ERROR, error_token); \
-        } \
-    } \
-} while(0)
-
 /// Macro for adding function to symbol table with redefinition check
 #define ADD_FUNCTION(symtable, name, pcount, error_token) do { \
     SymtableItem *existing_item = NULL; \
@@ -119,8 +81,52 @@
     } \
 } while(0)
 
+/// Helper for adding getter to symbol table with redefinition check
+ErrorCode add_getter_helper(Symtable *symtable, char *name) {
+    SymtableItem *existing_item = NULL;
+    if (symtable_contains_getter(symtable, (char *)name, &existing_item)) {
+        if (existing_item != NULL && existing_item->is_defined) {
+            return SEM_REDEFINITION;
+        }
+        if (existing_item != NULL && !existing_item->is_defined) {
+            existing_item->is_defined = 1;
+            symtable_decrement_undefined_items_counter(symtable);
+            return OK;
+        }
+        return OK;
+    } else {
+        SymtableItem *new_item = symtable_add_getter(symtable, (char *)name, 1);
+        if (new_item == NULL) {
+            return INTERNAL_ERROR;
+        }
+        return OK;
+    }
+}
+
+/// Helper for adding setter to symbol table with redefinition check
+ErrorCode add_setter_helper(Symtable *symtable, char *name) {
+    SymtableItem *existing_item = NULL;
+    if (symtable_contains_setter(symtable, (char *)name, &existing_item)) {
+        if (existing_item != NULL && existing_item->is_defined) {
+            return SEM_REDEFINITION;
+        }
+        if (existing_item != NULL && !existing_item->is_defined) {
+            existing_item->is_defined = 1;
+            symtable_decrement_undefined_items_counter(symtable);
+            return OK;
+        }
+        return OK;
+    } else {
+        SymtableItem *new_item = symtable_add_setter(symtable, (char *)name, 1);
+        if (new_item == NULL) {
+            return INTERNAL_ERROR;
+        }
+        return OK;
+    }
+}
+
 /// Helper function for checking variable expression - checks if variable exists
-ErrorCode check_variable_expression(Symtable *localtable, Symtable *globaltable, char *name, Token error_token, DataType expr_type, AstStatementType *type_out) {
+ErrorCode check_variable_expression(Symtable *localtable, Symtable *globaltable, char *name, DataType expr_type, AstStatementType *type_out) {
     SymtableItem *local_var = NULL;
     if (!find_local_var(localtable, name, &local_var)) {
         return INTERNAL_ERROR;
@@ -451,8 +457,10 @@ ErrorCode checks_setter(Lexer *lexer, Symtable *globaltable, Symtable *localtabl
     // Enters new scope for the setter
     enter_scope(localtable);
 
-    // Add setter to global symbol table with automatic redefinition check
-    ADD_SETTER(globaltable, identifier.string_val->val, identifier);
+    ErrorCode ec = add_setter_helper(globaltable, identifier.string_val->val);
+    if (ec != OK) {
+        return ec;
+    }
 
     Token token;
     INIT_TOKEN(token, TOK_OP_ASSIGN);
@@ -492,7 +500,7 @@ ErrorCode checks_setter(Lexer *lexer, Symtable *globaltable, Symtable *localtabl
 
     token_free(&param_name);
 
-    ErrorCode ec = check_body(lexer, globaltable, localtable, true, statement->setter->body->statements);
+    ec = check_body(lexer, globaltable, localtable, true, statement->setter->body->statements);
     if (ec != OK) {
         RETURN_CODE(ec, token);
     }
@@ -517,8 +525,10 @@ ErrorCode check_getter(Lexer *lexer, Symtable *globaltable, Symtable *localtable
     // Enters new scope for the getter
     enter_scope(localtable);
 
-    // Add getter to global symbol table with automatic redefinition check
-    ADD_GETTER(globaltable, identifier.string_val->val, identifier);
+    ErrorCode ec = add_getter_helper(globaltable, identifier.string_val->val);
+    if (ec != OK) {
+        return ec;
+    }
 
     Token token;
     INIT_TOKEN(token, TOK_LEFT_BRACE);
@@ -529,7 +539,7 @@ ErrorCode check_getter(Lexer *lexer, Symtable *globaltable, Symtable *localtable
     }
 
     // Check getter body
-    ErrorCode ec = check_body(lexer, globaltable, localtable, true, statement->getter->body->statements);
+    ec = check_body(lexer, globaltable, localtable, true, statement->getter->body->statements);
     if (ec != OK) {
         RETURN_CODE(ec, token);
     }
@@ -854,9 +864,9 @@ ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable,
         ErrorCode evc;
         AstStatementType stmt_type;
         if (known) {
-            evc = check_variable_expression(localtable, globaltable, identifier.string_val->val, identifier, expr_type, &stmt_type);
+            evc = check_variable_expression(localtable, globaltable, identifier.string_val->val, expr_type, &stmt_type);
         } else {
-            evc = check_variable_expression(localtable, globaltable, identifier.string_val->val, identifier, DT_UNKNOWN, &stmt_type);
+            evc = check_variable_expression(localtable, globaltable, identifier.string_val->val, DT_UNKNOWN, &stmt_type);
         }
         if (evc != OK) {
             RETURN_CODE(evc, identifier);
@@ -987,7 +997,6 @@ ErrorCode check_if_statement(Lexer *lexer, Symtable *globaltable, Symtable *loca
         enter_scope(localtable);
 
         // Create else body in AST
-        AstStatement *else_body = NULL;
         if (ast_add_else_branch(statement) == false) {
             RETURN_CODE(INTERNAL_ERROR, token);
         }
@@ -1209,6 +1218,8 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
                 result_type = global_var->data_type;
                 break;
             }
+
+            break;
         }
 
         case EX_FUN: {
@@ -1224,7 +1235,7 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
             }
 
             // Check argument expressions
-            for (int i = 0; i < expr->child_count; i++) {
+            for (size_t i = 0; i < expr->child_count; i++) {
                 DataType arg_type;
                 ec = semantic_check_expression(expr->params[i], globaltable, localtable, &arg_type);
                 if (ec != OK) {
@@ -1565,7 +1576,7 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
 
     case EX_BUILTIN_FUN: {
         // Check argument expressions
-        for (int i = 0; i < expr->child_count; i++) {
+        for (size_t i = 0; i < expr->child_count; i++) {
             DataType arg_type;
             ec = semantic_check_expression(expr->params[i], globaltable, localtable, &arg_type);
             if (ec != OK) {
