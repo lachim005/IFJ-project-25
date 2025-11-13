@@ -12,6 +12,9 @@ CFLAGS += -Wall -Wextra -pedantic
 
 # Debugging
 CFLAGS += -g -DCG_DEBUG
+# Asan
+# CFLAGS += -fsanitize=address
+# LDFLAGS += -lasan
 
 main: main.o ast.o code_generator.o expr_parser.o lexer.o parser.o stack.o string.o symtable.o token.o
 

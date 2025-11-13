@@ -79,6 +79,9 @@ ERR_BUF1:
 }
 
 void lexer_free(Lexer *lexer) {
+    for (unsigned i = 0; i < lexer->no_ungot_tokens; i++) {
+        token_free(lexer->ungot_tokens + i);
+    }
     str_free(&lexer->buf1);
     str_free(&lexer->buf2);
     lexer->file = NULL;

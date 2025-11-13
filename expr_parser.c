@@ -563,12 +563,14 @@ ErrorCode reduce_buildtin_call(Stack *expr_stack, Lexer *lexer) {
         token_free(&tok);
         return SYNTACTIC_ERROR;
     }
+    token_free(&tok);
     // Now the id
+    Token id;
     do {
-        if (lexer_get_token(lexer, &tok) != ERR_LEX_OK) return LEXICAL_ERROR;
-    } while (tok.type == TOK_EOL);
-    if (tok.type != TOK_IDENTIFIER) {
-        token_free(&tok);
+        if (lexer_get_token(lexer, &id) != ERR_LEX_OK) return LEXICAL_ERROR;
+    } while (id.type == TOK_EOL);
+    if (id.type != TOK_IDENTIFIER) {
+        token_free(&id);
         return SYNTACTIC_ERROR;
     }
     // And (
@@ -577,9 +579,10 @@ ErrorCode reduce_buildtin_call(Stack *expr_stack, Lexer *lexer) {
         token_free(&tok);
         return SYNTACTIC_ERROR;
     }
+    token_free(&tok);
 
     // This puts the function call to the top of the stack
-    ErrorCode res = reduce_function_call(expr_stack, lexer, tok.string_val);
+    ErrorCode res = reduce_function_call(expr_stack, lexer, id.string_val);
     if (res != OK) return res;
 
     // We have to change it's type to builtin

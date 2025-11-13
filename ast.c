@@ -602,7 +602,8 @@ void ast_expr_free(AstExpression *expr) {
     free(expr->params);
 
     // Free string value if its a string expression
-    if (expr->type == EX_STRING || expr->type == EX_ID || expr->type == EX_GLOBAL_ID) {
+    if (expr->type == EX_STRING || expr->type == EX_ID || expr->type == EX_GLOBAL_ID ||
+        expr->type == EX_FUN || expr->type == EX_BUILTIN_FUN || expr->type == EX_GETTER) {
         str_free(&expr->string_val);
     }
 
@@ -639,6 +640,10 @@ void ast_statement_free(AstStatement *statement) {
                 ast_block_free(statement->while_st->body);
                 free(statement->while_st);
             }
+            break;
+
+        case ST_EXPRESSION:
+            ast_expr_free(statement->expression);
             break;
 
         case ST_RETURN:
@@ -713,7 +718,7 @@ void ast_statement_free(AstStatement *statement) {
         case ST_END:
             // Empty statement doesn't have additional data to free
             break;
-    }
+        }
 
     free(statement);
 }
