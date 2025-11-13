@@ -1642,6 +1642,14 @@ ErrorCode parse(Lexer *lexer, AstStatement **out_root, Symtable **out_global_sym
         return SEM_UNDEFINED;
     }
 
+    // Check if there is main function
+    SymtableItem *main_function = NULL;
+    if (!symtable_contains_function(symtable, "main", 0, &main_function)) {
+        symtable_free(symtable);
+        ast_free(root);
+        return SEM_UNDEFINED;
+    }
+
     *out_global_symtable = symtable;
     *out_root = root;
 
