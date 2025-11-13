@@ -92,7 +92,6 @@ typedef struct ast_function AstFunction;
 typedef struct ast_getter AstGetter;
 typedef struct ast_setter AstSetter;
 typedef struct ast_variable AstVariable;
-typedef struct ast_function_call AstFunctionCall;
 typedef struct ast_if_statement AstIfStatement;
 typedef struct ast_while_statement AstWhileStatement;
 
@@ -106,7 +105,6 @@ typedef enum ast_statement_type {
     ST_LOCAL_VAR,
     ST_GLOBAL_VAR,
     ST_SETTER_CALL,
-    ST_FUNC_CALL,
     ST_FUNCTION,
     ST_GETTER,
     ST_SETTER,
