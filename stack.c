@@ -107,7 +107,7 @@ bool stack_find_type(Stack *stack, Stack *out_stack, TokType type) {
  * If found, it returns true and the terminal is on the top of the stack, otherwise false
  */
 bool stack_find_term(Stack *stack, Stack *out_stack) {
-    for (size_t i = stack->top; i >= 0; i--) {
+    for (size_t i = stack->top; i > 0; i--) {
         Token temp;
         stack_top(stack, &temp);
         if (temp.type == TOK_E || temp.type == TOK_PREC_OPEN) {
@@ -126,7 +126,7 @@ bool stack_find_term(Stack *stack, Stack *out_stack) {
  * Returns true if successful, false otherwise
  */
 bool push_whole_stack(Stack *src, Stack *dst) {
-    for (size_t i = src->top; i >= 0; i--) {
+    for (size_t i = src->top; i > 0; i--) {
         if(stack_empty(src)){
             return true;
         }

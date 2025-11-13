@@ -355,7 +355,7 @@ ErrLex lexer_read_token_from_file(Lexer *lexer, Token *tok) {
             MOVE_STATE(S_STR_MULTILINE_INSIDE);
         case S_ZERO:
             if (ch == 'x') MOVE_STATE(S_INT_HEX_LIT);
-            // Continues down:
+            __attribute__ ((fallthrough));
         case S_INT_LIT:
             str_append_char(buf1, ch);
             if (ch == 'e' || ch == 'E') MOVE_STATE(S_FLOAT_E);
@@ -388,7 +388,7 @@ ErrLex lexer_read_token_from_file(Lexer *lexer, Token *tok) {
             return ERR_LEX_NUM_LIT_UNEXPECTED_CHARACTER;
         case S_FLOAT_DECIMAL:
             if (ch == 'e' || ch == 'E') { str_append_char(buf1, 'e'); MOVE_STATE(S_FLOAT_E); }
-            // Continues down:
+            __attribute__ ((fallthrough));
         case S_FLOAT_EXPONENT:
             str_append_char(buf1, ch);
             if (isdigit(ch)) continue;
