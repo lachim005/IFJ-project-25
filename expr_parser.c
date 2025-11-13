@@ -105,6 +105,7 @@ ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr) {
         // Checking if we have reached the end
         if((stack_token.type == TOK_DOLLAR && token.type == TOK_RIGHT_PAR)
             || token.type == TOK_COMMA
+            || token.type == TOK_RIGHT_BRACE
             || (token.type == TOK_EOL && !eol_possible(last_used_token))) {
             lexer_unget_token(lexer, token);
             token.type = TOK_DOLLAR;
