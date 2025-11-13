@@ -222,7 +222,7 @@ void write_runtime(FILE *output) {
 
     // Main call
     fprintf(output, "CALL $main$0\n"
-                    "EXIT int@0");
+                    "EXIT int@0\n");
 }
 
 ErrorCode generate_code(FILE *output, AstStatement *root, Symtable *global_symtable) {
