@@ -1141,12 +1141,24 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
 
             if (local_var != NULL) {
                 result_type = local_var->data_type;
+                // Replace name in expression to match the name in symtable
+                str_clear(expr->string_val);
+                str_append_string(expr->string_val, local_var->key);
+
                 break;
             } 
 
             // Check getter
+
+            // Change expression type to a getter
+            expr->type = EX_GETTER;
+
             SymtableItem *getter_item = NULL;
             if (symtable_contains_getter(globaltable, expr->string_val->val, &getter_item)) {
+                // Change to getter name
+                str_clear(expr->string_val);
+                str_append_string(expr->string_val, getter_item->key);
+
                 result_type = DT_UNKNOWN; // Getter return type is unknown
                 break;
             }
@@ -1159,6 +1171,10 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
 
             symtable_increment_undefined_items_counter(globaltable);
             result_type = DT_UNKNOWN;
+
+            // Change to getter name
+            str_clear(expr->string_val);
+            str_append_string(expr->string_val, new_getter->key);
 
             break;
         }

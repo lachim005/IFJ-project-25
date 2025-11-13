@@ -39,6 +39,7 @@ typedef enum data_type {
 typedef enum ast_expr_type {
     EX_ID,
     EX_GLOBAL_ID,
+    EX_GETTER,
     EX_FUN,
     EX_ADD,
     EX_SUB,
