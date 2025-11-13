@@ -42,7 +42,7 @@ ErrorCode store_function_parameters(FILE *output, AstFunction *fun) {
     return OK;
 }
 
-/// Generates code for function body
+/// Generates code for function/getter/setter body
 ErrorCode define_function(FILE *output, AstFunction *fun) {
     // Function label
     DEBUG_WRITE(output, "\n\n################\n""# DEFINITION OF FUNCTION '%s' with %zu parameters\n################\n", fun->name->val, fun->param_count);
@@ -93,8 +93,40 @@ ErrorCode generate_code(FILE *output, AstStatement *root, Symtable *global_symta
 
     // Defines functions
     for (AstStatement *cur = root->next; cur->type != ST_END; cur = cur->next) {
-        CG_ASSERT(cur->type == ST_FUNCTION);
-        CG_ASSERT(define_function(output, cur->function) == OK);
+        // We define some variables that we need to convert getters and setters into functions
+        // and generate the code for them the same way
+        AstGetter *g;
+        AstSetter *s;
+        AstFunction f;
+        String *setter_par;
+        switch (cur->type) {
+            case ST_FUNCTION:
+                CG_ASSERT(define_function(output, cur->function) == OK);
+                break;
+            case ST_GETTER:
+                // Converting getter into a function
+                g = cur->getter;
+                f.name = g->name;
+                f.param_count = 0;
+                f.param_names = NULL;
+                f.body = g->body;
+                f.symtable = g->symtable;
+                CG_ASSERT(define_function(output, &f) == OK);
+                break;
+            case ST_SETTER:
+                // Converting setter into a function
+                s = cur->setter;
+                f.name = s->name;
+                f.param_count = 1;
+                setter_par = s->param_name;
+                f.param_names = &setter_par;
+                f.body = s->body;
+                f.symtable = s->symtable;
+                CG_ASSERT(define_function(output, &f) == OK);
+                break;
+            default:
+                return INTERNAL_ERROR;
+        }
     }
 
     return OK;
