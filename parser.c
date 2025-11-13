@@ -869,7 +869,13 @@ ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable,
             }
         } else {
             // Add assignment to AST
-            if (ast_add_local_var(statement, identifier.string_val->val, expr) == false) {
+            // We get the name from symtable to include the scope
+            SymtableItem *si;
+            bool r = find_local_var(localtable, identifier.string_val->val, &si);
+            if (r == false || si == NULL) {
+                RETURN_CODE(INTERNAL_ERROR, token);
+            }
+            if (ast_add_local_var(statement, si->key, expr) == false) {
                 RETURN_CODE(INTERNAL_ERROR, token);
             }
         }
