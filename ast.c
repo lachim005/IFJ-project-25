@@ -309,6 +309,10 @@ bool ast_add_getter(AstStatement *statement, char *name, Symtable *symtable) {
         str_free(&getter_name);
         return false;
     }
+    if (!str_append_char(getter_name, '!')) {
+        str_free(&getter_name);
+        return false;
+    }
 
     // Create AstGetter structure
     AstGetter *getter = malloc(sizeof(AstGetter));
@@ -363,6 +367,10 @@ bool ast_add_setter(AstStatement *statement, char *name, char *param_name, Symta
         return false;
     }
     if (!str_append_string(setter_name, name)) {
+        str_free(&setter_name);
+        return false;
+    }
+    if (!str_append_char(setter_name, '*')) {
         str_free(&setter_name);
         return false;
     }

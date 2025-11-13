@@ -16,6 +16,9 @@
 /// Generates code for a compound statement
 ErrorCode generate_compound_statement(FILE *output, AstBlock *st);
 
+/// Generates code for a function call
+ErrorCode generate_function_call(FILE *output, AstExpression *call);
+
 /// Generates code which will evaluate the given expression
 /// Leaves the resulting value at the top of the stack
 ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st);

@@ -810,9 +810,15 @@ ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localta
     } else {
         ADD_VARIABLE(localtable, identifier.string_val->val, identifier, DT_UNKNOWN);
     }
-    
+
+    // Finds the variable to get its key to put into the AST
+    SymtableItem *it;
+    if (find_local_var(localtable, identifier.string_val->val, &it) == false) {
+        RETURN_CODE(INTERNAL_ERROR, token);
+    }
+
     // Add local variable to AST
-    if (ast_add_local_var(statement, identifier.string_val->val, expr) == false) {
+    if (ast_add_local_var(statement, it->key, expr) == false) {
         RETURN_CODE(INTERNAL_ERROR, token);
     }
 

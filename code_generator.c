@@ -22,6 +22,14 @@ ErrorCode generate_compound_statement(FILE *output, AstBlock *st) {
     return OK;
 }
 
+ErrorCode generate_function_call(FILE *output, AstExpression *call) {
+    for (unsigned i = 0; i < call->child_count; i++) {
+        CG_ASSERT(generate_expression_evaluation(output, call->params[i]) == OK);
+    }
+    fprintf(output, "CALL $%s$%zu\n", call->string_val->val, call->child_count);
+    return OK;
+}
+
 ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
     switch (st->type) {
     case EX_ID:
@@ -30,8 +38,11 @@ ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
     case EX_GLOBAL_ID:
         fprintf(output, "PUSHS GF@%s\n", st->string_val->val);
         return OK;
-    case EX_FUN:
+    case EX_GETTER:
+        fprintf(output, "CALL $%s$0\n", st->string_val->val);
         return OK;
+    case EX_FUN:
+        return generate_function_call(output, st);
     case EX_INT:
         fprintf(output, "PUSHS int@%d\n", st->int_val);
         return OK;
@@ -45,22 +56,31 @@ ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
         fprintf(output, "PUSHS nil@nil\n");
         return OK;
     case EX_TERNARY:
+        fprintf(output, "PUSHS nil@nil\n");
         return OK;
     case EX_NOT:
+        fprintf(output, "PUSHS nil@nil\n");
         return OK;
     case EX_IS:
+        fprintf(output, "PUSHS nil@nil\n");
         return OK;
     case EX_STRING:
+        fprintf(output, "PUSHS nil@nil\n");
         return OK;
     case EX_NEGATE:
+        fprintf(output, "PUSHS nil@nil\n");
         return OK;
     case EX_DATA_TYPE:
+        fprintf(output, "PUSHS nil@nil\n");
         return OK;
     case EX_BUILTIN_FUN:
+        fprintf(output, "PUSHS nil@nil\n");
         return OK;
     case EX_AND:
+        fprintf(output, "PUSHS nil@nil\n");
         return OK;
     case EX_OR:
+        fprintf(output, "PUSHS nil@nil\n");
         return OK;
     default:
         break;
@@ -105,7 +125,7 @@ ErrorCode generate_var_assignment(FILE *output, char *scope, AstVariable *st) {
 
 ErrorCode generate_setter_assignment(FILE *output, AstVariable *st) {
     CG_ASSERT(generate_expression_evaluation(output, st->expression) == OK);
-    fprintf(output, "CALL $%s\n", st->name->val);
+    fprintf(output, "CALL $%s*$1\n", st->name->val);
     return OK;
 }
 
@@ -132,7 +152,9 @@ ErrorCode generate_statement(FILE *output, AstStatement *st) {
     case ST_SETTER_CALL:
         return generate_setter_assignment(output, st->setter_call);
     case ST_EXPRESSION:
-        return generate_expression_evaluation(output, st->expression);
+        CG_ASSERT(generate_expression_evaluation(output, st->expression) == OK);
+        fprintf(output, "POPS GF@&&void\n");
+        return OK;
     default:
         // return INTERNAL_ERROR;
         return OK;
@@ -209,6 +231,7 @@ ErrorCode generate_code(FILE *output, AstStatement *root, Symtable *global_symta
 
     // Declare global variables
     DEBUG_WRITE(output, "\n\n# GLOBAL VARS DECLARATION\n");
+    fprintf(output, "DEFVAR GF@&&void\n");
     symtable_foreach(global_symtable, declare_global_var, output);
 
     // Runtime
