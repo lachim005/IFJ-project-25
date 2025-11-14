@@ -12,7 +12,7 @@
 #include "error.h"
 #include "ast.h"
 
-bool reduce(Stack *expr_stack, Stack *op_stack);
+ErrorCode reduce(Stack *expr_stack, Stack *op_stack);
 
 ErrorCode shift(Stack *expr_stack, Stack *op_stack, Token token, Lexer *lexer);
 

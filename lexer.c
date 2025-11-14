@@ -446,7 +446,10 @@ ErrLex lexer_read_token_from_file(Lexer *lexer, Token *tok) {
 
     if (found_tok) return ERR_LEX_OK;
     if (ch == EOF && state != S_START) return ERR_LEX_UNEXPECTED_EOF;
-    if (ch == EOF) return ERR_LEX_EOF;
+    if (ch == EOF) {
+        tok->type = TOK_DOLLAR;
+        return ERR_LEX_OK;
+    }
     return ERR_LEX_UNKNOWN_ERR;
 }
 

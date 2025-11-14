@@ -202,7 +202,7 @@ ErrorCode shift(Stack *expr_stack, Stack *op_stack, Token token, Lexer *lexer) {
     return INTERNAL_ERROR;
 }
 
-bool reduce(Stack *expr_stack, Stack *op_stack) {
+ErrorCode reduce(Stack *expr_stack, Stack *op_stack) {
     stack_find_term(expr_stack, op_stack);
     Token top_token;
     stack_top(expr_stack, &top_token);
