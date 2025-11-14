@@ -17,6 +17,7 @@ AstExpression *ast_expr_create(AstExprType type, size_t child_count) {
     }
     expr->type = type;
     expr->child_count = child_count;
+    expr->assumed_type = DT_UNKNOWN;
     return expr;
 }
 

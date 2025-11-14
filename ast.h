@@ -75,6 +75,8 @@ struct ast_expression {
     size_t child_count;
     /// Expression type
     AstExprType type;
+    /// Type assumption from static analysis
+    DataType assumed_type;
     /// Value for literals
     union {
         String *string_val;

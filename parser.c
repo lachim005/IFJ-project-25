@@ -1597,6 +1597,7 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
         return INTERNAL_ERROR;
     }
 
+    expr->assumed_type = result_type;
     if (out_type != NULL) {
         *out_type = result_type;
     }
