@@ -28,24 +28,43 @@ ErrorCode generate_compound_statement(FILE *output, AstBlock *st) {
 }
 
 ErrorCode generate_if_statement(FILE *output, AstIfStatement *st) {
-    unsigned expr_id = internal_names_cntr++;
+    DataType cond_type = st->condition->assumed_type;
+    if (cond_type == DT_NULL) {
+        if (st->false_branch != NULL) {
+            generate_compound_statement(output, st->false_branch);
+        }
+        return OK;
+    }
+    if (cond_type != DT_BOOL && cond_type != DT_UNKNOWN) {
+        // If it is anything other than bool or null, it is always true
+        generate_compound_statement(output, st->true_branch);
+        return OK;
+    }
     CG_ASSERT(generate_expression_evaluation(output, st->condition) == OK);
-    fprintf(output, "POPS GF@&&inter1\n"
-                    // Check if null
-                    "PUSHS GF@&&inter1\n"
-                    "PUSHS nil@nil\n"
-                    "JUMPIFEQS $&&if_false_branch%u\n"
-                    // Check if bool
-                    "PUSHS GF@&&inter1\n"
-                    "TYPES\n"
-                    "PUSHS string@bool\n"
-                    "JUMPIFNEQS $&&if_true_branch%u\n"
-                    // Check if false
-                    "PUSHS GF@&&inter1\n"
-                    "PUSHS bool@false\n"
+    unsigned expr_id = internal_names_cntr++;
+    if (cond_type != DT_BOOL) {
+        // If it is not bool, we have to check the data type
+        fprintf(output, "POPS GF@&&inter1\n");
+        if (cond_type == DT_UNKNOWN) {
+            // We only have to check for null if the type is unknown, otherwise we know it isn't
+            fprintf(output, "PUSHS GF@&&inter1\n"
+                            "PUSHS nil@nil\n"
+                            "JUMPIFEQS $&&if_false_branch%u\n",
+                            expr_id);
+        }
+        // Check if it is the bool datatype
+        fprintf(output, "PUSHS GF@&&inter1\n"
+                        "TYPES\n"
+                        "PUSHS string@bool\n"
+                        "JUMPIFNEQS $&&if_true_branch%u\n"
+                        "PUSHS GF@&&inter1\n",
+                        expr_id);
+    }
+    // Check if false
+    fprintf(output, "PUSHS bool@false\n"
                     "JUMPIFEQS $&&if_false_branch%u\n"
                     "LABEL $&&if_true_branch%u\n",
-                    expr_id, expr_id, expr_id, expr_id);
+                    expr_id, expr_id);
     generate_compound_statement(output, st->true_branch);
     fprintf(output, "JUMP $&&if_end%u\n"
                     "LABEL $&&if_false_branch%u\n",
@@ -58,25 +77,44 @@ ErrorCode generate_if_statement(FILE *output, AstIfStatement *st) {
 }
 
 ErrorCode generate_while_statement(FILE *output, AstWhileStatement *st) {
+    DataType cond_type = st->condition->assumed_type;
+    if (cond_type == DT_NULL) {
+        // Null will never execute, so we don't have to generate anything
+        return OK;
+    }
     unsigned expr_id = internal_names_cntr++;
+    if (cond_type != DT_BOOL && cond_type != DT_UNKNOWN) {
+        // If it is anything other than bool or null, it will be an infinite cycle
+        fprintf(output, "LABEL $&&while_start%u\n", expr_id);
+        generate_compound_statement(output, st->body);
+        fprintf(output, "JUMP $&&while_start%u\n", expr_id);
+        return OK;
+    }
     fprintf(output, "LABEL $&&while_cond%u\n", expr_id);
     CG_ASSERT(generate_expression_evaluation(output, st->condition) == OK);
-    fprintf(output, "POPS GF@&&inter1\n"
-                    // Check if null
-                    "PUSHS GF@&&inter1\n"
-                    "PUSHS nil@nil\n"
-                    "JUMPIFEQS $&&while_end%u\n"
-                    // Check if bool
-                    "PUSHS GF@&&inter1\n"
-                    "TYPES\n"
-                    "PUSHS string@bool\n"
-                    "JUMPIFNEQS $&&while_start%u\n"
-                    // Check if false
-                    "PUSHS GF@&&inter1\n"
-                    "PUSHS bool@false\n"
+    if (cond_type != DT_BOOL) {
+        // If it is not bool, we have to check the data type
+        fprintf(output, "POPS GF@&&inter1\n");
+        if (cond_type == DT_UNKNOWN) {
+            // We only have to check for null if the type is unknown, otherwise we know it isn't
+            fprintf(output, "PUSHS GF@&&inter1\n"
+                            "PUSHS nil@nil\n"
+                            "JUMPIFEQS $&&while_end%u\n",
+                            expr_id);
+        }
+        // Check if it is the bool datatype
+        fprintf(output, "PUSHS GF@&&inter1\n"
+                        "TYPES\n"
+                        "PUSHS string@bool\n"
+                        "JUMPIFNEQS $&&while_start%u\n"
+                        "PUSHS GF@&&inter1\n",
+                        expr_id);
+    }
+    // Checks if false
+    fprintf(output, "PUSHS bool@false\n"
                     "JUMPIFEQS $&&while_end%u\n"
                     "LABEL $&&while_start%u\n",
-                    expr_id, expr_id, expr_id, expr_id);
+                    expr_id, expr_id);
     generate_compound_statement(output, st->body);
     fprintf(output, "JUMP $&&while_cond%u\n"
                     "LABEL $&&while_end%u\n",
