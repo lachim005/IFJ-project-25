@@ -33,7 +33,7 @@
 #define CHECK_TOKEN_SKIP_NEWLINE(lexer, token) do { \
     token_free(&token); \
     do { \
-        if(lexer_get_token(lexer, &token) != ERR_LEX_OK) { \
+        if(lexer_get_token(lexer, &token) != ERR_LEX_OK ) { \
             return LEXICAL_ERROR; \
         } \
     } while(token.type == TOK_EOL); \
@@ -591,6 +591,12 @@ ErrorCode check_function(Lexer *lexer, Symtable *globaltable, Symtable *localtab
             RETURN_CODE(INTERNAL_ERROR, token);
         }
 
+        // Check for parameter redefinition in local symbol table
+        if (contains_var_at_current_scope(localtable, token.string_val->val)) {
+            param_list_free(params);
+            RETURN_CODE(SEM_REDEFINITION, token);
+        }
+
         // Insert parameter into local symbol table
         if (add_var_at_current_scope(localtable, token.string_val->val, DT_UNKNOWN) == NULL) {
             param_list_free(params);
@@ -769,6 +775,17 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable, 
                 if (ast_add_inline_expression(statement, expr) == false) {
                     RETURN_CODE(INTERNAL_ERROR, token);
                 }
+
+                Token new_token;
+                INIT_TOKEN(new_token, TOK_IDENTIFIER);
+                CHECK_TOKEN(lexer, new_token);
+
+                if (new_token.type != TOK_EOL) {
+                    RETURN_CODE(SYNTACTIC_ERROR, new_token);
+                }
+
+                token_free(&new_token);
+
 
                 statement = statement->next;
             }
