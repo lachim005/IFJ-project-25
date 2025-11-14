@@ -384,6 +384,7 @@ ErrorCode generate_add_expression(FILE *output, AstExpression *ex) {
     if (left_type != DT_UNKNOWN && right_type != DT_UNKNOWN) {
         // Should be caught during semantic checks
         fprintf(output, "EXIT int@26\n");
+        return OK;
     }
     unsigned expr_id = internal_names_cntr++;
     // Unknown data types
@@ -563,6 +564,7 @@ ErrorCode generate_mul_expression(FILE *output, AstExpression *ex) {
     if (left_type != DT_UNKNOWN && right_type != DT_UNKNOWN) {
         // Should be caught during semantic checks
         fprintf(output, "EXIT int@26\n");
+        return OK;
     }
     unsigned expr_id = internal_names_cntr++;
     // Unknown data types
@@ -660,12 +662,162 @@ ErrorCode generate_mul_expression(FILE *output, AstExpression *ex) {
         }
         fprintf(output, "JUMP $&&mul_mul%u\n", expr_id);
     }
-    fprintf(output, "LABEL $&&mul_mul%u\n"
+    fprintf(output, "LABEL $&&mul_type_errror%u\n"
+                    "EXIT int@26\n"
+                    "LABEL $&&mul_mul%u\n"
                     "MUL GF@&&inter3 GF@&&inter1 GF@&&inter2\n"
                     "PUSHS GF@&&inter3\n"
                     "LABEL $&&mul_end%u\n",
-                    expr_id, expr_id);
+                    expr_id, expr_id, expr_id);
 
+
+    return OK;
+}
+
+ErrorCode generate_binary_operator_with_num(FILE *output, AstExpression *ex, char *stack_op) {
+    DataType left_type = ex->params[0]->assumed_type;
+    DataType right_type = ex->params[1]->assumed_type;
+    // Known data types
+    if ((left_type == DT_INT || left_type == DT_DOUBLE)
+        && (right_type == DT_INT || right_type == DT_DOUBLE)) {
+        return generate_arithmetic_with_known_type(output, ex, stack_op);
+    }
+    if (left_type != DT_UNKNOWN && right_type != DT_UNKNOWN) {
+        // Should be caught during semantic checks
+        fprintf(output, "EXIT int@26\n");
+        return OK;
+    }
+    // Unknown types
+    unsigned expr_id = internal_names_cntr++;
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
+    fprintf(output, "POPS GF@&&inter2\n"
+                    "POPS GF@&&inter1\n");
+    if (left_type == DT_UNKNOWN) {
+        // Switch by data type
+        fprintf(output, "PUSHS GF@&&inter1\n"
+                        "TYPES\n"
+                        "PUSHS string@int\n"
+                        "JUMPIFEQS $&&op_int_val%u\n"
+                        "PUSHS GF@&&inter1\n"
+                        "TYPES\n"
+                        "PUSHS string@float\n"
+                        "JUMPIFEQS $&&op_float_val%u\n"
+                        "EXIT int@26\n",
+                        expr_id, expr_id);
+    }
+    if (left_type == DT_INT || left_type == DT_UNKNOWN) {
+        if (left_type == DT_UNKNOWN) {
+            // We only need the label if left is unknown, otherwise this is the default path
+            fprintf(output, "LABEL $&&op_int_val%u\n", expr_id);
+        }
+        if (right_type == DT_UNKNOWN) {
+            // Check right type
+            fprintf(output, "PUSHS GF@&&inter2\n"
+                            "TYPES\n"
+                            "PUSHS string@int\n"
+                            "JUMPIFEQS $&&op_do%u\n"
+                            "PUSHS GF@&&inter2\n"
+                            "TYPES\n"
+                            "PUSHS string@float\n"
+                            "JUMPIFNEQS $&&op_type_errror%u\n"
+                            "INT2FLOAT GF@&&inter1 GF@&&inter1\n",
+                            expr_id, expr_id);
+        } else if (right_type == DT_INT) {
+            // Nothing
+        } else if (right_type == DT_DOUBLE) {
+            fprintf(output, "INT2FLOAT GF@&&inter1 GF@&&inter1\n");
+        } else {
+            // Should get caught by semantic analysis
+            fprintf(output, "EXIT int@26\n");
+        }
+        fprintf(output, "JUMP $&&op_do%u\n", expr_id);
+    }
+    if (left_type == DT_DOUBLE || left_type == DT_UNKNOWN) {
+        if (left_type == DT_UNKNOWN) {
+            // We only need the label if left is unknown, otherwise this is the default path
+            fprintf(output, "LABEL $&&op_float_val%u\n", expr_id);
+        }
+        if (right_type == DT_UNKNOWN) {
+            // Check right type
+            fprintf(output, "PUSHS GF@&&inter2\n"
+                            "TYPES\n"
+                            "PUSHS string@float\n"
+                            "JUMPIFEQS $&&op_do%u\n"
+                            "PUSHS GF@&&inter2\n"
+                            "TYPES\n"
+                            "PUSHS string@int\n"
+                            "JUMPIFNEQS $&&op_type_errror%u\n"
+                            "INT2FLOAT GF@&&inter2 GF@&&inter2\n",
+                            expr_id, expr_id);
+        } else if (right_type == DT_DOUBLE) {
+            // Nothing
+        } else if (right_type == DT_INT) {
+            fprintf(output, "INT2FLOAT GF@&&inter2 GF@&&inter2\n");
+        } else {
+            // Should get caught by semantic analysis
+            fprintf(output, "EXIT int@26\n");
+        }
+        fprintf(output, "JUMP $&&op_do%u\n", expr_id);
+    }
+    fprintf(output, "LABEL $&&op_type_errror%u\n"
+                    "EXIT int@26\n"
+                    "LABEL $&&op_do%u\n"
+                    "PUSHS GF@&&inter1\n"
+                    "PUSHS GF@&&inter2\n"
+                    "%s\n",
+                    expr_id, expr_id, stack_op);
+
+
+    return OK;
+
+}
+
+void generate_num_check_with_float_conversion(FILE *output) {
+    unsigned expr_id = internal_names_cntr++;
+    fprintf(output, "POPS GF@&&inter1\n"
+                    "PUSHS GF@&&inter1\n"
+                    "TYPES\n"
+                    "PUSHS string@float\n"
+                    "JUMPIFEQS $&&op_left_float_val%u\n"
+                    "PUSHS GF@&&inter1\n"
+                    "TYPES\n"
+                    "PUSHS string@int\n"
+                    "JUMPIFEQS $&&op_left_int_val%u\n"
+                    "EXIT int@26\n"
+                    "LABEL $&&op_left_int_val%u\n"
+                    "INT2FLOAT GF@&&inter1 GF@&&inter1\n"
+                    "LABEL $&&op_left_float_val%u\n"
+                    "PUSHS GF@&&inter1\n",
+                    expr_id, expr_id, expr_id, expr_id);
+}
+
+ErrorCode generate_binary_operator_with_floats(FILE *output, AstExpression *ex, char *stack_op) {
+    DataType left_type = ex->params[0]->assumed_type;
+    DataType right_type = ex->params[1]->assumed_type;
+
+    // Left side
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+    if (left_type == DT_UNKNOWN) {
+        // Check if left is float or int and convert to float
+        generate_num_check_with_float_conversion(output);
+    } else if (left_type == DT_INT) {
+        fprintf(output, "INT2FLOATS\n");
+    }
+    CG_ASSERT(left_type == DT_UNKNOWN || left_type == DT_INT || left_type == DT_DOUBLE);
+
+    // Right side
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
+    if (right_type == DT_UNKNOWN) {
+        // Check if right is float or int and convert to float
+        generate_num_check_with_float_conversion(output);
+    } else if (right_type == DT_INT) {
+        fprintf(output, "INT2FLOATS\n");
+    }
+
+    CG_ASSERT(right_type == DT_UNKNOWN || right_type == DT_INT || right_type == DT_DOUBLE);
+
+    fprintf(output, "%s\n", stack_op);
 
     return OK;
 }
@@ -727,6 +879,18 @@ ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
         return generate_add_expression(output, st);
     case EX_MUL:
         return generate_mul_expression(output, st);
+    case EX_SUB:
+        return generate_binary_operator_with_num(output, st, "SUBS");
+    case EX_DIV:
+        return generate_binary_operator_with_floats(output, st, "DIVS");
+    case EX_GREATER:
+        return generate_binary_operator_with_num(output, st, "GTS");
+    case EX_LESS:
+        return generate_binary_operator_with_num(output, st, "LTS");
+    case EX_GREATER_EQ:
+        return generate_binary_operator_with_num(output, st, "LTS\nNOTS");
+    case EX_LESS_EQ:
+        return generate_binary_operator_with_num(output, st, "GTS\nNOTS");
     default:
         break;
     }
@@ -736,18 +900,6 @@ ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
     CG_ASSERT(generate_expression_evaluation(output, st->params[0]) == OK);
     CG_ASSERT(generate_expression_evaluation(output, st->params[1]) == OK);
     switch (st->type) {
-    case EX_SUB:
-        fprintf(stdout, "SUBS\n"); break;
-    case EX_DIV:
-        fprintf(stdout, "DIVS\n"); break;
-    case EX_GREATER:
-        fprintf(stdout, "GTS\n"); break;
-    case EX_LESS:
-        fprintf(stdout, "LTS\n"); break;
-    case EX_GREATER_EQ:
-        fprintf(stdout, "LTS\nNOTS\n"); break;
-    case EX_LESS_EQ:
-        fprintf(stdout, "GTS\nNOTS\n"); break;
     case EX_EQ:
         fprintf(stdout, "EQS\n"); break;
     case EX_NOT_EQ:
