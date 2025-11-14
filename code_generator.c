@@ -822,6 +822,92 @@ ErrorCode generate_binary_operator_with_floats(FILE *output, AstExpression *ex, 
     return OK;
 }
 
+void convert_to_float_if_int(FILE *output) {
+    unsigned expr_id = internal_names_cntr++;
+    fprintf(output, "POPS GF@&&inter1\n"
+                    "PUSHS GF@&&inter1\n"
+                    "TYPES\n"
+                    "PUSHS string@int\n"
+                    "JUMPIFNEQS $&&float_conv_end%u\n"
+                    "INT2FLOAT GF@&&inter1 GF@&&inter1\n"
+                    "LABEL $&&float_conv_end%u\n"
+                    "PUSHS GF@&&inter1\n",
+                    expr_id, expr_id);
+}
+
+ErrorCode generate_equals_expression(FILE *output, AstExpression *ex) {
+    DataType left_type = ex->params[0]->assumed_type;
+    DataType right_type = ex->params[1]->assumed_type;
+    // We set all ints to doubles to possibly skip subexpressions evaluations
+    if (left_type == DT_INT) left_type = DT_DOUBLE;
+    if (right_type == DT_INT) right_type = DT_DOUBLE;
+    // Both types known and not the same -> false
+    if (left_type != right_type && left_type != DT_UNKNOWN && right_type != DT_UNKNOWN) {
+        fprintf(output, "PUSHS bool@false\n");
+        return OK;
+    }
+    // We reset them again to convert them if needed
+    left_type = ex->params[0]->assumed_type;
+    right_type = ex->params[1]->assumed_type;
+
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+    if (left_type == DT_INT) {
+        left_type = DT_DOUBLE;
+        fprintf(output, "INT2FLOATS\n");
+    } else if (left_type == DT_UNKNOWN) {
+        convert_to_float_if_int(output);
+    }
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
+    if (right_type == DT_INT) {
+        right_type = DT_DOUBLE;
+        fprintf(output, "INT2FLOATS\n");
+    } else if (right_type == DT_UNKNOWN) {
+        convert_to_float_if_int(output);
+    }
+
+    if (left_type == right_type && left_type != DT_UNKNOWN && right_type != DT_UNKNOWN) {
+        fprintf(output, "EQS\n");
+        return OK;
+    }
+
+    unsigned expr_id = internal_names_cntr++;
+
+    // We don't know their types
+    fprintf(output, "POPS GF@&&inter2\n"
+                    "POPS GF@&&inter1\n");
+
+    // Push left type
+    // This structure saves one instruction. Worth it
+    if (left_type == DT_DOUBLE) { fprintf(output, "PUSHS string@float\n"); }
+    else if (left_type == DT_STRING) { fprintf(output, "PUSHS string@string\n"); }
+    else if (left_type == DT_BOOL) { fprintf(output, "PUSHS string@bool\n"); }
+    else if (left_type == DT_NULL) { fprintf(output, "PUSHS string@nil\n"); }
+    else {
+        fprintf(output, "PUSHS GF@&&inter1\n"
+                        "TYPES\n");
+    }
+    // Push right type
+    if (right_type == DT_DOUBLE) { fprintf(output, "PUSHS string@float\n"); }
+    else if (right_type == DT_STRING) { fprintf(output, "PUSHS string@string\n"); }
+    else if (right_type == DT_BOOL) { fprintf(output, "PUSHS string@bool\n"); }
+    else if (right_type == DT_NULL) { fprintf(output, "PUSHS string@nil\n"); }
+    else {
+        fprintf(output, "PUSHS GF@&&inter2\n"
+                        "TYPES\n");
+    }
+    fprintf(output, "JUMPIFNEQS $&&eq_false%u\n" // Compare types
+                    "PUSHS GF@&&inter1\n" // Types are the same, compare values
+                    "PUSHS GF@&&inter2\n"
+                    "EQS\n"
+                    "JUMP $&&eq_end%u\n"
+                    "LABEL $&&eq_false%u\n"
+                    "PUSHS bool@false\n"
+                    "LABEL $&&eq_end%u\n",
+                    expr_id, expr_id, expr_id, expr_id);
+
+    return OK;
+}
+
 ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
     String *str; // Used for string literals
     switch (st->type) {
@@ -891,23 +977,16 @@ ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
         return generate_binary_operator_with_num(output, st, "LTS\nNOTS");
     case EX_LESS_EQ:
         return generate_binary_operator_with_num(output, st, "GTS\nNOTS");
-    default:
-        break;
-    }
-
-    // The rest are just binary operators
-    // TODO: type check
-    CG_ASSERT(generate_expression_evaluation(output, st->params[0]) == OK);
-    CG_ASSERT(generate_expression_evaluation(output, st->params[1]) == OK);
-    switch (st->type) {
     case EX_EQ:
-        fprintf(stdout, "EQS\n"); break;
+        return generate_equals_expression(output, st);
     case EX_NOT_EQ:
-        fprintf(stdout, "EQS\nNOTS\n"); break;
+        CG_ASSERT(generate_equals_expression(output, st) == OK);
+        fprintf(stdout, "NOTS\n");
+        return OK;
     default:
         return INTERNAL_ERROR;
     }
-    return OK;
+    return INTERNAL_ERROR;
 }
 
 ErrorCode generate_var_assignment(FILE *output, char *scope, AstVariable *st) {

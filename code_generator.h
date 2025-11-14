@@ -55,6 +55,9 @@ ErrorCode generate_binary_operator_with_num(FILE *output, AstExpression *ex, cha
 /// Generates code for evaluating a binary operator which only accepts float on both sides
 ErrorCode generate_binary_operator_with_floats(FILE *output, AstExpression *ex, char *stack_op);
 
+/// Generates code for a == expression
+ErrorCode generate_equals_expression(FILE *output, AstExpression *ex);
+
 /// Generates code which will evaluate the given expression
 /// Leaves the resulting value at the top of the stack
 ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st);
