@@ -355,6 +355,178 @@ ErrorCode generate_builtin_function_call(FILE *output, AstExpression *ex) {
     return OK;
 }
 
+ErrorCode generate_add_expression(FILE *output, AstExpression *ex) {
+    DataType left_type = ex->params[0]->assumed_type;
+    DataType right_type = ex->params[1]->assumed_type;
+    // Known data types
+    if ((left_type == DT_INT || left_type == DT_DOUBLE)
+        && (right_type == DT_INT || right_type == DT_DOUBLE)) {
+        bool has_float = false;
+        if (right_type == DT_DOUBLE || left_type == DT_DOUBLE) has_float = true;
+
+        // Left side
+        CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+        if (left_type == DT_INT && has_float) fprintf(output, "INT2FLOATS\n");
+
+        // Right side
+        CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
+        if (right_type == DT_INT && has_float) fprintf(output, "INT2FLOATS\n");
+        fprintf(output, "ADDS\n");
+        return OK;
+    }
+    if (left_type == DT_STRING && right_type == DT_STRING) {
+        CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+        CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
+        fprintf(output, "POPS GF@&&inter2\n"
+                        "POPS GF@&&inter1\n"
+                        "CONCAT GF@&&inter3 GF@&&inter1 GF@&&inter2\n"
+                        "PUSHS GF@&&inter3\n");
+        return OK;
+    }
+    if (left_type != DT_UNKNOWN && right_type != DT_UNKNOWN) {
+        // Should be caught during semantic checks
+        fprintf(output, "EXIT int@26\n");
+    }
+    unsigned expr_id = internal_names_cntr++;
+    // Unknown data types
+    if (left_type == DT_STRING || right_type == DT_STRING) {
+        // One is string -> check if other is string
+        unsigned unknown = left_type == DT_UNKNOWN ? 1 : 2;
+        CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+        CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
+        fprintf(output, "POPS GF@&&inter2\n"
+                        "POPS GF@&&inter1\n"
+                        "PUSHS GF@&&inter%u\n" // check type of unknown
+                        "TYPES\n"
+                        "PUSHS string@string\n"
+                        "JUMPIFEQS $&&cat%u\n"
+                        "EXIT int@26\n"
+                        "LABEL $&&cat%u\n"
+                        "CONCAT GF@&&inter3 GF@&&inter1 GF@&&inter2\n"
+                        "PUSHS GF@&&inter3\n",
+                        unknown, expr_id, expr_id);
+        return OK;
+    }
+    if (left_type == DT_INT || left_type == DT_DOUBLE
+        || right_type == DT_INT || right_type == DT_DOUBLE) {
+        // One is num -> check if other is num
+        unsigned unknown = left_type == DT_UNKNOWN ? 1 : 2;
+        unsigned known = left_type == DT_UNKNOWN ? 2 : 1;
+        unsigned known_type = known == 1 ? left_type : right_type;
+        CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+        CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
+        fprintf(output, "POPS GF@&&inter2\n"
+                        "POPS GF@&&inter1\n"
+                        "PUSHS GF@&&inter%u\n" // check if unknown is int
+                        "TYPES\n"
+                        "PUSHS string@int\n",
+                        unknown);
+        if ((known == 1 ? left_type : right_type) == DT_DOUBLE) {
+            // known is double, so we convert unknown int to double
+            fprintf(output, "JUMPIFEQS $&&add_unknown_int%u\n", expr_id);
+        } else {
+            fprintf(output, "JUMPIFEQS $&&add_add%u\n", expr_id);
+        }
+        fprintf(output, "PUSHS GF@&&inter%u\n" // check if unknown is float
+                        "TYPES\n"
+                        "PUSHS string@float\n",
+                        unknown);
+        if (known_type == DT_INT) {
+            // unknown is double, so we convert known int to double
+            fprintf(output, "JUMPIFEQS $&&add_unknown_float%u\n", expr_id);
+        } else {
+            fprintf(output, "JUMPIFEQS $&&add_add%u\n", expr_id);
+        }
+        fprintf(output, "EXIT int@26\n"); // Type error
+        if (known_type == DT_DOUBLE) {
+            // Adds double conversion if required
+            fprintf(output, "LABEL $&&add_unknown_int%u\n"
+                            "INT2FLOAT GF@&&inter%u GF@&&inter%u\n"
+                            "JUMP $&&add_add%u\n",
+                            expr_id, unknown, unknown, expr_id);
+        }
+        if (known_type == DT_INT) {
+            // Adds double conversion if required
+            fprintf(output, "LABEL $&&add_unknown_float%u\n"
+                            "INT2FLOAT GF@&&inter%u GF@&&inter%u\n"
+                            "JUMP $&&add_add%u\n",
+                            expr_id, known, known, expr_id);
+        }
+        fprintf(output, "LABEL $&&add_add%u\n"
+                        "ADD GF@&&inter3 GF@&&inter1 GF@&&inter2\n"
+                        "PUSHS GF@&&inter3\n",
+                        expr_id);
+        return OK;
+    }
+
+    // We know nothing
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
+    // Pop values
+    fprintf(output, "POPS GF@&&inter2\n"
+                    "POPS GF@&&inter1\n");
+    // Choose the path by the first operand type
+    fprintf(output, "PUSHS GF@&&inter1\n" // string test
+                    "TYPES\n"
+                    "PUSHS string@string\n"
+                    "JUMPIFEQS $&&add_string_val%u\n"
+                    "PUSHS GF@&&inter1\n" // int test
+                    "TYPES\n"
+                    "PUSHS string@int\n"
+                    "JUMPIFEQS $&&add_int_val%u\n"
+                    "PUSHS GF@&&inter1\n" // float test
+                    "TYPES\n"
+                    "PUSHS string@float\n"
+                    "JUMPIFEQS $&&add_float_val%u\n"
+                    "EXIT int@26\n",
+                    expr_id, expr_id, expr_id);
+    // First is string
+    fprintf(output, "LABEL $&&add_string_val%u\n"
+                    "PUSHS GF@&&inter2\n" // check if second is string
+                    "TYPES\n"
+                    "PUSHS string@string\n"
+                    "JUMPIFNEQS $&&add_type_err%u\n"
+                    "CONCAT GF@&&inter3 GF@&&inter1 GF@&&inter2\n" // concat
+                    "PUSHS GF@&&inter3\n"
+                    "JUMP $&&add_end%u\n",
+                    expr_id, expr_id, expr_id);
+    // First is int
+    fprintf(output, "LABEL $&&add_int_val%u\n"
+                    "PUSHS GF@&&inter2\n" // check if second is int
+                    "TYPES\n"
+                    "PUSHS string@int\n"
+                    "JUMPIFEQS $&&add_add%u\n" // it is - we add them
+                    "PUSHS GF@&&inter2\n" // check if float
+                    "TYPES\n"
+                    "PUSHS string@float\n"
+                    "JUMPIFNEQS $&&add_type_err%u\n" // it isn't - type error
+                    "INT2FLOAT GF@&&inter1 GF@&&inter1\n" // convert first to float and add them
+                    "JUMP $&&add_add%u\n",
+                    expr_id, expr_id, expr_id, expr_id);
+    // First is float
+    fprintf(output, "LABEL $&&add_float_val%u\n"
+                    "PUSHS GF@&&inter2\n" // check if second is float
+                    "TYPES\n"
+                    "PUSHS string@float\n"
+                    "JUMPIFEQS $&&add_add%u\n" // it is - we add them
+                    "PUSHS GF@&&inter2\n" // check if int
+                    "TYPES\n"
+                    "PUSHS string@int\n"
+                    "JUMPIFNEQS $&&add_type_err%u\n" // it isn't - type error
+                    "INT2FLOAT GF@&&inter2 GF@&&inter2\n" // convert second to float and add them
+                    "JUMP $&&add_add%u\n",
+                    expr_id, expr_id, expr_id, expr_id);
+    // End
+    fprintf(output, "LABEL $&&add_type_err%u\n"
+                    "EXIT int@26\n"
+                    "LABEL $&&add_add%u\n"
+                    "ADD GF@&&inter3 GF@&&inter1 GF@&&inter2\n"
+                    "PUSHS GF@&&inter3\n"
+                    "LABEL $&&add_end%u\n",
+                    expr_id, expr_id, expr_id);
+    return OK;
+}
+
 ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
     String *str; // Used for string literals
     switch (st->type) {
@@ -408,6 +580,8 @@ ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
         return generate_and_expr(output, st);
     case EX_OR:
         return generate_or_expr(output, st);
+    case EX_ADD:
+        return generate_add_expression(output, st);
     default:
         break;
     }
@@ -417,8 +591,6 @@ ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
     CG_ASSERT(generate_expression_evaluation(output, st->params[0]) == OK);
     CG_ASSERT(generate_expression_evaluation(output, st->params[1]) == OK);
     switch (st->type) {
-    case EX_ADD:
-        fprintf(stdout, "ADDS\n"); break;
     case EX_SUB:
         fprintf(stdout, "SUBS\n"); break;
     case EX_MUL:
