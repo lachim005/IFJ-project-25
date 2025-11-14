@@ -163,9 +163,22 @@ ErrorCode generate_or_expr(FILE *output, AstExpression *ex) {
 }
 
 ErrorCode generate_is_expr(FILE *output, AstExpression *ex) {
-    unsigned expr_id = internal_names_cntr++;
     CG_ASSERT(ex->params[1]->type == EX_DATA_TYPE);
+    DataType expr_type = ex->params[0]->assumed_type;
+    DataType checked_type = ex->params[1]->data_type;
+    if (expr_type == checked_type
+        || (checked_type == DT_NUM && (expr_type == DT_INT || expr_type == DT_DOUBLE))) {
+        // Types are the same, we can just push true
+        fprintf(output, "PUSHS bool@true\n");
+        return OK;
+    }
+    if (expr_type != DT_UNKNOWN) {
+        // The type isn't uknown and it isn't the same, so we can push false
+        fprintf(output, "PUSHS bool@false\n");
+        return OK;
+    }
     CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+    unsigned expr_id = internal_names_cntr++;
     if (ex->params[1]->data_type == DT_NUM) {
         // If the type we are checking is Num, it could be either a float or an int,
         // so we convert ints into floats
