@@ -276,17 +276,8 @@ ErrorCode generate_builtin_function_call(FILE *output, AstExpression *ex) {
     }
     else if (strcmp(ex->string_val->val, "read_num") == 0) {
         CG_ASSERT(ex->child_count == 0);
-        unsigned expr_id = internal_names_cntr++;
         fprintf(output, "READ GF@&&inter1 float\n"
-                        "PUSHS GF@&&inter1\n"
-                        "PUSHS GF@&&inter1\n"
-                        // Convert to int if required
-                        "ISINTS\n"
-                        "PUSHS bool@false\n"
-                        "JUMPIFEQS $&&read_num_end%u\n"
-                        "FLOAT2INTS\n"
-                        "LABEL $&&read_num_end%u\n",
-                        expr_id, expr_id);
+                        "PUSHS GF@&&inter1\n");
     }
     else if (strcmp(ex->string_val->val, "floor") == 0) {
         CG_ASSERT(ex->child_count == 1);
@@ -355,24 +346,31 @@ ErrorCode generate_builtin_function_call(FILE *output, AstExpression *ex) {
     return OK;
 }
 
+/// Generates code for applying an arithmetic operation to two expressions of known Num types
+ErrorCode generate_arithmetic_with_known_type(FILE *output, AstExpression *ex, char *stack_op) {
+    DataType left_type = ex->params[0]->assumed_type;
+    DataType right_type = ex->params[1]->assumed_type;
+    bool has_float = false;
+    if (right_type == DT_DOUBLE || left_type == DT_DOUBLE) has_float = true;
+
+    // Left side
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+    if (left_type == DT_INT && has_float) fprintf(output, "INT2FLOATS\n");
+
+    // Right side
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
+    if (right_type == DT_INT && has_float) fprintf(output, "INT2FLOATS\n");
+    fprintf(output, "%s\n", stack_op);
+    return OK;
+}
+
 ErrorCode generate_add_expression(FILE *output, AstExpression *ex) {
     DataType left_type = ex->params[0]->assumed_type;
     DataType right_type = ex->params[1]->assumed_type;
     // Known data types
     if ((left_type == DT_INT || left_type == DT_DOUBLE)
         && (right_type == DT_INT || right_type == DT_DOUBLE)) {
-        bool has_float = false;
-        if (right_type == DT_DOUBLE || left_type == DT_DOUBLE) has_float = true;
-
-        // Left side
-        CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
-        if (left_type == DT_INT && has_float) fprintf(output, "INT2FLOATS\n");
-
-        // Right side
-        CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
-        if (right_type == DT_INT && has_float) fprintf(output, "INT2FLOATS\n");
-        fprintf(output, "ADDS\n");
-        return OK;
+        return generate_arithmetic_with_known_type(output, ex, "ADDS");
     }
     if (left_type == DT_STRING && right_type == DT_STRING) {
         CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
@@ -527,6 +525,151 @@ ErrorCode generate_add_expression(FILE *output, AstExpression *ex) {
     return OK;
 }
 
+/// Generates code for string iteration. Expects the string in inter1,
+/// the count in inter2 and will put the result into inter3
+void generate_string_iteration(FILE *output) {
+    unsigned expr_id = internal_names_cntr++;
+    fprintf(output, "MOVE GF@&&inter3 string@\n"
+                    "LABEL $&&str_iter_cond%u\n"
+                    "PUSHS GF@&&inter2\n"
+                    "PUSHS int@0\n"
+                    "GTS\n"
+                    "PUSHS bool@false\n"
+                    "JUMPIFEQS $&&str_iter_end%u\n"
+                    "SUB GF@&&inter2 GF@&&inter2 int@1\n"
+                    "CONCAT GF@&&inter3 GF@&&inter3 GF@&&inter1\n"
+                    "JUMP $&&str_iter_cond%u\n"
+                    "LABEL $&&str_iter_end%u\n",
+                    expr_id, expr_id, expr_id, expr_id);
+}
+
+ErrorCode generate_mul_expression(FILE *output, AstExpression *ex) {
+    DataType left_type = ex->params[0]->assumed_type;
+    DataType right_type = ex->params[1]->assumed_type;
+    // Known data types
+    if ((left_type == DT_INT || left_type == DT_DOUBLE)
+        && (right_type == DT_INT || right_type == DT_DOUBLE)) {
+        return generate_arithmetic_with_known_type(output, ex, "MULS");
+    }
+    if (left_type == DT_STRING && right_type == DT_INT) {
+        CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+        CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
+        fprintf(output, "POPS GF@&&inter2\n"
+                        "POPS GF@&&inter1\n");
+        generate_string_iteration(output);
+        fprintf(output, "PUSHS GF@&&inter3\n");
+        return OK;
+    }
+    if (left_type != DT_UNKNOWN && right_type != DT_UNKNOWN) {
+        // Should be caught during semantic checks
+        fprintf(output, "EXIT int@26\n");
+    }
+    unsigned expr_id = internal_names_cntr++;
+    // Unknown data types
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
+    fprintf(output, "POPS GF@&&inter2\n"
+                    "POPS GF@&&inter1\n");
+    if (left_type == DT_UNKNOWN) {
+        // Switch by data type
+        fprintf(output, "PUSHS GF@&&inter1\n"
+                        "TYPES\n"
+                        "PUSHS string@string\n"
+                        "JUMPIFEQS $&&mul_string_val%u\n"
+                        "PUSHS GF@&&inter1\n"
+                        "TYPES\n"
+                        "PUSHS string@int\n"
+                        "JUMPIFEQS $&&mul_int_val%u\n"
+                        "PUSHS GF@&&inter1\n"
+                        "TYPES\n"
+                        "PUSHS string@float\n"
+                        "JUMPIFEQS $&&mul_float_val%u\n"
+                        "EXIT int@26\n",
+                        expr_id, expr_id, expr_id);
+    }
+    if (left_type == DT_STRING || left_type == DT_UNKNOWN) {
+        if (left_type == DT_UNKNOWN) {
+            // We only need the label if left is unknown, otherwise this is the default path
+            fprintf(output, "LABEL $&&mul_string_val%u\n", expr_id);
+        }
+        if (right_type == DT_UNKNOWN) {
+            // Check right type
+            fprintf(output, "PUSHS GF@&&inter2\n"
+                            "TYPES\n"
+                            "PUSHS string@int\n"
+                            "JUMPIFEQS $&&mul_string_int%u\n"
+                            "EXIT int@26\n"
+                            "LABEL $&&mul_string_int%u\n",
+                            expr_id, expr_id);
+        }
+        generate_string_iteration(output);
+        fprintf(output, "PUSHS GF@&&inter3\n"
+                        "JUMP $&&mul_end%u\n", expr_id);
+    }
+    if (left_type == DT_INT || left_type == DT_UNKNOWN) {
+        if (left_type == DT_UNKNOWN) {
+            // We only need the label if left is unknown, otherwise this is the default path
+            fprintf(output, "LABEL $&&mul_int_val%u\n", expr_id);
+        }
+        if (right_type == DT_UNKNOWN) {
+            // Check right type
+            fprintf(output, "PUSHS GF@&&inter2\n"
+                            "TYPES\n"
+                            "PUSHS string@int\n"
+                            "JUMPIFEQS $&&mul_mul%u\n"
+                            "PUSHS GF@&&inter2\n"
+                            "TYPES\n"
+                            "PUSHS string@float\n"
+                            "JUMPIFNEQS $&&mul_type_errror%u\n"
+                            "INT2FLOAT GF@&&inter1 GF@&&inter1\n",
+                            expr_id, expr_id);
+        } else if (right_type == DT_INT) {
+            // Nothing
+        } else if (right_type == DT_DOUBLE) {
+            fprintf(output, "INT2FLOAT GF@&&inter1 GF@&&inter1\n");
+        } else {
+            // Should get caught by semantic analysis
+            fprintf(output, "EXIT int@26\n");
+        }
+        fprintf(output, "JUMP $&&mul_mul%u\n", expr_id);
+    }
+    if (left_type == DT_DOUBLE || left_type == DT_UNKNOWN) {
+        if (left_type == DT_UNKNOWN) {
+            // We only need the label if left is unknown, otherwise this is the default path
+            fprintf(output, "LABEL $&&mul_float_val%u\n", expr_id);
+        }
+        if (right_type == DT_UNKNOWN) {
+            // Check right type
+            fprintf(output, "PUSHS GF@&&inter2\n"
+                            "TYPES\n"
+                            "PUSHS string@float\n"
+                            "JUMPIFEQS $&&mul_mul%u\n"
+                            "PUSHS GF@&&inter2\n"
+                            "TYPES\n"
+                            "PUSHS string@int\n"
+                            "JUMPIFNEQS $&&mul_type_errror%u\n"
+                            "INT2FLOAT GF@&&inter2 GF@&&inter2\n",
+                            expr_id, expr_id);
+        } else if (right_type == DT_DOUBLE) {
+            // Nothing
+        } else if (right_type == DT_INT) {
+            fprintf(output, "INT2FLOAT GF@&&inter2 GF@&&inter2\n");
+        } else {
+            // Should get caught by semantic analysis
+            fprintf(output, "EXIT int@26\n");
+        }
+        fprintf(output, "JUMP $&&mul_mul%u\n", expr_id);
+    }
+    fprintf(output, "LABEL $&&mul_mul%u\n"
+                    "MUL GF@&&inter3 GF@&&inter1 GF@&&inter2\n"
+                    "PUSHS GF@&&inter3\n"
+                    "LABEL $&&mul_end%u\n",
+                    expr_id, expr_id);
+
+
+    return OK;
+}
+
 ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
     String *str; // Used for string literals
     switch (st->type) {
@@ -582,6 +725,8 @@ ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
         return generate_or_expr(output, st);
     case EX_ADD:
         return generate_add_expression(output, st);
+    case EX_MUL:
+        return generate_mul_expression(output, st);
     default:
         break;
     }
@@ -593,8 +738,6 @@ ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
     switch (st->type) {
     case EX_SUB:
         fprintf(stdout, "SUBS\n"); break;
-    case EX_MUL:
-        fprintf(stdout, "MULS\n"); break;
     case EX_DIV:
         fprintf(stdout, "DIVS\n"); break;
     case EX_GREATER:
