@@ -292,7 +292,9 @@ ErrorCode convert_string(char *input, String **out) {
 }
 
 /// Generates code for Ifj.str
-void generate_builtin_str(FILE *output, AstExpression *ex) {
+ErrorCode generate_builtin_str(FILE *output, AstExpression *ex) {
+    // Push parameter
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
     unsigned expr_id = internal_names_cntr++;
     unsigned type = ex->params[0]->assumed_type;
     fprintf(output, "POPS GF@&&inter1\n");
@@ -349,10 +351,13 @@ void generate_builtin_str(FILE *output, AstExpression *ex) {
                         expr_id, expr_id);
     }
     fprintf(output, "LABEL $&&ifj_str_end%u\n", expr_id);
+    return OK;
 }
 
 /// Generates code for Ifj.write
-void generate_builtin_write(FILE *output, AstExpression *ex) {
+ErrorCode generate_builtin_write(FILE *output, AstExpression *ex) {
+    // Push parameter
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
     unsigned type = ex->params[0]->assumed_type;
     unsigned expr_id = internal_names_cntr++;
     fprintf(output, "POPS GF@&&inter1\n");
@@ -376,13 +381,65 @@ void generate_builtin_write(FILE *output, AstExpression *ex) {
                     "WRITE GF@&&inter1\n"
                     "PUSHS nil@nil\n",
                     expr_id);
+    return OK;
+}
+
+/// Generates code for Ifj.floor
+ErrorCode generate_builtin_floor(FILE *output, AstExpression *ex) {
+    // Push parameter
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+    if (ex->params[0]->assumed_type == DT_NUM) {
+        fprintf(output, "FLOAT2INTS\n"
+                        "INT2FLOATS\n");
+        return OK;
+    }
+    unsigned expr_id = internal_names_cntr++;
+    fprintf(output, "POPS GF@&&inter1\n"
+                    "PUSHS GF@&&inter1\n"
+                    "TYPES\n"
+                    "PUSHS string@float\n"
+                    "JUMPIFEQS $&&floor_float%u\n"
+                    "EXIT int@26\n"
+                    "LABEL $&&floor_float%u\n"
+                    "PUSHS GF@&&inter1\n"
+                    "FLOAT2INTS\n"
+                    "INT2FLOATS\n",
+                    expr_id, expr_id);
+    return OK;
+}
+
+/// Generates code for Ifj.length
+ErrorCode generate_builtin_length(FILE *output, AstExpression *ex) {
+    AstExpression *param = ex->params[0];
+    if (param->assumed_type == DT_STRING && param->val_known) {
+        fprintf(output, "PUSHS float@%a\n", (double)strlen(param->string_val->val));
+        return OK;
+    }
+    // Push parameter
+    CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+    if (param->assumed_type == DT_STRING) {
+        fprintf(output, "POPS GF@&&inter1\n"
+                        "STRLEN GF@&&inter2 GF@&&inter1\n"
+                        "PUSHS GF@&&inter2\n"
+                        "INT2FLOATS\n");
+        return OK;
+    }
+    unsigned expr_id = internal_names_cntr++;
+    fprintf(output, "POPS GF@&&inter1\n"
+                    "PUSHS GF@&&inter1\n"
+                    "TYPES\n"
+                    "PUSHS string@string\n"
+                    "JUMPIFEQS $&&length_string%u\n"
+                    "EXIT int@26\n"
+                    "LABEL $&&length_string%u\n"
+                    "STRLEN GF@&&inter2 GF@&&inter1\n"
+                    "PUSHS GF@&&inter2\n"
+                    "INT2FLOATS\n",
+                    expr_id, expr_id);
+    return OK;
 }
 
 ErrorCode generate_builtin_function_call(FILE *output, AstExpression *ex) {
-    // Push parameters
-    for (unsigned par = 0; par < ex->child_count; par++) {
-        CG_ASSERT(generate_expression_evaluation(output, ex->params[par]) == OK);
-    }
     if (strcmp(ex->string_val->val, "write") == 0) {
         CG_ASSERT(ex->child_count == 1);
         generate_builtin_write(output, ex);
@@ -399,8 +456,7 @@ ErrorCode generate_builtin_function_call(FILE *output, AstExpression *ex) {
     }
     else if (strcmp(ex->string_val->val, "floor") == 0) {
         CG_ASSERT(ex->child_count == 1);
-        fprintf(output, "FLOAT2INTS\n"
-                        "INT2FLOATS\n");
+        generate_builtin_floor(output, ex);
     }
     else if (strcmp(ex->string_val->val, "str") == 0) {
         CG_ASSERT(ex->child_count == 1);
@@ -408,9 +464,7 @@ ErrorCode generate_builtin_function_call(FILE *output, AstExpression *ex) {
     }
     else if (strcmp(ex->string_val->val, "length") == 0) {
         CG_ASSERT(ex->child_count == 1);
-        fprintf(output, "POPS GF@&&inter1\n"
-                        "STRLEN GF@&&inter2 GF@&&inter1\n"
-                        "PUSHS GF@&&inter2\n");
+        generate_builtin_length(output, ex);
     }
     else if (strcmp(ex->string_val->val, "substring") == 0) {
         CG_ASSERT(ex->child_count == 3);
