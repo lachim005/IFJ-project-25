@@ -62,7 +62,7 @@ int calculate_table_idx(TokType type){
     case TOK_OP_AND: return 10; // &&
     case TOK_OP_OR: return 11; // ||
     case TOK_IDENTIFIER: case TOK_GLOBAL_VAR:
-    case TOK_LIT_INT: case TOK_LIT_DOUBLE: case TOK_LIT_STRING:
+    case TOK_LIT_NUM: case TOK_LIT_STRING:
     case TOK_TYPE_NULL: case TOK_TYPE_NUM: case TOK_TYPE_STRING: case TOK_TYPE_BOOL:
     case TOK_KW_TRUE: case TOK_KW_FALSE: case TOK_KW_NULL:
     case TOK_KW_IFJ:
@@ -256,11 +256,8 @@ ErrorCode reduce(Stack *expr_stack, Stack *op_stack) {
         case TOK_GLOBAL_VAR:
             reduction_res = reduce_identifier(expr_stack, TOK_GLOBAL_VAR, EX_GLOBAL_ID);
             break;
-        case TOK_LIT_INT:
-            reduction_res = reduce_literal(expr_stack, TOK_LIT_INT, EX_INT);
-            break;
-        case TOK_LIT_DOUBLE:
-            reduction_res = reduce_literal(expr_stack, TOK_LIT_DOUBLE, EX_DOUBLE);
+        case TOK_LIT_NUM:
+            reduction_res = reduce_literal(expr_stack, TOK_LIT_NUM, EX_DOUBLE);
             break;
         case TOK_LIT_STRING:
             reduction_res = reduce_literal(expr_stack, TOK_LIT_STRING, EX_STRING);
@@ -442,8 +439,6 @@ ErrorCode reduce_literal(Stack *expr_stack, TokType lit_type, AstExprType expr_t
     switch (expr_type) {
     case EX_STRING:
         expr->string_val = top.string_val; break;
-    case EX_INT:
-        expr->int_val = top.int_val; break;
     case EX_DOUBLE:
         expr->double_val = top.double_val; break;
     case EX_BOOL:

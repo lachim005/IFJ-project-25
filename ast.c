@@ -779,9 +779,6 @@ static void ast_print_expression(AstExpression *expr) {
             // For AST printing replace string literal text with the generic label
             printf("EXPRESSION\n");
             break;
-        case EX_INT:
-            printf("%d\n", expr->int_val);
-            break;
         case EX_DOUBLE:
             printf("%f\n", expr->double_val);
             break;

@@ -24,16 +24,11 @@ typedef enum data_type {
 
     // New types
     DT_UNKNOWN,
-    DT_INT,
-    DT_DOUBLE,
     DT_TYPE
 } DataType;
 
-#define IS_NUM(dt) \
-    ((dt) == DT_NUM || (dt) == DT_INT || (dt) == DT_DOUBLE)
-
 #define IS_DATA_TYPE(dt) \
-    (IS_NUM(dt) || (dt) == DT_STRING || (dt) == DT_BOOL || (dt) == DT_NULL)
+    ((dt) == DT_NUM || (dt) == DT_STRING || (dt) == DT_BOOL || (dt) == DT_NULL)
 
 /// Type of expression
 typedef enum ast_expr_type {
@@ -56,7 +51,6 @@ typedef enum ast_expr_type {
     EX_IS,
     EX_TERNARY,
     EX_NOT,
-    EX_INT,
     EX_DOUBLE,
     EX_BOOL,
     EX_NULL,

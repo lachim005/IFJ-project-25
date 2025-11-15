@@ -87,7 +87,7 @@ void lexer_free(Lexer *lexer) {
     lexer->file = NULL;
 }
 
-bool hex2int(char *hexStr, int *out) {
+bool hex2int(char *hexStr, long *out) {
     int val = 0;
     for (int i = 0; hexStr[i] != '\0'; i++) {
         char c = tolower(hexStr[i]);
@@ -289,7 +289,7 @@ ErrLex lexer_read_token_from_file(Lexer *lexer, Token *tok) {
             MOVE_STATE(S_STR_ESCAPE_CODE_2);
         case S_STR_ESCAPE_CODE_2:
             str_append_char(buf2, ch);
-            int code;
+            long code;
             if (!hex2int(buf2->val, &code)) return ERR_LEX_STRING_UNEXPECTED_ESCAPE_SEQUENCE;
             str_clear(buf2);
             str_append_char(buf1, code);
@@ -363,16 +363,18 @@ ErrLex lexer_read_token_from_file(Lexer *lexer, Token *tok) {
             if (isdigit(ch)) MOVE_STATE(S_INT_LIT);
             UNGET;
             str_remove_last(buf1);
-            tok->int_val = strtol(buf1->val, NULL, 10); // Should not fail
-            FOUND_TOK(TOK_LIT_INT);
+            tok->double_val = strtod(buf1->val, NULL); // Should not fail
+            FOUND_TOK(TOK_LIT_NUM);
         case S_INT_HEX_LIT:
             if (isdigit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'Z')) {
                 str_append_char(buf1, ch);
                 continue;
             }
             UNGET;
-            hex2int(buf1->val, &tok->int_val); // Should not fail
-            FOUND_TOK(TOK_LIT_INT);
+            long val;
+            hex2int(buf1->val, &val); // Should not fail
+            tok->double_val = (double)val;
+            FOUND_TOK(TOK_LIT_NUM);
         case S_FLOAT_DOT:
             if (!isdigit(ch)) return ERR_LEX_NUM_LIT_UNEXPECTED_CHARACTER;
             str_append_char(buf1, ch);
@@ -395,7 +397,7 @@ ErrLex lexer_read_token_from_file(Lexer *lexer, Token *tok) {
             str_remove_last(buf1);
             UNGET;
             tok->double_val = strtod(buf1->val, NULL); // Should not fail
-            FOUND_TOK(TOK_LIT_DOUBLE);
+            FOUND_TOK(TOK_LIT_NUM);
         case S_IDENTIFIER:
             if (isalnum(ch) || ch == '_') {
                 str_append_char(buf1, ch);

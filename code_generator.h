@@ -49,9 +49,6 @@ ErrorCode generate_add_expression(FILE *output, AstExpression *ex);
 /// Generates code for a * expression
 ErrorCode generate_mul_expression(FILE *output, AstExpression *ex);
 
-/// Generates code for evaluating a binary operator which only accepts Num on both sides
-ErrorCode generate_binary_operator_with_num(FILE *output, AstExpression *ex, char *stack_op);
-
 /// Generates code for evaluating a binary operator which only accepts float on both sides
 ErrorCode generate_binary_operator_with_floats(FILE *output, AstExpression *ex, char *stack_op);
 

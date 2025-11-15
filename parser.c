@@ -227,7 +227,7 @@ bool add_builtin_functions(Symtable *symtab) {
     if (add_builtin_function(symtab, "#write", 1, DT_NULL, write_params) == NULL) return false; // Ifj.write(term) -> Null
 
     // Conversion functions
-    DataType floor_params[] = {DT_DOUBLE};
+    DataType floor_params[] = {DT_NUM};
     if (add_builtin_function(symtab, "#floor", 1, DT_NUM, floor_params) == NULL) return false; // Ifj.floor(Num) -> Num
     
     DataType str_params[] = {DT_UNKNOWN};  // term can be any type
@@ -1327,8 +1327,8 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
                     break;
                 }
                 
-                if (IS_NUM(left_type) && IS_NUM(right_type)) {
-                    result_type = (left_type == DT_DOUBLE || right_type == DT_DOUBLE) ? DT_DOUBLE : DT_INT;
+                if (left_type == DT_NUM && right_type == DT_NUM) {
+                    result_type = DT_NUM;
                     break;
                 }
 
@@ -1341,12 +1341,13 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
             }
 
             if (expr->type == EX_MUL) {
-                if (IS_NUM(left_type) && IS_NUM(right_type)) {
-                    result_type = (left_type == DT_DOUBLE || right_type == DT_DOUBLE) ? DT_DOUBLE : DT_INT;
+                if (left_type == DT_NUM && right_type == DT_NUM) {
+                    result_type = DT_NUM;
                     break;
                 }
 
-                if ((left_type == DT_STRING && right_type == DT_INT)) {
+                // TODO: Integer check?
+                if ((left_type == DT_STRING && right_type == DT_NUM)) {
                     result_type = DT_STRING;
                     break;
                 }
@@ -1365,8 +1366,8 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
             }
 
             if (expr->type == EX_SUB || expr->type == EX_DIV) {
-                if (IS_NUM(left_type) && IS_NUM(right_type)) {
-                    result_type = (left_type == DT_DOUBLE || right_type == DT_DOUBLE) ? DT_DOUBLE : DT_INT;
+                if (left_type == DT_NUM && right_type == DT_NUM) {
+                    result_type = DT_NUM;
                     break;
                 }
 
@@ -1421,7 +1422,7 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
             break;
         }
 
-        if (IS_NUM(left_type) && IS_NUM(right_type)) {
+        if (left_type == DT_NUM && right_type == DT_NUM) {
             result_type = DT_BOOL;
             break;
         }
@@ -1558,12 +1559,8 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
 
         return SEM_TYPE_COMPAT;
 
-    case EX_INT:
-        result_type = DT_INT;
-        break;
-
     case EX_DOUBLE:
-        result_type = DT_DOUBLE;
+        result_type = DT_NUM;
         break;
 
     case EX_BOOL:
@@ -1589,7 +1586,7 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
             return ec;
         }
 
-        if (IS_NUM(child_type)) {
+        if (child_type == DT_NUM) {
             result_type = child_type;
             break;
         }
@@ -1627,7 +1624,7 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
 
             // Check parameter type compatibility
             DataType expected_type = builtin_item->param_types[i];
-            if (expected_type != DT_UNKNOWN && arg_type != DT_UNKNOWN && expected_type != arg_type && !(IS_NUM(expected_type) && IS_NUM(arg_type))) {
+            if (expected_type != DT_UNKNOWN && arg_type != DT_UNKNOWN && expected_type != arg_type && !(expected_type == DT_NUM && arg_type == DT_NUM)) {
                 return SEM_BAD_PARAMS;
             }
         }

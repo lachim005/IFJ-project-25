@@ -17,8 +17,7 @@ typedef enum tok_type {
     TOK_GLOBAL_VAR, // Name stored in string_val
     TOK_EOL,
     // Literals
-    TOK_LIT_INT, // Value stored in int_val
-    TOK_LIT_DOUBLE, // Value stored in double_val
+    TOK_LIT_NUM, // Value stored in double_val
     TOK_LIT_STRING, // Value stored in string_val
     // Operators
     TOK_OP_ASSIGN, // =
@@ -79,7 +78,6 @@ typedef struct token {
     TokType type;
     union {
         String *string_val;
-        int int_val;
         double double_val;
         // pointer to ast_expression for precedence parsing
         AstExpression *expr_val;
