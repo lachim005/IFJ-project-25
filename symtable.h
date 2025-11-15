@@ -34,6 +34,7 @@ typedef struct symtable_item {
     size_t param_count;
     bool is_defined;
     DataType data_type;
+    DataType *param_types;
 } SymtableItem;
 
 typedef struct symtable {
@@ -113,7 +114,7 @@ SymtableItem *symtable_add_global_var(Symtable *st, char *var_name, DataType dat
 bool symtable_contains_global_var(Symtable *st, char *var_name, SymtableItem **out_item);
 
 /// Add a builtin function to the symtable. Returns NULL
-SymtableItem *add_builtin_function(Symtable *symtab, const char *name, int param_count, DataType return_type);
+SymtableItem *add_builtin_function(Symtable *symtab, const char *name, int param_count, DataType return_type, DataType *param_types);
 
 /// Checks if a builtin function with the given name and parameter count exists in the symtable
 bool symtable_contains_builtin_function(Symtable *st, const char *name, int param_count, SymtableItem **out_item);

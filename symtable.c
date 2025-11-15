@@ -74,6 +74,9 @@ void symtable_free(Symtable *st) {
         if (st->state[i] == SLOT_OCCUPIED && st->data[i].key) {
             free(st->data[i].key);
             str_free(&st->data[i].name);
+            if (st->data[i].param_types) {
+                free(st->data[i].param_types);
+            }
         }
     }
     free(st->data);
@@ -185,6 +188,7 @@ SymtableItem *symtable_insert(Symtable *st, const char *key) {
         st->data[use_idx].data_type = DT_UNKNOWN;
         st->data[use_idx].is_defined = true;
         st->data[use_idx].type = SYM_VAR;
+        st->data[use_idx].param_types = NULL;
         st->state[use_idx] = SLOT_OCCUPIED;
         st->size++;
         return &st->data[use_idx];
@@ -486,7 +490,7 @@ bool symtable_contains_global_var(Symtable *st, char *var_name, SymtableItem **o
     return false;
 }
 
-SymtableItem *add_builtin_function(Symtable *symtab, const char *name, int param_count, DataType return_type) {
+SymtableItem *add_builtin_function(Symtable *symtab, const char *name, int param_count, DataType return_type, DataType *param_types) {
     // Constructs symtable name
     String *s = str_init();
     if (s == NULL) return NULL;
@@ -515,6 +519,19 @@ SymtableItem *add_builtin_function(Symtable *symtab, const char *name, int param
     result->param_count = (size_t)param_count;
     result->type = SYM_FUNCTION;
     result->data_type = return_type;
+
+    // Copy parameter types if provided
+    if (param_types != NULL && param_count > 0) {
+        result->param_types = malloc(sizeof(DataType) * param_count);
+        if (result->param_types == NULL) {
+            return NULL;
+        }
+        for (int i = 0; i < param_count; i++) {
+            result->param_types[i] = param_types[i];
+        }
+    } else {
+        result->param_types = NULL;
+    }
 
     return result;
 }

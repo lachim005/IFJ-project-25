@@ -220,20 +220,34 @@ void param_list_free(ParamList *list) {
 /// Returns true if all functions were successfully added, false otherwise
 bool add_builtin_functions(Symtable *symtab) {
     // I/O functions
-    if (add_builtin_function(symtab, "#read_str", 0, DT_STRING) == NULL) return false;   // Ifj.read_str() -> String | Null
-    if (add_builtin_function(symtab, "#read_num", 0, DT_DOUBLE) == NULL) return false;   // Ifj.read_num() -> Num | Null
-    if (add_builtin_function(symtab, "#write", 1, DT_NULL) == NULL) return false;        // Ifj.write(term) -> Null
+    if (add_builtin_function(symtab, "#read_str", 0, DT_UNKNOWN, NULL) == NULL) return false; // Ifj.read_str() -> String | Null
+    if (add_builtin_function(symtab, "#read_num", 0, DT_UNKNOWN, NULL) == NULL) return false; // Ifj.read_num() -> Num | Null
+    
+    DataType write_params[] = {DT_UNKNOWN};  // term can be any type
+    if (add_builtin_function(symtab, "#write", 1, DT_NULL, write_params) == NULL) return false; // Ifj.write(term) -> Null
 
     // Conversion functions
-    if (add_builtin_function(symtab, "#floor", 1, DT_INT) == NULL) return false;         // Ifj.floor(Num) -> Num
-    if (add_builtin_function(symtab, "#str", 1, DT_STRING) == NULL) return false;        // Ifj.str(term) -> String
+    DataType floor_params[] = {DT_DOUBLE};
+    if (add_builtin_function(symtab, "#floor", 1, DT_NUM, floor_params) == NULL) return false; // Ifj.floor(Num) -> Num
+    
+    DataType str_params[] = {DT_UNKNOWN};  // term can be any type
+    if (add_builtin_function(symtab, "#str", 1, DT_STRING, str_params) == NULL) return false; // Ifj.str(term) -> String
 
     // String functions
-    if (add_builtin_function(symtab, "#length", 1, DT_INT) == NULL) return false;        // Ifj.length(String) -> Num
-    if (add_builtin_function(symtab, "#substring", 3, DT_STRING) == NULL) return false;  // Ifj.substring(String, Num, Num) -> String | Null
-    if (add_builtin_function(symtab, "#strcmp", 2, DT_INT) == NULL) return false;        // Ifj.strcmp(String, String) -> Num
-    if (add_builtin_function(symtab, "#ord", 2, DT_INT) == NULL) return false;           // Ifj.ord(String, Num) -> Num
-    if (add_builtin_function(symtab, "#chr", 1, DT_STRING) == NULL) return false;        // Ifj.chr(Num) -> String
+    DataType length_params[] = {DT_STRING};
+    if (add_builtin_function(symtab, "#length", 1, DT_NUM, length_params) == NULL) return false; // Ifj.length(String) -> Num
+    
+    DataType substring_params[] = {DT_STRING, DT_NUM, DT_NUM};
+    if (add_builtin_function(symtab, "#substring", 3, DT_UNKNOWN, substring_params) == NULL) return false; // Ifj.substring(String, Num, Num) -> String | Null
+    
+    DataType strcmp_params[] = {DT_STRING, DT_STRING};
+    if (add_builtin_function(symtab, "#strcmp", 2, DT_NUM, strcmp_params) == NULL) return false; // Ifj.strcmp(String, String) -> Num
+    
+    DataType ord_params[] = {DT_STRING, DT_NUM};
+    if (add_builtin_function(symtab, "#ord", 2, DT_NUM, ord_params) == NULL) return false; // Ifj.ord(String, Num) -> Num
+    
+    DataType chr_params[] = {DT_NUM};
+    if (add_builtin_function(symtab, "#chr", 1, DT_STRING, chr_params) == NULL) return false; // Ifj.chr(Num) -> String
 
     return true;
 }
@@ -287,6 +301,11 @@ ErrorCode check_class_program(Lexer *lexer, Symtable *symtable, AstStatement *st
 
     CHECK_TOKEN_SKIP_NEWLINE(lexer, token);
     if (token.type != TOK_RIGHT_BRACE)
+        RETURN_CODE(SYNTACTIC_ERROR, token);
+
+    // Check for end of file
+    CHECK_TOKEN_SKIP_NEWLINE(lexer, token);
+    if (token.type != TOK_DOLLAR)
         RETURN_CODE(SYNTACTIC_ERROR, token);
 
     RETURN_CODE(OK, token);
@@ -1505,10 +1524,6 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
             return ec;
         }
 
-        if (cond_type != DT_BOOL && cond_type != DT_UNKNOWN) {
-            return SEM_TYPE_COMPAT;
-        }
-
         if (true_type == false_type) {
             result_type = true_type;
             break;
@@ -1592,6 +1607,16 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
         break;
 
     case EX_BUILTIN_FUN: {
+        SymtableItem *builtin_item = NULL;
+        if (!symtable_contains_builtin_function(globaltable, expr->string_val->val, expr->child_count, &builtin_item)) {
+            return SEM_UNDEFINED;
+        }
+
+        // Check if child count matches builtin definition
+        if (builtin_item->param_count != expr->child_count) {
+            return SEM_BAD_PARAMS;
+        }
+
         // Check argument expressions
         for (size_t i = 0; i < expr->child_count; i++) {
             DataType arg_type;
@@ -1599,12 +1624,14 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
             if (ec != OK) {
                 return ec;
             }
+
+            // Check parameter type compatibility
+            DataType expected_type = builtin_item->param_types[i];
+            if (expected_type != DT_UNKNOWN && arg_type != DT_UNKNOWN && expected_type != arg_type && !(IS_NUM(expected_type) && IS_NUM(arg_type))) {
+                return SEM_BAD_PARAMS;
+            }
         }
 
-        SymtableItem *builtin_item = NULL;
-        if (!symtable_contains_builtin_function(globaltable, expr->string_val->val, expr->child_count, &builtin_item)) {
-            return SEM_UNDEFINED;
-        }
 
         result_type = builtin_item->data_type;
         break;
