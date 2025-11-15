@@ -323,7 +323,6 @@ ErrorCode check_class_body(Lexer *lexer, Symtable *symtable, AstStatement *state
         if (token.type == TOK_RIGHT_BRACE) {
             // Return token back for parent function
             if (!lexer_unget_token(lexer, token)) {
-                token_free(&token);
                 return INTERNAL_ERROR;
             }
             return OK;
@@ -343,8 +342,10 @@ ErrorCode check_class_body(Lexer *lexer, Symtable *symtable, AstStatement *state
             case TOK_GLOBAL_VAR:
                 ec = check_global_var(lexer, symtable, NULL, token.string_val, statement);
                 if (ec != OK) {
-                    RETURN_CODE(ec, token);
+                    token_free(&token);
+                    return ec;
                 }
+                token_free(&token);
                 statement = statement->next;
 
                 break;
@@ -373,11 +374,13 @@ ErrorCode check_global_var(Lexer *lexer, Symtable *globaltable, Symtable *localt
         // Check expression type compatibility
         ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
         if (ec != OK) {
+            ast_expr_free(expr);
             RETURN_CODE(ec, token);
         }
 
         // Add global variable to AST
         if (ast_add_global_var(statement, var_name->val, expr) == false) {
+            ast_expr_free(expr);
             RETURN_CODE(INTERNAL_ERROR, token);
         }
 
@@ -388,26 +391,33 @@ ErrorCode check_global_var(Lexer *lexer, Symtable *globaltable, Symtable *localt
     } else {
         // No assignment, unget the token for further processing
         if (!lexer_unget_token(lexer, token)) {
-            RETURN_CODE(INTERNAL_ERROR, token);
+            return INTERNAL_ERROR;
         }
 
         // Parse assignment expression
         ErrorCode ec = parse_expression(lexer, &expr);
         if (ec != OK) {
-            RETURN_CODE(ec, token);
+            return ec;
         }
 
         DataType expr_type;
         // Check expression type compatibility
         ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
         if (ec != OK) {
-            RETURN_CODE(ec, token);
+            ast_expr_free(expr);
+            return ec;
         }
 
         // Add global variable to AST
         if (ast_add_inline_expression(statement, expr) == false) {
-            RETURN_CODE(INTERNAL_ERROR, token);
+            ast_expr_free(expr);
+            return INTERNAL_ERROR;
         }
+
+        Token new_token;
+        INIT_TOKEN(new_token, TOK_EOL);
+        CHECK_TOKEN(lexer, new_token);
+        token = new_token;
     }
 
     if (token.type != TOK_EOL) {
@@ -684,7 +694,6 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable, 
         if (token.type == TOK_RIGHT_BRACE) {
             // Return token back for parent function
             if (!lexer_unget_token(lexer, token)) {
-                token_free(&token);
                 return INTERNAL_ERROR;
             }
             return OK;
@@ -695,8 +704,10 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable, 
             case TOK_GLOBAL_VAR:
                 ec = check_global_var(lexer, globaltable, localtable, token.string_val, statement);
                 if (ec != OK) {
-                    RETURN_CODE(ec, token);
+                    token_free(&token);
+                    return ec;
                 }
+                token_free(&token);
                 statement = statement->next;
                 break;
 
@@ -774,25 +785,27 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable, 
             default: {
                 // Unget token for expression parsing
                 if (!lexer_unget_token(lexer, token)) {
-                    RETURN_CODE(INTERNAL_ERROR, token);
+                    return INTERNAL_ERROR;
                 }
 
                 AstExpression *expr;
                 ec = parse_expression(lexer, &expr);
                 if (ec != OK) {
-                    RETURN_CODE(ec, token);
+                    return ec;
                 }
 
                 // Analyze expression type compatibility
                 DataType expr_type;
                 ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
                 if (ec != OK) {
-                    RETURN_CODE(ec, token);
+                    ast_expr_free(expr);
+                    return ec;
                 }
 
                 // Add expression statement to AST
                 if (ast_add_inline_expression(statement, expr) == false) {
-                    RETURN_CODE(INTERNAL_ERROR, token);
+                    ast_expr_free(expr);
+                    return INTERNAL_ERROR;
                 }
 
                 Token new_token;
@@ -840,6 +853,7 @@ ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localta
         // Check expression type compatibility
         ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
         if (ec != OK) {
+            ast_expr_free(expr);
             RETURN_CODE(ec, token);
         }
 
@@ -847,6 +861,7 @@ ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localta
     }
 
     if (token.type != TOK_EOL) {
+        if (expr) ast_expr_free(expr);
         RETURN_CODE(SYNTACTIC_ERROR, token);
     }
 
@@ -860,11 +875,13 @@ ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localta
     // Finds the variable to get its key to put into the AST
     SymtableItem *it;
     if (find_local_var(localtable, identifier.string_val->val, &it) == false) {
+        if (expr) ast_expr_free(expr);
         RETURN_CODE(INTERNAL_ERROR, token);
     }
 
     // Add local variable to AST
     if (ast_add_local_var(statement, it->key, expr) == false) {
+        if (expr) ast_expr_free(expr);
         RETURN_CODE(INTERNAL_ERROR, token);
     }
 
@@ -893,6 +910,7 @@ ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable,
         DataType expr_type;
         ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
         if (ec != OK) {
+            ast_expr_free(expr);
             RETURN_CODE(ec, token);
         }
 
@@ -905,12 +923,14 @@ ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable,
             evc = check_variable_expression(localtable, globaltable, identifier.string_val->val, DT_UNKNOWN, &stmt_type);
         }
         if (evc != OK) {
+            ast_expr_free(expr);
             RETURN_CODE(evc, identifier);
         }
 
         if (stmt_type == ST_SETTER) {
             // Add setter call to AST
             if (ast_add_setter_call(statement, identifier.string_val->val, expr) == false) {
+                ast_expr_free(expr);
                 RETURN_CODE(INTERNAL_ERROR, token);
             }
         } else {
@@ -919,9 +939,11 @@ ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable,
             SymtableItem *si;
             bool r = find_local_var(localtable, identifier.string_val->val, &si);
             if (r == false || si == NULL) {
+                ast_expr_free(expr);
                 RETURN_CODE(INTERNAL_ERROR, token);
             }
             if (ast_add_local_var(statement, si->key, expr) == false) {
+                ast_expr_free(expr);
                 RETURN_CODE(INTERNAL_ERROR, token);
             }
         }
@@ -930,33 +952,38 @@ ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable,
     } else {
         // Unget token for expression parsing
         if (!lexer_unget_token(lexer, token)) {
-            RETURN_CODE(INTERNAL_ERROR, token);
+            return INTERNAL_ERROR;
         }
 
         if (!lexer_unget_token(lexer, identifier)) {
-            RETURN_CODE(INTERNAL_ERROR, token);
+            return INTERNAL_ERROR;
         }
         
         // Parse function call expression
         AstExpression *expr;
         ErrorCode ec = parse_expression(lexer, &expr);
         if (ec != OK) {
-            RETURN_CODE(ec, token);
+            return ec;
         }
 
         // Check expression type compatibility
         DataType expr_type;
         ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
         if (ec != OK) {
-            RETURN_CODE(ec, token);
+            ast_expr_free(expr);
+            return ec;
         }
 
         // Add expression statement to AST
         if (ast_add_inline_expression(statement, expr) == false) {
-            RETURN_CODE(INTERNAL_ERROR, token);
+            ast_expr_free(expr);
+            return INTERNAL_ERROR;
         }
 
-        CHECK_TOKEN(lexer, token);
+        Token new_token;
+        INIT_TOKEN(new_token, TOK_EOL);
+        CHECK_TOKEN(lexer, new_token);
+        token = new_token;
     }
 
     if (token.type != TOK_EOL) {
@@ -987,16 +1014,19 @@ ErrorCode check_if_statement(Lexer *lexer, Symtable *globaltable, Symtable *loca
     DataType expr_type;
     ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
     if (ec != OK) {
+        ast_expr_free(expr);
         RETURN_CODE(ec, token);
     }
 
     CHECK_TOKEN(lexer, token);
     if (token.type != TOK_RIGHT_PAR) {
+        ast_expr_free(expr);
         RETURN_CODE(SYNTACTIC_ERROR, token);
     }
 
     CHECK_TOKEN(lexer, token);
     if (token.type != TOK_LEFT_BRACE) {
+        ast_expr_free(expr);
         RETURN_CODE(SYNTACTIC_ERROR, token);
     }
 
@@ -1005,6 +1035,7 @@ ErrorCode check_if_statement(Lexer *lexer, Symtable *globaltable, Symtable *loca
 
     // Add if statement to AST
     if (ast_add_if_statement(statement, expr) == false) {
+        ast_expr_free(expr);
         RETURN_CODE(INTERNAL_ERROR, token);
     }
 
@@ -1082,16 +1113,19 @@ ErrorCode check_while_statement(Lexer *lexer, Symtable *globaltable, Symtable *l
     DataType expr_type;
     ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
     if (ec != OK) {
+        ast_expr_free(expr);
         RETURN_CODE(ec, token);
     }
 
     CHECK_TOKEN(lexer, token);
     if (token.type != TOK_RIGHT_PAR) {
+        ast_expr_free(expr);
         RETURN_CODE(SYNTACTIC_ERROR, token);
     }
 
     CHECK_TOKEN(lexer, token);
     if (token.type != TOK_LEFT_BRACE) {
+        ast_expr_free(expr);
         RETURN_CODE(SYNTACTIC_ERROR, token);
     }
 
@@ -1100,6 +1134,7 @@ ErrorCode check_while_statement(Lexer *lexer, Symtable *globaltable, Symtable *l
 
     // Add while statement to AST
     if (ast_add_while_statement(statement, expr) == false) {
+        ast_expr_free(expr);
         RETURN_CODE(INTERNAL_ERROR, token);
     }
 
@@ -1149,19 +1184,21 @@ ErrorCode check_return_statement(Lexer *lexer, Symtable *globaltable, Symtable *
     AstExpression *expr;
     ErrorCode ec = parse_expression(lexer, &expr);
     if (ec != OK) {
-        RETURN_CODE(ec, token);
+        return ec;
     }
 
     // Check expression type compatibility
     DataType expr_type;
     ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
     if (ec != OK) {
-        RETURN_CODE(ec, token);
+        ast_expr_free(expr);
+        return ec;
     }
 
     // Add return statement to AST
     if (ast_add_return_statement(statement, expr) == false) {
-        RETURN_CODE(INTERNAL_ERROR, token);
+        ast_expr_free(expr);
+        return INTERNAL_ERROR;
     }
 
     Token new_token;
