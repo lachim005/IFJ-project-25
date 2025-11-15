@@ -36,16 +36,17 @@ ErrorCode generate_compound_statement(FILE *output, AstBlock *st) {
 
 ErrorCode generate_if_statement(FILE *output, AstIfStatement *st) {
     DataType cond_type = st->condition->assumed_type;
-    if (cond_type == DT_NULL) {
+    if (cond_type == DT_NULL ||
+        (cond_type == DT_BOOL && st->condition->val_known && !st->condition->bool_val)) {
         if (st->false_branch != NULL) {
-            generate_compound_statement(output, st->false_branch);
+            return generate_compound_statement(output, st->false_branch);
         }
         return OK;
     }
-    if (cond_type != DT_BOOL && cond_type != DT_UNKNOWN) {
+    if ((cond_type != DT_BOOL && cond_type != DT_UNKNOWN) ||
+        (cond_type == DT_BOOL && st->condition->val_known && st->condition->bool_val)) {
         // If it is anything other than bool or null, it is always true
-        generate_compound_statement(output, st->true_branch);
-        return OK;
+        return generate_compound_statement(output, st->true_branch);
     }
     CG_ASSERT(generate_expression_evaluation(output, st->condition) == OK);
     unsigned expr_id = internal_names_cntr++;
@@ -85,12 +86,14 @@ ErrorCode generate_if_statement(FILE *output, AstIfStatement *st) {
 
 ErrorCode generate_while_statement(FILE *output, AstWhileStatement *st) {
     DataType cond_type = st->condition->assumed_type;
-    if (cond_type == DT_NULL) {
+    if ((cond_type == DT_NULL) ||
+        (cond_type == DT_BOOL && st->condition->val_known && !st->condition->bool_val)) {
         // Null will never execute, so we don't have to generate anything
         return OK;
     }
     unsigned expr_id = internal_names_cntr++;
-    if (cond_type != DT_BOOL && cond_type != DT_UNKNOWN) {
+    if ((cond_type != DT_BOOL && cond_type != DT_UNKNOWN) ||
+        (cond_type == DT_BOOL && st->condition->val_known && st->condition->bool_val)) {
         // If it is anything other than bool or null, it will be an infinite cycle
         fprintf(output, "LABEL $&&while_start%u\n", expr_id);
         generate_compound_statement(output, st->body);
@@ -208,11 +211,43 @@ ErrorCode generate_is_expr(FILE *output, AstExpression *ex) {
 
 ErrorCode generate_ternary_expr(FILE *output, AstExpression *ex) {
     unsigned expr_id = internal_names_cntr++;
+    AstExpression *cond = ex->params[0];
+    DataType cond_type = cond->assumed_type;
+    if (cond_type == DT_NULL ||
+        (cond_type == DT_BOOL && cond->val_known && !cond->bool_val)) {
+        // We know it's false
+        return generate_expression_evaluation(output, ex->params[2]);
+    }
+    if ((cond_type != DT_BOOL && cond_type != DT_UNKNOWN) ||
+        (cond_type == DT_BOOL && cond->val_known && cond->bool_val)) {
+        // We know it's true
+        return generate_expression_evaluation(output, ex->params[1]);
+    }
 
     CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+    if (cond_type != DT_BOOL) {
+        // If it is not bool, we have to check the data type
+        fprintf(output, "POPS GF@&&inter1\n");
+        if (cond_type == DT_UNKNOWN) {
+            // We only have to check for null if the type is unknown, otherwise we know it isn't
+            fprintf(output, "PUSHS GF@&&inter1\n"
+                            "PUSHS nil@nil\n"
+                            "JUMPIFEQS $&&ternary_false%u\n",
+                            expr_id);
+        }
+        // Check if it is the bool datatype
+        fprintf(output, "PUSHS GF@&&inter1\n"
+                        "TYPES\n"
+                        "PUSHS string@bool\n"
+                        "JUMPIFNEQS $&&while_start%u\n"
+                        "PUSHS GF@&&inter1\n",
+                        expr_id);
+    }
+    // Checks if false
     fprintf(output, "PUSHS bool@false\n"
-                    "JUMPIFEQS $&&ternary_false%u\n",
-                    expr_id);
+                    "JUMPIFEQS $&&ternary_false%u\n"
+                    "LABEL $&&ternary_true%u\n",
+                    expr_id, expr_id);
     CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
     fprintf(output, "JUMP $&&ternary_end%u\n"
                     "LABEL $&&ternary_false%u\n",
