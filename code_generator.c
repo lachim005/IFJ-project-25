@@ -21,9 +21,16 @@ do {\
 unsigned internal_names_cntr = 0;
 
 ErrorCode generate_compound_statement(FILE *output, AstBlock *st) {
+    DEBUG_WRITE(output, "#v v v v v BLOCK v v v v v\n");
     for (AstStatement *cur = st->statements; cur->type != ST_END; cur = cur->next) {
         CG_ASSERT(generate_statement(output, cur) == OK);
+        DEBUG_WRITE(output, "#------------\n");
+        if (cur->type == ST_RETURN) {
+            DEBUG_WRITE(output, "# SKIPPING DEAD CODE AFTER RETURN\n");
+            break;
+        }
     }
+    DEBUG_WRITE(output, "#^ ^ ^ ^ ^ BLOCK ^ ^ ^ ^ ^\n");
     return OK;
 }
 
@@ -977,10 +984,7 @@ ErrorCode define_function(FILE *output, AstFunction *fun) {
 
     // Generate code for statements
     DEBUG_WRITE(output, "\n# Function body\n");
-    for (AstStatement *cur = fun->body->statements; cur->type != ST_END; cur = cur->next) {
-        CG_ASSERT(generate_statement(output, cur) == OK);
-        DEBUG_WRITE(output, "#---------\n");
-    }
+    generate_compound_statement(output, fun->body);
 
     // Default return
     DEBUG_WRITE(output, "\n# Default return value\n");
