@@ -258,6 +258,102 @@ ErrorCode convert_string(char *input, String **out) {
     return OK;
 }
 
+/// Generates code for Ifj.str
+void generate_builtin_str(FILE *output, AstExpression *ex) {
+    unsigned expr_id = internal_names_cntr++;
+    unsigned type = ex->params[0]->assumed_type;
+    fprintf(output, "POPS GF@&&inter1\n");
+    // Generate switch
+    if (type == DT_UNKNOWN) {
+        fprintf(output, "TYPE GF@&&inter2 GF@&&inter1\n"
+                        "JUMPIFEQ $&&ifj_str_str%u GF@&&inter2 string@string\n"
+                        "JUMPIFEQ $&&ifj_str_int%u GF@&&inter2 string@int\n"
+                        "JUMPIFEQ $&&ifj_str_float%u GF@&&inter2 string@float\n"
+                        "JUMPIFEQ $&&ifj_str_bool%u GF@&&inter2 string@bool\n"
+                        "JUMPIFEQ $&&ifj_str_null%u GF@&&inter2 string@nil\n"
+                        "EXIT int@26\n", // Shouldn't happen
+                        expr_id, expr_id, expr_id, expr_id, expr_id);
+    }
+    // Generate string branch
+    if (type == DT_STRING || type == DT_UNKNOWN) {
+        fprintf(output, "LABEL $&&ifj_str_str%u\n"
+                        "PUSHS GF@&&inter1\n"
+                        "JUMP $&&ifj_str_end%u\n",
+                        expr_id, expr_id);
+    }
+    // Generate int branch
+    if (type == DT_INT || type == DT_UNKNOWN) {
+        fprintf(output, "LABEL $&&ifj_str_int%u\n"
+                        "PUSHS GF@&&inter1\n"
+                        "INT2STRS\n"
+                        "JUMP $&&ifj_str_end%u\n",
+                        expr_id, expr_id);
+    }
+    // Generate float branch
+    if (type == DT_DOUBLE || type == DT_UNKNOWN) {
+        fprintf(output, "LABEL $&&ifj_str_float%u\n"
+                        "PUSHS GF@&&inter1\n"
+                        "ISINTS\n"
+                        "PUSHS bool@true\n"
+                        "JUMPIFEQS $&&ifj_str_float_int%u\n"
+                        "PUSHS GF@&&inter1\n"
+                        "FLOAT2STRS\n"
+                        "JUMP $&&ifj_str_end%u\n"
+                        "LABEL $&&ifj_str_float_int%u\n"
+                        "PUSHS GF@&&inter1\n"
+                        "FLOAT2INTS\n"
+                        "INT2STRS\n"
+                        "JUMP $&&ifj_str_end%u\n",
+                        expr_id, expr_id, expr_id, expr_id, expr_id);
+    }
+    // Generate bool branch
+    if (type == DT_BOOL || type == DT_UNKNOWN) {
+        fprintf(output, "LABEL $&&ifj_str_bool%u\n"
+                        "JUMPIFEQ $&&ifj_str_bool_true%u GF@&&inter1 bool@true\n"
+                        "PUSHS string@false\n"
+                        "JUMP $&&ifj_str_end%u\n"
+                        "LABEL $&&ifj_str_bool_true%u\n"
+                        "PUSHS string@true\n"
+                        "JUMP $&&ifj_str_end%u\n",
+                        expr_id, expr_id, expr_id, expr_id, expr_id);
+    }
+    // Generate null branch
+    if (type == DT_NULL || type == DT_UNKNOWN) {
+        fprintf(output, "LABEL $&&ifj_str_null%u\n"
+                        "PUSHS string@null\n"
+                        "JUMP $&&ifj_str_end%u\n",
+                        expr_id, expr_id);
+    }
+    fprintf(output, "LABEL $&&ifj_str_end%u\n", expr_id);
+}
+
+/// Generates code for Ifj.write
+void generate_builtin_write(FILE *output, AstExpression *ex) {
+    unsigned type = ex->params[0]->assumed_type;
+    unsigned expr_id = internal_names_cntr++;
+    fprintf(output, "POPS GF@&&inter1\n");
+    if (type == DT_UNKNOWN) {
+        // We check if the expr is double and if so, we may convert it to an int int the next if
+        fprintf(output, "PUSHS GF@&&inter1\n"
+                        "TYPES\n"
+                        "PUSHS string@float\n"
+                        "JUMPIFNEQS $&&ifj_write_write%u\n",
+                        expr_id);
+    }
+    if (type == DT_DOUBLE || type == DT_UNKNOWN) {
+        fprintf(output, "PUSHS GF@&&inter1\n"
+                        "ISINTS\n"
+                        "PUSHS bool@false\n"
+                        "JUMPIFEQS $&&ifj_write_write%u\n"
+                        "FLOAT2INT GF@&&inter1 GF@&&inter1\n",
+                        expr_id);
+    }
+    fprintf(output, "LABEL $&&ifj_write_write%u\n"
+                    "WRITE GF@&&inter1\n"
+                    "PUSHS nil@nil\n",
+                    expr_id);
+}
+
 ErrorCode generate_builtin_function_call(FILE *output, AstExpression *ex) {
     // Push parameters
     for (unsigned par = 0; par < ex->child_count; par++) {
@@ -265,9 +361,7 @@ ErrorCode generate_builtin_function_call(FILE *output, AstExpression *ex) {
     }
     if (strcmp(ex->string_val->val, "write") == 0) {
         CG_ASSERT(ex->child_count == 1);
-        fprintf(output, "POPS GF@&&inter1\n"
-                        "WRITE GF@&&inter1\n"
-                        "PUSHS nil@nil\n");
+        generate_builtin_write(output, ex);
     }
     else if (strcmp(ex->string_val->val, "read_str") == 0) {
         CG_ASSERT(ex->child_count == 0);
@@ -282,6 +376,10 @@ ErrorCode generate_builtin_function_call(FILE *output, AstExpression *ex) {
     else if (strcmp(ex->string_val->val, "floor") == 0) {
         CG_ASSERT(ex->child_count == 1);
         fprintf(output, "FLOAT2INTS\n");
+    }
+    else if (strcmp(ex->string_val->val, "str") == 0) {
+        CG_ASSERT(ex->child_count == 1);
+        generate_builtin_str(output, ex);
     }
     else if (strcmp(ex->string_val->val, "length") == 0) {
         CG_ASSERT(ex->child_count == 1);
@@ -953,7 +1051,8 @@ ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
         fprintf(output, "SUBS\n");
         return OK;
     case EX_DATA_TYPE:
-        return INTERNAL_ERROR;
+        fprintf(output, "EXIT int@26\n");
+        return OK;
     case EX_BUILTIN_FUN:
         CG_ASSERT(generate_builtin_function_call(output, st) == OK);
         return OK;
