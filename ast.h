@@ -71,7 +71,9 @@ struct ast_expression {
     AstExprType type;
     /// Type assumption from static analysis
     DataType assumed_type;
-    /// Value for literals
+    /// True if the value of this expression is known at compile time
+    bool val_known;
+    /// Value for literals or the whole expression if val_known
     union {
         String *string_val;
         int int_val;

@@ -776,7 +776,35 @@ ErrorCode generate_equals_expression(FILE *output, AstExpression *ex) {
     return OK;
 }
 
+ErrorCode push_known_value(FILE *output, AstExpression *ex) {
+    String *converted_string;
+    switch (ex->assumed_type) {
+    case DT_NULL:
+        fprintf(output, "PUSHS nil@nil\n");
+        break;
+    case DT_NUM:
+        fprintf(output, "PUSHS float@%a\n", ex->double_val);
+        break;
+    case DT_STRING:
+        CG_ASSERT(convert_string(ex->string_val->val, &converted_string) == OK);
+        fprintf(output, "PUSHS string@%s\n", converted_string->val);
+        str_free(&converted_string);
+        break;
+    case DT_BOOL:
+        fprintf(output, "PUSHS bool@%s\n", ex->bool_val ? "true" : "false");
+        break;
+    case DT_UNKNOWN:
+    case DT_TYPE:
+        return INTERNAL_ERROR;
+    }
+    return OK;
+}
+
 ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
+    if (st->val_known) {
+        ErrorCode ec = push_known_value(output, st);
+        if (ec == OK) return OK;
+    }
     String *str; // Used for string literals
     switch (st->type) {
     case EX_ID:

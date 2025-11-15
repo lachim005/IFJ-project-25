@@ -446,6 +446,7 @@ ErrorCode reduce_literal(Stack *expr_stack, TokType lit_type, AstExprType expr_t
     default:
         break;
     }
+    expr->val_known = true;
 
     Token expr_tok = { .type = TOK_E, .expr_val = expr };
     if (!stack_push(expr_stack, expr_tok)) return INTERNAL_ERROR;
