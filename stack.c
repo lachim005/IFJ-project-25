@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "stack.h"
+#include "token.h"
 
 Stack *stack_init(size_t capacity) {
     Stack *stack = malloc(sizeof(Stack));
@@ -25,6 +26,9 @@ Stack *stack_init(size_t capacity) {
 }
 
 void stack_destroy(Stack *stack) {
+    for (unsigned i = 0; i < stack->top; i++) {
+        token_free(stack->items + i);
+    }
     free(stack->items);
     free(stack);
 }

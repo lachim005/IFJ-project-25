@@ -95,6 +95,8 @@ ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr) {
 
     if(lexer_get_token(lexer, &token) != ERR_LEX_OK){
         // Read the first token
+        stack_destroy(expr_stack);
+        stack_destroy(op_stack);
         return LEXICAL_ERROR;
     }
     while(1) {
@@ -111,7 +113,11 @@ ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr) {
             token.type = TOK_DOLLAR;
         }
         if (token.type == TOK_EOL) {
-            if (lexer_get_token(lexer, &token) != ERR_LEX_OK) return LEXICAL_ERROR;
+            if (lexer_get_token(lexer, &token) != ERR_LEX_OK) {
+                stack_destroy(expr_stack);
+                stack_destroy(op_stack);
+                return LEXICAL_ERROR;
+            }
             continue;
         }
 
@@ -134,26 +140,44 @@ ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr) {
         {
         case '<':
             result = shift(expr_stack, op_stack, token, lexer);
-            if (result != OK) return result;
+            if (result != OK) {
+                stack_destroy(expr_stack);
+                stack_destroy(op_stack);
+                return result;
+            }
             if(last_used_token.type != TOK_DOLLAR){
                 if(lexer_get_token(lexer, &token) != ERR_LEX_OK){
+                    stack_destroy(expr_stack);
+                    stack_destroy(op_stack);
                     return LEXICAL_ERROR;
                 } // read next token
             }
             break;
         case '>':
             result = reduce(expr_stack, op_stack);
-            if (result != OK) return result;
+            if (result != OK) {
+                stack_destroy(expr_stack);
+                stack_destroy(op_stack);
+                return result;
+            }
             break;
         case '=':
-            if (!stack_push(expr_stack, token)) return INTERNAL_ERROR;
+            if (!stack_push(expr_stack, token)) {
+                stack_destroy(expr_stack);
+                stack_destroy(op_stack);
+                return INTERNAL_ERROR;
+            }
             if(last_used_token.type != TOK_DOLLAR){
                 if(lexer_get_token(lexer, &token) != ERR_LEX_OK){
+                    stack_destroy(expr_stack);
+                    stack_destroy(op_stack);
                     return LEXICAL_ERROR;
                 } // read next token
             }
             break;
         case ' ':
+            stack_destroy(expr_stack);
+            stack_destroy(op_stack);
             return SYNTACTIC_ERROR;
         default:
             break;
@@ -161,10 +185,13 @@ ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr) {
     }
 
     if(expr_stack->top != 2 || !stack_empty(op_stack)){ // should contain only DOLLAR and E
+        stack_destroy(expr_stack);
+        stack_destroy(op_stack);
         return SYNTACTIC_ERROR;
     }
 
     stack_top(expr_stack, &token);
+    stack_pop(expr_stack);
     *out_expr = token.expr_val;
     stack_destroy(expr_stack);
     stack_destroy(op_stack);
