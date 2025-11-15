@@ -85,6 +85,8 @@ bool ast_add_if_statement(AstStatement *statement, AstExpression *condition) {
     if_st->condition = condition;
     if_st->true_branch = true_branch;
     if_st->false_branch = NULL;
+    if_st->else_if_count = 0;
+    if_st->else_if_branches = NULL;
 
     // Set statement type and union
     statement->type = ST_IF;
@@ -101,6 +103,49 @@ bool ast_add_if_statement(AstStatement *statement, AstExpression *condition) {
         statement->next->type = ST_END;
         statement->next->next = NULL;
     }
+
+    return true;
+}
+
+/// Adds an else-if branch to an existing if statement
+bool ast_add_else_if_branch(AstStatement *if_statement, AstExpression *condition) {
+    // Check if statement is NULL or not an IF statement
+    if (if_statement == NULL || if_statement->type != ST_IF) {
+        return false;
+    }
+
+    if (if_statement->if_st == NULL) {
+        return false;
+    }
+
+    // Create new else-if branch
+    AstElseIfStatement *else_if = malloc(sizeof(AstElseIfStatement));
+    if (else_if == NULL) {
+        return false;
+    }
+
+    AstBlock *body = ast_block_create();
+    if (body == NULL) {
+        free(else_if);
+        return false;
+    }
+
+    else_if->condition = condition;
+    else_if->body = body;
+
+    // Reallocate else_if_branches array to hold the new branch
+    size_t new_count = if_statement->if_st->else_if_count + 1;
+    AstElseIfStatement **new_branches = realloc(if_statement->if_st->else_if_branches, new_count * sizeof(AstElseIfStatement *));
+    if (new_branches == NULL) {
+        free(body);
+        free(else_if);
+        return false;
+    }
+
+    // Add new branch to the array
+    new_branches[if_statement->if_st->else_if_count] = else_if;
+    if_statement->if_st->else_if_branches = new_branches;
+    if_statement->if_st->else_if_count = new_count;
 
     return true;
 }
@@ -631,6 +676,19 @@ void ast_statement_free(AstStatement *statement) {
             if (statement->if_st != NULL) {
                 ast_expr_free(statement->if_st->condition);
                 ast_block_free(statement->if_st->true_branch);
+                
+                // Free else-if branches
+                if (statement->if_st->else_if_branches != NULL) {
+                    for (size_t i = 0; i < statement->if_st->else_if_count; i++) {
+                        if (statement->if_st->else_if_branches[i] != NULL) {
+                            ast_expr_free(statement->if_st->else_if_branches[i]->condition);
+                            ast_block_free(statement->if_st->else_if_branches[i]->body);
+                            free(statement->if_st->else_if_branches[i]);
+                        }
+                    }
+                    free(statement->if_st->else_if_branches);
+                }
+                
                 ast_block_free(statement->if_st->false_branch);
                 free(statement->if_st);
             }
@@ -866,6 +924,18 @@ static void ast_print_statement(AstStatement *statement, int indent) {
                 if (statement->if_st->true_branch != NULL) {
                     ast_print_block(statement->if_st->true_branch, indent + 2);
                 }
+                
+                // Print else-if branches
+                for (size_t i = 0; i < statement->if_st->else_if_count; i++) {
+                    if (statement->if_st->else_if_branches[i] != NULL) {
+                        ast_print_indent(indent + 1);
+                        printf("ELSE_IF_BRANCH:\n");
+                        if (statement->if_st->else_if_branches[i]->body != NULL) {
+                            ast_print_block(statement->if_st->else_if_branches[i]->body, indent + 2);
+                        }
+                    }
+                }
+                
                 if (statement->if_st->false_branch != NULL) {
                     ast_print_indent(indent + 1);
                     printf("FALSE_BRANCH:\n");

@@ -211,7 +211,7 @@ void param_list_free(ParamList *list) {
         }
         free(list->names);
     }
-    
+
     free(list);
 }
 
@@ -1030,6 +1030,12 @@ ErrorCode check_if_statement(Lexer *lexer, Symtable *globaltable, Symtable *loca
         RETURN_CODE(SYNTACTIC_ERROR, token);
     }
 
+    CHECK_TOKEN(lexer, token);
+    if (token.type != TOK_EOL) {
+        ast_expr_free(expr);
+        RETURN_CODE(SYNTACTIC_ERROR, token);
+    }
+
     // Enter new scope for if body
     enter_scope(localtable);
 
@@ -1052,11 +1058,99 @@ ErrorCode check_if_statement(Lexer *lexer, Symtable *globaltable, Symtable *loca
         RETURN_CODE(SYNTACTIC_ERROR, token);
     }
 
+    Token else_if_token1;
+    INIT_TOKEN(else_if_token1, TOK_KW_ELSE);
+
+    Token else_if_token2;
+    INIT_TOKEN(else_if_token2, TOK_KW_IF);
+
+    CHECK_TOKEN(lexer, else_if_token1);
+    CHECK_TOKEN(lexer, else_if_token2);
+
+    while (else_if_token1.type == TOK_KW_ELSE && else_if_token2.type == TOK_KW_IF) {
+        CHECK_TOKEN(lexer, token);
+        if (token.type != TOK_LEFT_PAR) {
+            RETURN_CODE(SYNTACTIC_ERROR, token);
+        }
+
+        // Parse condition expression
+        AstExpression *expr;
+        ErrorCode ec = parse_expression(lexer, &expr);
+        if (ec != OK) {
+            RETURN_CODE(ec, token);
+        }
+
+        // Check expression type compatibility
+        DataType expr_type;
+        ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
+        if (ec != OK) {
+            ast_expr_free(expr);
+            RETURN_CODE(ec, token);
+        }
+
+        CHECK_TOKEN(lexer, token);
+        if (token.type != TOK_RIGHT_PAR) {
+            ast_expr_free(expr);
+            RETURN_CODE(SYNTACTIC_ERROR, token);
+        }
+
+        CHECK_TOKEN(lexer, token);
+        if (token.type != TOK_LEFT_BRACE) {
+            ast_expr_free(expr);
+            RETURN_CODE(SYNTACTIC_ERROR, token);
+        }
+
+        CHECK_TOKEN(lexer, token);
+        if (token.type != TOK_EOL) {
+            ast_expr_free(expr);
+            RETURN_CODE(SYNTACTIC_ERROR, token);
+        }
+
+        // Enter new scope for else-if body
+        enter_scope(localtable);
+
+        // Create else-if branch in AST
+        if (ast_add_else_if_branch(statement, expr) == false) {
+            RETURN_CODE(INTERNAL_ERROR, token);
+        }
+
+        // Check else-if body
+        size_t branch_index = statement->if_st->else_if_count - 1;
+        ec = check_body(lexer, globaltable, localtable, false, statement->if_st->else_if_branches[branch_index]->body->statements);
+        if (ec != OK) {
+            RETURN_CODE(ec, token);
+        }
+
+        // Exit scope for else-if body
+        exit_scope(localtable);
+
+        CHECK_TOKEN_SKIP_NEWLINE(lexer, token);
+        if (token.type != TOK_RIGHT_BRACE) {
+            RETURN_CODE(SYNTACTIC_ERROR, token);
+        }
+
+        CHECK_TOKEN(lexer, else_if_token1);
+        CHECK_TOKEN(lexer, else_if_token2);
+    }
+
+    // Unget last read tokens which are not else-if
+    if (!lexer_unget_token(lexer, &else_if_token2)) {
+        return INTERNAL_ERROR;
+    }
+    if (!lexer_unget_token(lexer, &else_if_token1)) {
+        return INTERNAL_ERROR;
+    }
+
     // Optional else part
     CHECK_TOKEN(lexer, token);
     if (token.type == TOK_KW_ELSE) {
         CHECK_TOKEN(lexer, token);
         if (token.type != TOK_LEFT_BRACE) {
+            RETURN_CODE(SYNTACTIC_ERROR, token);
+        }
+
+        CHECK_TOKEN(lexer, token);
+        if (token.type != TOK_EOL) {
             RETURN_CODE(SYNTACTIC_ERROR, token);
         }
 

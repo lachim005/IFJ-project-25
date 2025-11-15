@@ -28,9 +28,9 @@ int main() {
         return ec;
     }
 
-    // ast_print(ast_root);
+    ast_print(ast_root);
 
-    generate_code(stdout, ast_root, glob_symtable);
+    //generate_code(stdout, ast_root, glob_symtable);
 
     ast_free(ast_root);
     symtable_free(glob_symtable);

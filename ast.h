@@ -91,6 +91,7 @@ typedef struct ast_getter AstGetter;
 typedef struct ast_setter AstSetter;
 typedef struct ast_variable AstVariable;
 typedef struct ast_if_statement AstIfStatement;
+typedef struct ast_else_if_statement AstElseIfStatement;
 typedef struct ast_while_statement AstWhileStatement;
 
 /// Statement type, used to tag the union in AstStatement
@@ -190,9 +191,24 @@ typedef struct ast_if_statement {
     /// True branch
     AstBlock *true_branch;
 
+    /// Number of else if branches
+    size_t else_if_count;
+
+    /// Else if branches
+    AstElseIfStatement **else_if_branches;
+
     /// False branch
     AstBlock *false_branch;
 } AstIfStatement;
+
+typedef struct ast_else_if_statement {
+    /// Condition expression
+    AstExpression *condition;
+
+    /// Body of the else-if branch
+    AstBlock *body;
+} AstElseIfStatement;
+
 
 typedef struct ast_while_statement {
     /// Condition expression
@@ -239,6 +255,9 @@ AstBlock *ast_block_create();
 
 /// Adds an if statement to the AST
 bool ast_add_if_statement(AstStatement *statement, AstExpression *condition);
+
+/// Adds an else-if branch to an existing if statement
+bool ast_add_else_if_branch(AstStatement *if_statement, AstExpression *condition);
 
 /// Adds an else branch to an existing if statement
 bool ast_add_else_branch(AstStatement *if_statement);
