@@ -322,7 +322,7 @@ ErrorCode check_class_body(Lexer *lexer, Symtable *symtable, AstStatement *state
         // If we encounter a right brace, end of class body
         if (token.type == TOK_RIGHT_BRACE) {
             // Return token back for parent function
-            if (!lexer_unget_token(lexer, token)) {
+            if (!lexer_unget_token(lexer, &token)) {
                 return INTERNAL_ERROR;
             }
             return OK;
@@ -390,7 +390,7 @@ ErrorCode check_global_var(Lexer *lexer, Symtable *globaltable, Symtable *localt
         CHECK_TOKEN(lexer, token);
     } else {
         // No assignment, unget the token for further processing
-        if (!lexer_unget_token(lexer, token)) {
+        if (!lexer_unget_token(lexer, &token)) {
             return INTERNAL_ERROR;
         }
 
@@ -693,7 +693,7 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable, 
         // If we encounter a right brace, end of function body
         if (token.type == TOK_RIGHT_BRACE) {
             // Return token back for parent function
-            if (!lexer_unget_token(lexer, token)) {
+            if (!lexer_unget_token(lexer, &token)) {
                 return INTERNAL_ERROR;
             }
             return OK;
@@ -720,7 +720,7 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable, 
                 break;
 
             case TOK_IDENTIFIER:
-                ec = check_assignment_or_function_call(lexer, globaltable, localtable, token, known, statement);
+                ec = check_assignment_or_function_call(lexer, globaltable, localtable, &token, known, statement);
                 if (ec != OK) {
                     RETURN_CODE(ec, token);
                 }
@@ -784,7 +784,7 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable, 
 
             default: {
                 // Unget token for expression parsing
-                if (!lexer_unget_token(lexer, token)) {
+                if (!lexer_unget_token(lexer, &token)) {
                     return INTERNAL_ERROR;
                 }
 
@@ -892,7 +892,7 @@ ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localta
 }
 
 /// Checks assignment or function call
-ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable, Symtable *localtable, Token identifier, bool known, AstStatement *statement) {
+ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable, Symtable *localtable, Token *identifier, bool known, AstStatement *statement) {
     Token token;
     INIT_TOKEN(token, TOK_OP_ASSIGN);
 
@@ -918,18 +918,18 @@ ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable,
         ErrorCode evc;
         AstStatementType stmt_type;
         if (known) {
-            evc = check_variable_expression(localtable, globaltable, identifier.string_val->val, expr_type, &stmt_type);
+            evc = check_variable_expression(localtable, globaltable, identifier->string_val->val, expr_type, &stmt_type);
         } else {
-            evc = check_variable_expression(localtable, globaltable, identifier.string_val->val, DT_UNKNOWN, &stmt_type);
+            evc = check_variable_expression(localtable, globaltable, identifier->string_val->val, DT_UNKNOWN, &stmt_type);
         }
         if (evc != OK) {
             ast_expr_free(expr);
-            RETURN_CODE(evc, identifier);
+            RETURN_CODE(evc, *identifier);
         }
 
         if (stmt_type == ST_SETTER) {
             // Add setter call to AST
-            if (ast_add_setter_call(statement, identifier.string_val->val, expr) == false) {
+            if (ast_add_setter_call(statement, identifier->string_val->val, expr) == false) {
                 ast_expr_free(expr);
                 RETURN_CODE(INTERNAL_ERROR, token);
             }
@@ -937,7 +937,7 @@ ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable,
             // Add assignment to AST
             // We get the name from symtable to include the scope
             SymtableItem *si;
-            bool r = find_local_var(localtable, identifier.string_val->val, &si);
+            bool r = find_local_var(localtable, identifier->string_val->val, &si);
             if (r == false || si == NULL) {
                 ast_expr_free(expr);
                 RETURN_CODE(INTERNAL_ERROR, token);
@@ -951,7 +951,7 @@ ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable,
         CHECK_TOKEN(lexer, token);
     } else {
         // Unget token for expression parsing
-        if (!lexer_unget_token(lexer, token)) {
+        if (!lexer_unget_token(lexer, &token)) {
             return INTERNAL_ERROR;
         }
 
@@ -1176,7 +1176,7 @@ ErrorCode check_return_statement(Lexer *lexer, Symtable *globaltable, Symtable *
         RETURN_CODE(OK, token);
     }
 
-    if (!lexer_unget_token(lexer, token)) {
+    if (!lexer_unget_token(lexer, &token)) {
         RETURN_CODE(INTERNAL_ERROR, token);
     }
 

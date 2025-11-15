@@ -107,7 +107,7 @@ ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr) {
             || token.type == TOK_COMMA
             || token.type == TOK_RIGHT_BRACE
             || (token.type == TOK_EOL && !eol_possible(last_used_token))) {
-            lexer_unget_token(lexer, token);
+            lexer_unget_token(lexer, &token);
             token.type = TOK_DOLLAR;
         }
         if (token.type == TOK_EOL) {
@@ -187,7 +187,7 @@ ErrorCode shift(Stack *expr_stack, Stack *op_stack, Token token, Lexer *lexer) {
             // This, is a function!
             return reduce_function_call(expr_stack, lexer, token.string_val);
         } else {
-            lexer_unget_token(lexer, next_tok);
+            lexer_unget_token(lexer, &next_tok);
         }
     } else if (token.type == TOK_KW_IFJ) {
         return reduce_buildtin_call(expr_stack, lexer);
@@ -503,7 +503,7 @@ ErrorCode reduce_function_call(Stack *expr_stack, Lexer *lexer, String *id) {
         if (!stack_push(expr_stack, fun_call_tok)) return INTERNAL_ERROR;
         return OK;
     }
-    lexer_unget_token(lexer, tok);
+    lexer_unget_token(lexer, &tok);
 
     unsigned param_cnt = 0;
 

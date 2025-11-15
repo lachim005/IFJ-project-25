@@ -463,10 +463,12 @@ ErrLex lexer_get_token(Lexer *lexer, Token *tok) {
     return lexer_read_token_from_file(lexer, tok);
 }
 
-bool lexer_unget_token(Lexer *lexer, Token tok) {
+bool lexer_unget_token(Lexer *lexer, Token *tok) {
     if (lexer->no_ungot_tokens == MAX_UNGET_TOKENS) {
         return false;
     }
-    lexer->ungot_tokens[lexer->no_ungot_tokens++] = tok;
+    lexer->ungot_tokens[lexer->no_ungot_tokens++] = *tok;
+    tok->type = TOK_DOLLAR;
+    tok->string_val = NULL;
     return true;
 }

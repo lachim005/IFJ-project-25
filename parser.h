@@ -53,7 +53,7 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable, 
 ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localtable, bool known, AstStatement *statement);
 
 /// Checks assignment or function call
-ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable, Symtable *localtable, Token identifier, bool known, AstStatement *statement);
+ErrorCode check_assignment_or_function_call(Lexer *lexer, Symtable *globaltable, Symtable *localtable, Token *identifier, bool known, AstStatement *statement);
 
 /// Checks if statement
 ErrorCode check_if_statement(Lexer *lexer, Symtable *globaltable, Symtable *localtable, AstStatement *statement);

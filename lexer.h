@@ -55,6 +55,6 @@ void lexer_free(Lexer *lexer);
 ErrLex lexer_get_token(Lexer *lexer, Token *tok);
 
 /// Ungets token, returns false if the ungot token stack overflowed
-bool lexer_unget_token(Lexer *lexer, Token tok);
+bool lexer_unget_token(Lexer *lexer, Token *tok);
 
 #endif // !_LEXER_H_
