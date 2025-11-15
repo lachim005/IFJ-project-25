@@ -34,6 +34,17 @@ ErrorCode generate_compound_statement(FILE *output, AstBlock *st) {
     return OK;
 }
 
+/// Helper that returns true if an expression contains any variables
+bool has_vars(AstExpression *ex) {
+    if (ex->type == EX_ID || ex->type == EX_GLOBAL_ID || ex->type == EX_GETTER || ex->type == EX_FUN) {
+        return true;
+    }
+    for (unsigned i = 0; i < ex->child_count; i++) {
+        if (has_vars(ex->params[i])) return true;
+    }
+    return false;
+}
+
 ErrorCode generate_if_statement(FILE *output, AstIfStatement *st) {
     DataType cond_type = st->condition->assumed_type;
     if (cond_type == DT_NULL ||
@@ -85,15 +96,16 @@ ErrorCode generate_if_statement(FILE *output, AstIfStatement *st) {
 }
 
 ErrorCode generate_while_statement(FILE *output, AstWhileStatement *st) {
-    DataType cond_type = st->condition->assumed_type;
+    AstExpression *cond = st->condition;
+    DataType cond_type = cond->assumed_type;
     if ((cond_type == DT_NULL) ||
-        (cond_type == DT_BOOL && st->condition->val_known && !st->condition->bool_val)) {
+        (cond_type == DT_BOOL && cond->val_known && !cond->bool_val && !has_vars(cond))) {
         // Null will never execute, so we don't have to generate anything
         return OK;
     }
     unsigned expr_id = internal_names_cntr++;
     if ((cond_type != DT_BOOL && cond_type != DT_UNKNOWN) ||
-        (cond_type == DT_BOOL && st->condition->val_known && st->condition->bool_val)) {
+        (cond_type == DT_BOOL && cond->val_known && cond->bool_val)) {
         // If it is anything other than bool or null, it will be an infinite cycle
         fprintf(output, "LABEL $&&while_start%u\n", expr_id);
         generate_compound_statement(output, st->body);
@@ -101,7 +113,7 @@ ErrorCode generate_while_statement(FILE *output, AstWhileStatement *st) {
         return OK;
     }
     fprintf(output, "LABEL $&&while_cond%u\n", expr_id);
-    CG_ASSERT(generate_expression_evaluation(output, st->condition) == OK);
+    CG_ASSERT(generate_expression_evaluation(output, cond) == OK);
     if (cond_type != DT_BOOL) {
         // If it is not bool, we have to check the data type
         fprintf(output, "POPS GF@&&inter1\n");
