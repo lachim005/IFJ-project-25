@@ -1448,8 +1448,13 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
                     break;
                 }
 
-                if ((left_type == DT_UNKNOWN || right_type == DT_UNKNOWN)) {
-                    result_type = DT_UNKNOWN;
+                if ((left_type == DT_UNKNOWN && right_type == DT_STRING) || (left_type == DT_STRING && right_type == DT_UNKNOWN)) {
+                    result_type = DT_STRING;
+                    break;
+                }
+
+                if ((left_type == DT_UNKNOWN || right_type == DT_UNKNOWN) && !(left_type == DT_STRING || right_type == DT_STRING)) {
+                    result_type = DT_NUM;
                     break;
                 }
 
@@ -1469,12 +1474,12 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
                 }
 
                 if (left_type == DT_STRING && right_type == DT_UNKNOWN) {
-                    result_type = DT_UNKNOWN;
+                    result_type = DT_STRING;
                     break;
                 }
 
                 if ((left_type == DT_UNKNOWN || right_type == DT_UNKNOWN) && !(left_type == DT_STRING || right_type == DT_STRING)) {
-                    result_type = DT_UNKNOWN;
+                    result_type = DT_NUM;
                     break;
                 }
 
@@ -1488,7 +1493,7 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
                 }
 
                 if ((left_type == DT_UNKNOWN || right_type == DT_UNKNOWN)) {
-                    result_type = DT_UNKNOWN;
+                    result_type = DT_NUM;
                     break;
                 }
 
@@ -1534,7 +1539,7 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
         }
 
         if ((left_type == DT_UNKNOWN || right_type == DT_UNKNOWN)) {
-            result_type = DT_UNKNOWN;
+            result_type = DT_BOOL;
             break;
         }
 
