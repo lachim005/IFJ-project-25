@@ -329,29 +329,14 @@ ErrorCode check_class_body(Lexer *lexer, Symtable *symtable, AstStatement *state
         }
 
         ErrorCode ec;
-        switch (token.type) {
-            case TOK_KW_STATIC:
-                ec = check_statics(lexer, symtable, statement);
-                if (ec != OK) {
-                    RETURN_CODE(ec, token);
-                }
-                statement = statement->next;
-
-                break;
-
-            case TOK_GLOBAL_VAR:
-                ec = check_global_var(lexer, symtable, NULL, token.string_val, statement);
-                if (ec != OK) {
-                    token_free(&token);
-                    return ec;
-                }
-                token_free(&token);
-                statement = statement->next;
-
-                break;
-
-            default: 
-                RETURN_CODE(SYNTACTIC_ERROR, token);
+        if (token.type == TOK_KW_STATIC) {
+            ec = check_statics(lexer, symtable, statement);
+            if (ec != OK) {
+                RETURN_CODE(ec, token);
+            }
+            statement = statement->next;
+        } else {
+            RETURN_CODE(SYNTACTIC_ERROR, token);
         }
     }
 }
