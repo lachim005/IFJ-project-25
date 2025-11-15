@@ -1182,7 +1182,12 @@ ErrorCode generate_statement(FILE *output, AstStatement *st) {
     case ST_RETURN:
         return generate_return_statement(output, st->return_expr);
     case ST_LOCAL_VAR:
-        return generate_var_assignment(output, "LF", st->local_var);
+        if (st->local_var->expression == NULL) {
+            fprintf(output, "MOVE LF@%s nil@nil\n", st->local_var->name->val);
+            return OK;
+        } else {
+            return generate_var_assignment(output, "LF", st->local_var);
+        }
     case ST_GLOBAL_VAR:
         return generate_var_assignment(output, "GF", st->global_var);
     case ST_SETTER_CALL:
