@@ -222,6 +222,7 @@ bool add_builtin_functions(Symtable *symtab) {
     // I/O functions
     if (add_builtin_function(symtab, "#read_str", 0, DT_UNKNOWN, NULL) == NULL) return false; // Ifj.read_str() -> String | Null
     if (add_builtin_function(symtab, "#read_num", 0, DT_UNKNOWN, NULL) == NULL) return false; // Ifj.read_num() -> Num | Null
+    if (add_builtin_function(symtab, "#read_bool", 0, DT_UNKNOWN, NULL) == NULL) return false; // Ifj.read_bool() -> Bool | Null
     
     DataType write_params[] = {DT_UNKNOWN};  // term can be any type
     if (add_builtin_function(symtab, "#write", 1, DT_NULL, write_params) == NULL) return false; // Ifj.write(term) -> Null

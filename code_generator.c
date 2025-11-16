@@ -622,6 +622,12 @@ ErrorCode generate_builtin_function_call(FILE *output, AstExpression *ex) {
                         "PUSHS GF@&&inter1\n");
         return OK;
     }
+    else if (strcmp(ex->string_val->val, "read_bool") == 0) {
+        CG_ASSERT(ex->child_count == 0);
+        fprintf(output, "READ GF@&&inter1 bool\n"
+                        "PUSHS GF@&&inter1\n");
+        return OK;
+    }
     else if (strcmp(ex->string_val->val, "floor") == 0) {
         CG_ASSERT(ex->child_count == 1);
         return generate_builtin_floor(output, ex);
