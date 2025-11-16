@@ -7,6 +7,7 @@
  */
 
 #include "optimizer.h"
+#include "ast.h"
 #include "symtable.h"
 #include "string.h"
 #include <string.h>
@@ -43,6 +44,24 @@ void update_symtable_value(SymtableItem *item, AstExpression *expr) {
             item->data_type_known = false;
             break;
     }
+}
+
+/// Clears a known value from a symtable item
+void clear_symtable_item_value(SymtableItem *it, void* par) {
+    // Par is unused here
+    (void)par;
+
+    if (it->data_type_known == false) return;
+    it->data_type_known = false;
+    if (it->data_type == DT_STRING) {
+        str_free(&it->string_val);
+    }
+    it->data_type = DT_UNKNOWN;
+}
+
+/// Clears all known values from a symtable
+void clear_symtable_values(Symtable *st) {
+    symtable_foreach(st, clear_symtable_item_value, NULL);
 }
 
 /// Optimizes expression recursively
@@ -373,6 +392,12 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
                 }
             }
             break;
+        case EX_FUN:
+        case EX_GETTER:
+            // Functions and getters could have side effects on global variables,
+            // so we have to clear their values
+            clear_symtable_values(globaltable);
+            break;
         default:
             break;
     }
@@ -445,6 +470,7 @@ ErrorCode optimize_statement(AstStatement *statement, Symtable *globaltable, Sym
     }
 
     ErrorCode ec = OK;
+    AstExpression *cond;
 
     switch (statement->type) {
         case ST_LOCAL_VAR:
@@ -481,6 +507,8 @@ ErrorCode optimize_statement(AstStatement *statement, Symtable *globaltable, Sym
             if (statement->setter_call != NULL && statement->setter_call->expression != NULL) {
                 ec = optimize_expression(statement->setter_call->expression, globaltable, localtable);
             }
+            // Setter could have side effects on global variables, so we have to clear their values
+            clear_symtable_values(globaltable);
             break;
 
         case ST_RETURN:
@@ -490,39 +518,74 @@ ErrorCode optimize_statement(AstStatement *statement, Symtable *globaltable, Sym
             break;
 
         case ST_IF:
-            if (statement->if_st != NULL) {
-                ec = optimize_expression(statement->if_st->condition, globaltable, localtable);
-                if (ec != OK) return ec;
+            if (statement->if_st == NULL) break;
 
+            cond = statement->if_st->condition;
+            ec = optimize_expression(cond, globaltable, localtable);
+            if (ec != OK) return ec;
+
+            if (cond->assumed_type == DT_UNKNOWN || !cond->val_known || cond->bool_val)
+            {
+                // We only optimize this branch if it can execute
                 ec = optimize_block(statement->if_st->true_branch, globaltable, localtable);
                 if (ec != OK) return ec;
-
-                // Optimize else-if branches
-                for (size_t i = 0; i < statement->if_st->else_if_count; i++) {
-                    if (statement->if_st->else_if_branches[i] != NULL) {
-                        ec = optimize_expression(statement->if_st->else_if_branches[i]->condition, globaltable, localtable);
-                        if (ec != OK) return ec;
-
-                        ec = optimize_block(statement->if_st->else_if_branches[i]->body, globaltable, localtable);
-                        if (ec != OK) return ec;
-                    }
+                if (cond->assumed_type == DT_UNKNOWN || !cond->val_known) {
+                    // If we aren't sure that this branch will execute, we have to clear
+                    // symtable values because it could have side effects
+                    clear_symtable_values(localtable);
+                    clear_symtable_values(globaltable);
+                } else {
+                    // We now that this branch will execute for sure, so we are done here
+                    break;
                 }
+            }
 
-                if (statement->if_st->false_branch != NULL) {
-                    ec = optimize_block(statement->if_st->false_branch, globaltable, localtable);
+            // Optimize else-if branches
+            for (size_t i = 0; i < statement->if_st->else_if_count; i++) {
+                if (statement->if_st->else_if_branches[i] != NULL) {
+                    ec = optimize_expression(statement->if_st->else_if_branches[i]->condition, globaltable, localtable);
+                    if (ec != OK) return ec;
+
+                    ec = optimize_block(statement->if_st->else_if_branches[i]->body, globaltable, localtable);
+                    if (ec != OK) return ec;
+
+                    clear_symtable_values(localtable);
+                    clear_symtable_values(globaltable);
+                }
+            }
+
+            // Optimize false branch
+            if (statement->if_st->false_branch != NULL &&
+                (cond->assumed_type == DT_UNKNOWN || !cond->val_known || !cond->bool_val)) {
+                // We only optimize this branch if it can execute
+                ec = optimize_block(statement->if_st->false_branch, globaltable, localtable);
+                if (cond->assumed_type == DT_UNKNOWN || !cond->val_known) {
+                    // If we aren't sure that this branch will execute, we have to clear
+                    // symtable values because it could have side effects
+                    clear_symtable_values(localtable);
+                    clear_symtable_values(globaltable);
                 }
             }
             break;
 
         case ST_WHILE:
-            if (statement->while_st != NULL) {
-                ec = optimize_expression(statement->while_st->condition, globaltable, localtable);
-                if (ec != OK) return ec;
+            if (statement->while_st == NULL) break;
 
+            cond = statement->while_st->condition;
+            ec = optimize_expression(cond, globaltable, localtable);
+            if (ec != OK) return ec;
+
+            if (cond->assumed_type == DT_UNKNOWN || !cond->val_known || cond->bool_val) {
                 ec = optimize_block(statement->while_st->body, globaltable, localtable);
+
+                if (cond->assumed_type == DT_UNKNOWN || !cond->val_known) {
+                    // If we aren't sure that this branch will execute, we have to clear
+                    // symtable values because it could have side effects
+                    clear_symtable_values(localtable);
+                    clear_symtable_values(globaltable);
+                }
             }
             break;
-
         case ST_BLOCK:
             if (statement->block != NULL) {
                 ec = optimize_block(statement->block, globaltable, localtable);
@@ -532,18 +595,21 @@ ErrorCode optimize_statement(AstStatement *statement, Symtable *globaltable, Sym
         case ST_FUNCTION:
             if (statement->function != NULL && statement->function->body != NULL) {
                 ec = optimize_block(statement->function->body, globaltable, statement->function->symtable);
+                clear_symtable_values(globaltable);
             }
             break;
 
         case ST_GETTER:
             if (statement->getter != NULL && statement->getter->body != NULL) {
                 ec = optimize_block(statement->getter->body, globaltable, statement->getter->symtable);
+                clear_symtable_values(globaltable);
             }
             break;
 
         case ST_SETTER:
             if (statement->setter != NULL && statement->setter->body != NULL) {
                 ec = optimize_block(statement->setter->body, globaltable, statement->setter->symtable);
+                clear_symtable_values(globaltable);
             }
             break;
 
