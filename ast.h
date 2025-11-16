@@ -73,6 +73,8 @@ struct ast_expression {
     DataType assumed_type;
     /// True if the value of this expression is known at compile time
     bool val_known;
+    /// True if the num value is an surely integer
+    bool surely_int;
     /// Value for literals or the whole expression if val_known
     union {
         String *string_val;

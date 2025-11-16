@@ -11,6 +11,7 @@
 #include "error.h"
 #include "parser.h"
 #include "lexer.h"
+#include "optimizer.h"
 
 int main() {
     Lexer lexer;
@@ -28,9 +29,16 @@ int main() {
         return ec;
     }
 
-    ast_print(ast_root);
+    //ast_print(ast_root);
 
-    //generate_code(stdout, ast_root, glob_symtable);
+    ec = optimize_ast(ast_root, glob_symtable);
+    if (ec != OK) {
+        ast_free(ast_root);
+        symtable_free(glob_symtable);
+        return ec;
+    }
+
+    generate_code(stdout, ast_root, glob_symtable);
 
     ast_free(ast_root);
     symtable_free(glob_symtable);

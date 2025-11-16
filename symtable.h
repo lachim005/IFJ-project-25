@@ -35,6 +35,16 @@ typedef struct symtable_item {
     bool is_defined;
     DataType data_type;
     DataType *param_types;
+
+    /// Is data type known at compile time
+    bool data_type_known;
+    
+    /// Value for literals
+    union {
+        String *string_val;
+        double double_val;
+        bool bool_val;
+    };
 } SymtableItem;
 
 typedef struct symtable {

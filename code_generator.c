@@ -350,20 +350,28 @@ ErrorCode generate_builtin_str(FILE *output, AstExpression *ex) {
     }
     // Generate num branch
     if (type == DT_NUM || type == DT_UNKNOWN) {
-        fprintf(output, "LABEL $&&ifj_str_float%u\n"
-                        "PUSHS GF@&&inter1\n"
-                        "ISINTS\n"
-                        "PUSHS bool@true\n"
-                        "JUMPIFEQS $&&ifj_str_float_int%u\n"
-                        "PUSHS GF@&&inter1\n"
-                        "FLOAT2STRS\n"
-                        "JUMP $&&ifj_str_end%u\n"
-                        "LABEL $&&ifj_str_float_int%u\n"
-                        "PUSHS GF@&&inter1\n"
-                        "FLOAT2INTS\n"
-                        "INT2STRS\n"
-                        "JUMP $&&ifj_str_end%u\n",
-                        expr_id, expr_id, expr_id, expr_id, expr_id);
+        fprintf(output, "LABEL $&&ifj_str_float%u\n", expr_id);
+        if (ex->params[0]->surely_int) {
+            fprintf(output, "PUSHS GF@&&inter1\n"
+                            "FLOAT2INTS\n"
+                            "INT2STRS\n"
+                            "JUMP $&&ifj_str_end%u\n",
+                            expr_id);
+        } else {
+            fprintf(output, "PUSHS GF@&&inter1\n"
+                            "ISINTS\n"
+                            "PUSHS bool@true\n"
+                            "JUMPIFEQS $&&ifj_str_float_int%u\n"
+                            "PUSHS GF@&&inter1\n"
+                            "FLOAT2STRS\n"
+                            "JUMP $&&ifj_str_end%u\n"
+                            "LABEL $&&ifj_str_float_int%u\n"
+                            "PUSHS GF@&&inter1\n"
+                            "FLOAT2INTS\n"
+                            "INT2STRS\n"
+                            "JUMP $&&ifj_str_end%u\n",
+                            expr_id, expr_id, expr_id, expr_id);
+        }
     }
     // Generate bool branch
     if (type == DT_BOOL || type == DT_UNKNOWN) {
@@ -403,12 +411,14 @@ ErrorCode generate_builtin_write(FILE *output, AstExpression *ex) {
                         expr_id);
     }
     if (type == DT_NUM || type == DT_UNKNOWN) {
-        fprintf(output, "PUSHS GF@&&inter1\n"
-                        "ISINTS\n"
-                        "PUSHS bool@false\n"
-                        "JUMPIFEQS $&&ifj_write_write%u\n"
-                        "FLOAT2INT GF@&&inter1 GF@&&inter1\n",
-                        expr_id);
+        if (!ex->params[0]->surely_int) {
+            fprintf(output, "PUSHS GF@&&inter1\n"
+                            "ISINTS\n"
+                            "PUSHS bool@false\n"
+                            "JUMPIFEQS $&&ifj_write_write%u\n",\
+                            expr_id);
+        }
+        fprintf(output, "FLOAT2INT GF@&&inter1 GF@&&inter1\n");
     }
     fprintf(output, "LABEL $&&ifj_write_write%u\n"
                     "WRITE GF@&&inter1\n"
@@ -421,6 +431,10 @@ ErrorCode generate_builtin_write(FILE *output, AstExpression *ex) {
 ErrorCode generate_builtin_floor(FILE *output, AstExpression *ex) {
     // Push parameter
     CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
+    if (ex->params[0]->surely_int) {
+        // We don't need to do anything if the argument is already an integer
+        return OK;
+    }
     if (ex->params[0]->assumed_type == DT_NUM) {
         fprintf(output, "FLOAT2INTS\n"
                         "INT2FLOATS\n");
@@ -450,25 +464,14 @@ ErrorCode generate_builtin_length(FILE *output, AstExpression *ex) {
     }
     // Push parameter
     CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
-    if (param->assumed_type == DT_STRING) {
-        fprintf(output, "POPS GF@&&inter1\n"
-                        "STRLEN GF@&&inter2 GF@&&inter1\n"
-                        "PUSHS GF@&&inter2\n"
-                        "INT2FLOATS\n");
-        return OK;
+
+    fprintf(output, "POPS GF@&&inter1\n");
+    if (param->assumed_type != DT_STRING) {
+        generate_var_type_check(output, "GF@&&inter1", "string");
     }
-    unsigned expr_id = internal_names_cntr++;
-    fprintf(output, "POPS GF@&&inter1\n"
-                    "PUSHS GF@&&inter1\n"
-                    "TYPES\n"
-                    "PUSHS string@string\n"
-                    "JUMPIFEQS $&&length_string%u\n"
-                    "EXIT int@26\n"
-                    "LABEL $&&length_string%u\n"
-                    "STRLEN GF@&&inter2 GF@&&inter1\n"
+    fprintf(output, "STRLEN GF@&&inter2 GF@&&inter1\n"
                     "PUSHS GF@&&inter2\n"
-                    "INT2FLOATS\n",
-                    expr_id, expr_id);
+                    "INT2FLOATS\n");
     return OK;
 }
 
@@ -485,24 +488,28 @@ ErrorCode generate_builtin_substring(FILE *output, AstExpression *ex) {
     } else if (str->assumed_type != DT_STRING) {
         fprintf(output, "EXIT int@26\n"); // Shouldn't happen
     }
-    CG_ASSERT(generate_expression_evaluation(output, start) == OK);
 
+    CG_ASSERT(generate_expression_evaluation(output, start) == OK);
     fprintf(output, "POPS GF@&&inter2\n");
     if (start->assumed_type == DT_UNKNOWN) {
         generate_var_type_check(output, "GF@&&inter2", "float");
-        generate_var_int_check(output, "GF@&&inter2");
     } else if (start->assumed_type != DT_NUM) {
         fprintf(output, "EXIT int@26\n"); // Shouldn't happen
     }
-    CG_ASSERT(generate_expression_evaluation(output, end) == OK);
+    if (!start->surely_int) {
+        generate_var_int_check(output, "GF@&&inter2");
+    }
     fprintf(output, "FLOAT2INT GF@&&inter2 GF@&&inter2\n");
 
+    CG_ASSERT(generate_expression_evaluation(output, end) == OK);
     fprintf(output, "POPS GF@&&inter3\n");
     if (end->assumed_type == DT_UNKNOWN) {
         generate_var_type_check(output, "GF@&&inter3", "float");
-        generate_var_int_check(output, "GF@&&inter3");
     } else if (end->assumed_type != DT_NUM) {
         fprintf(output, "EXIT int@26\n"); // Shouldn't happen
+    }
+    if (!start->surely_int) {
+        generate_var_int_check(output, "GF@&&inter3");
     }
     fprintf(output, "FLOAT2INT GF@&&inter3 GF@&&inter3\n");
 

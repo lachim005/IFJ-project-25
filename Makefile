@@ -7,6 +7,7 @@
 #
 CC = gcc
 CFLAGS += -Wall -Wextra -pedantic
+LDFLAGS += -lm
 # CFLAGS += -Werror
 # CFLAGS += -O3
 
@@ -16,7 +17,7 @@ CFLAGS += -g -DCG_DEBUG
 # CFLAGS += -fsanitize=address
 # LDFLAGS += -lasan
 
-main: main.o ast.o code_generator.o expr_parser.o lexer.o parser.o stack.o string.o symtable.o token.o
+main: main.o ast.o code_generator.o expr_parser.o lexer.o parser.o stack.o string.o symtable.o token.o optimizer.o
 
 .PHONY: clean
 clean:
@@ -38,3 +39,4 @@ stack.o: stack.c stack.h token.h string.h ast.h
 string.o: string.c string.h
 symtable.o: symtable.c symtable.h string.h ast.h
 token.o: token.c token.h string.h ast.h
+optimizer.o: optimizer.c optimizer.h ast.h error.h symtable.h string.h
