@@ -1419,85 +1419,65 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
                 return ec;
             }
 
-            if (left_type == DT_BOOL || right_type == DT_BOOL) {
-                return SEM_TYPE_COMPAT;
+            // We first cover / and -
+            if (expr->type == EX_SUB || expr->type == EX_DIV) {
+                result_type = DT_NUM;
+                // Both sides can only be unknown or num
+                if ((left_type != DT_UNKNOWN && left_type != DT_NUM) ||
+                    (right_type != DT_UNKNOWN && right_type != DT_NUM)) {
+                    return SEM_TYPE_COMPAT;
+                }
+                break;
             }
+            // Now for + and *
 
-            if (left_type == DT_NULL || right_type == DT_NULL) {
-                return SEM_TYPE_COMPAT;
-            }
-
-            if (left_type == DT_TYPE || right_type == DT_TYPE) {
-                return SEM_TYPE_COMPAT;
-            }
-
+            // Both unknown
             if (left_type == DT_UNKNOWN && right_type == DT_UNKNOWN) {
                 result_type = DT_UNKNOWN;
                 break;
             }
-    
+
             if (expr->type == EX_ADD) {
-                // String concatenation
-                if (left_type == DT_STRING && right_type == DT_STRING) {
-                    result_type = DT_STRING;
-                    break;
+                // One known
+                if (left_type == DT_UNKNOWN || right_type == DT_UNKNOWN) {
+                    if (left_type == DT_STRING || right_type == DT_STRING) {
+                        // One is string, other has to be unknown
+                        result_type = DT_STRING;
+                        break;
+                    }
+                    if (left_type == DT_NUM || right_type == DT_NUM) {
+                        // One is num, other has to be unknown
+                        result_type = DT_NUM;
+                        break;
+                    }
+                    return SEM_TYPE_COMPAT;
                 }
-                
-                if (left_type == DT_NUM && right_type == DT_NUM) {
-                    result_type = DT_NUM;
-                    break;
-                }
-
-                if ((left_type == DT_UNKNOWN && right_type == DT_STRING) || (left_type == DT_STRING && right_type == DT_UNKNOWN)) {
-                    result_type = DT_STRING;
-                    break;
-                }
-
-                if ((left_type == DT_UNKNOWN || right_type == DT_UNKNOWN) && !(left_type == DT_STRING || right_type == DT_STRING)) {
-                    result_type = DT_NUM;
-                    break;
-                }
-
-                return SEM_TYPE_COMPAT;
+                // Both known - must be the same
+                if (left_type != right_type) return SEM_TYPE_COMPAT;
+                // Both must be num or string, we know they are the same here though
+                if (left_type != DT_STRING && left_type != DT_NUM) return SEM_TYPE_COMPAT;
+                result_type = left_type;
+                break;
             }
 
             if (expr->type == EX_MUL) {
-                if (left_type == DT_NUM && right_type == DT_NUM) {
-                    result_type = DT_NUM;
+                // Left can only be string/num/unknown and right can only be num/unknown
+                if ((left_type != DT_STRING && left_type != DT_NUM && left_type != DT_UNKNOWN) ||
+                    (right_type != DT_NUM && right_type != DT_UNKNOWN)) {
+                    return SEM_TYPE_COMPAT;
+                }
+                // One unknown
+                if (left_type == DT_UNKNOWN) {
+                    result_type = DT_UNKNOWN;
+                    break;
+                }
+                if (right_type == DT_UNKNOWN) {
+                    result_type = left_type;
                     break;
                 }
 
-                // TODO: Integer check?
-                if ((left_type == DT_STRING && right_type == DT_NUM)) {
-                    result_type = DT_STRING;
-                    break;
-                }
-
-                if (left_type == DT_STRING && right_type == DT_UNKNOWN) {
-                    result_type = DT_STRING;
-                    break;
-                }
-
-                if ((left_type == DT_UNKNOWN || right_type == DT_UNKNOWN) && !(left_type == DT_STRING || right_type == DT_STRING)) {
-                    result_type = DT_NUM;
-                    break;
-                }
-
-                return SEM_TYPE_COMPAT;
-            }
-
-            if (expr->type == EX_SUB || expr->type == EX_DIV) {
-                if (left_type == DT_NUM && right_type == DT_NUM) {
-                    result_type = DT_NUM;
-                    break;
-                }
-
-                if ((left_type == DT_UNKNOWN || right_type == DT_UNKNOWN)) {
-                    result_type = DT_NUM;
-                    break;
-                }
-
-                return SEM_TYPE_COMPAT;
+                // Both known
+                result_type = left_type;
             }
 
             break;

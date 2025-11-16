@@ -43,8 +43,6 @@ class Program {
         Ifj.write("\n")
         Ifj.write("a" * i)
         Ifj.write("\n")
-        Ifj.write(s * 5)
-        Ifj.write("\n")
         Ifj.write("BOTH LOCAL\n")
         Ifj.write(i * i)
         Ifj.write("\n")
