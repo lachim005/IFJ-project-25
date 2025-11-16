@@ -1,0 +1,10 @@
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        var a = "ahoj" 
+        while (__u == 5) {
+            a = "CHYBA" 
+        }
+        Ifj.write(a + "\n")
+    }
+}

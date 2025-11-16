@@ -1,0 +1,18 @@
+import "ifj25" for Ifj
+class Program {
+    static foo() {
+        __a = "ahoj"
+    }
+    static foo=(a) {
+        __a = "ahoj"
+    }
+    static foo {
+        __a = "ahoj"
+    }
+    static main() {
+        __a = "CHYBA"
+        foo()
+        foo = foo
+        Ifj.write(__a + "\n")
+    }
+}

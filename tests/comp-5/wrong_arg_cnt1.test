@@ -1,0 +1,12 @@
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        foo()
+    }
+    static foo(a) {
+
+    }
+    static foo(a, b) {
+
+    }
+}

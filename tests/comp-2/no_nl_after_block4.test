@@ -1,0 +1,9 @@
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        if (false) {
+        } else { Ifj.write("ahoj\n")
+
+        }
+    }
+}

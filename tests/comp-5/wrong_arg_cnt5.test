@@ -1,0 +1,6 @@
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        var x = Ifj.floor(5.5, 1)
+    }
+}

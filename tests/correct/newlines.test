@@ -1,0 +1,12 @@
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        Ifj  .
+        write("ahoj\n")
+        Ifj  .
+        write(
+            5 +
+            5)
+        Ifj  . write("\n")
+    }
+}

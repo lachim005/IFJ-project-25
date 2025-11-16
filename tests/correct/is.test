@@ -1,0 +1,93 @@
+import "ifj25" for Ifj
+class Program {
+    static pushs_super_cool_values_into_the_best_global_variables_you_have_ever_seen_they_say_there_arent_better_ones() {
+        __s = "ahoj"
+        __b = true
+        __i = 5
+        __n = null
+    }
+    static main() {
+        var s = "ahoj"
+        var b = true
+        var i = 5
+        var n = null
+        var x
+
+        pushs_super_cool_values_into_the_best_global_variables_you_have_ever_seen_they_say_there_arent_better_ones()
+
+        Ifj.write("LITERALS\n")
+        Ifj.write("ahoj" is String)
+        Ifj.write("\n")
+        Ifj.write(5 is Num)
+        Ifj.write("\n")
+        Ifj.write(false is Bool)
+        Ifj.write("\n")
+        Ifj.write(null is Null)
+        Ifj.write("\n")
+        Ifj.write(5 is String)
+        Ifj.write("\n")
+        Ifj.write("ahoj" is Num)
+        Ifj.write("\n")
+        Ifj.write(null is Bool)
+        Ifj.write("\n")
+        Ifj.write(false is Null)
+        Ifj.write("\n")
+
+        Ifj.write("LOCALS\n")
+        Ifj.write(s is String)
+        Ifj.write("\n")
+        Ifj.write(i is Num)
+        Ifj.write("\n")
+        Ifj.write(b is Bool)
+        Ifj.write("\n")
+        Ifj.write(n is Null)
+        Ifj.write("\n")
+        Ifj.write(n is String)
+        Ifj.write("\n")
+        Ifj.write(b is Num)
+        Ifj.write("\n")
+        Ifj.write(i is Bool)
+        Ifj.write("\n")
+        Ifj.write(s is Null)
+        Ifj.write("\n")
+
+        Ifj.write("GLOBALS\n")
+        Ifj.write(__s is String)
+        Ifj.write("\n")
+        Ifj.write(__i is Num)
+        Ifj.write("\n")
+        Ifj.write(__b is Bool)
+        Ifj.write("\n")
+        Ifj.write(__n is Null)
+        Ifj.write("\n")
+        Ifj.write(__n is String)
+        Ifj.write("\n")
+        Ifj.write(__b is Num)
+        Ifj.write("\n")
+        Ifj.write(__i is Bool)
+        Ifj.write("\n")
+        Ifj.write(__s is Null)
+        Ifj.write("\n")
+
+        Ifj.write("EXPRS\n")
+        Ifj.write(__s * i is String)
+        Ifj.write("\n")
+        Ifj.write(i * __i is Num)
+        Ifj.write("\n")
+        // Is false
+        Ifj.write(__i == __i is Bool)
+        Ifj.write("\n")
+        Ifj.write((__i == __i) is Bool)
+        Ifj.write("\n")
+        Ifj.write(x is Null)
+        Ifj.write("\n")
+        Ifj.write(s + Ifj.chr(111) is String)
+        Ifj.write("\n")
+        Ifj.write(__s * __i is Num)
+        Ifj.write("\n")
+        Ifj.write(10 > i is Bool)
+        Ifj.write("\n")
+        Ifj.write(Ifj.write("") is Null)
+        Ifj.write("\n")
+    }
+}

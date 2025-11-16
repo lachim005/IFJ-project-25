@@ -1,0 +1,13 @@
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        if (true) {
+            Ifj.write("ahoj\n")
+
+        } else
+        {
+            Ifj.write("CHYBA\n")
+
+        }
+    }
+    }

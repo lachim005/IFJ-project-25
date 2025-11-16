@@ -1,0 +1,14 @@
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        Ifj.write(foo())
+        Ifj.write(foo)
+        Ifj.write("\n")
+    }
+    static foo() {
+
+    }
+    static foo {
+
+    }
+}

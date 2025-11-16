@@ -1,0 +1,24 @@
+import "ifj25" for Ifj
+class Program {
+    static x(a) {
+
+    }
+    static main() {
+        var x
+        {
+            var x
+        }
+    }
+    static x {
+
+    }
+    static x() {
+
+    }
+    static x=(a) {
+
+    }
+    static x(b) {
+
+    }
+}

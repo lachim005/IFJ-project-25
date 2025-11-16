@@ -1,0 +1,15 @@
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        var a = 5
+        while (a > 0) {
+            var b
+            a = a - 1
+            if (a == 3) {
+                Ifj.write(b)
+                Ifj.write("\n")
+            }
+            b = 3
+        }
+    }
+}

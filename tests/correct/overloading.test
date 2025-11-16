@@ -1,0 +1,28 @@
+import "ifj25" for Ifj
+
+class Program {
+    static main() {
+        main(5)
+        Ifj.write(Ifj.str(foo) + "\n")
+    }
+    static main(a) {
+        Ifj.write(Ifj.str(a) + "\n")
+        foo()
+        foo(a + 1)
+    }
+    static foo() {
+        Ifj.write("Ahoj\n")
+        foo(1)
+    }
+    static foo(a) {
+        Ifj.write(Ifj.str(a) + "\n")
+        foo = a
+    }
+    static foo=(a) {
+        Ifj.write("f" + "o" * 2 + ": " + Ifj.str(a) + "\n")
+        __a = a
+    }
+    static foo {
+        return __a + 1
+    }
+}

@@ -1,0 +1,12 @@
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        var a = "a"
+        var b = 2
+        if (a == "a") {
+            a = 5
+            b = 1
+        }
+        Ifj.write(Ifj.str("a" * a) * b + "\n")
+    }
+}

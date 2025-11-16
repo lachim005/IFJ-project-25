@@ -1,0 +1,10 @@
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        var getter = getter + " svete\n"
+        Ifj.write(getter)
+    }
+    static getter {
+        return "ahoj"
+    }
+}
