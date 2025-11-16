@@ -189,6 +189,8 @@ SymtableItem *symtable_insert(Symtable *st, const char *key) {
         st->data[use_idx].is_defined = true;
         st->data[use_idx].type = SYM_VAR;
         st->data[use_idx].param_types = NULL;
+        st->data[use_idx].data_type_known = false;
+        st->data[use_idx].string_val = NULL;
         st->state[use_idx] = SLOT_OCCUPIED;
         st->size++;
         return &st->data[use_idx];

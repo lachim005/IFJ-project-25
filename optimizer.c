@@ -1,0 +1,579 @@
+/*
+ * optimizer.c
+ * Implements optimization for ast
+ *
+ * Authors:
+ * Tomáš Hanák (xhanakt00)
+ */
+
+#include "optimizer.h"
+#include "symtable.h"
+#include "string.h"
+#include <string.h>
+#include <stdio.h>
+
+/// Updates symtable item with known value from expression
+void update_symtable_value(SymtableItem *item, AstExpression *expr) {
+    if (item == NULL || expr == NULL) {
+        return;
+    }
+
+    item->data_type_known = true;
+    item->data_type = expr->assumed_type;
+
+    switch (expr->assumed_type) {
+        case DT_NUM:
+            item->double_val = expr->double_val;
+            break;
+        case DT_BOOL:
+            item->bool_val = expr->bool_val;
+            break;
+        case DT_STRING:
+            if (item->string_val != NULL) {
+                str_free(&item->string_val);
+            }
+            item->string_val = str_init();
+            if (item->string_val != NULL && expr->string_val != NULL) {
+                str_append_string(item->string_val, expr->string_val->val);
+            }
+            break;
+        case DT_NULL:
+            break;
+        default:
+            item->data_type_known = false;
+            break;
+    }
+}
+
+/// Optimizes expression recursively
+ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtable *localtable) {
+    if (expr == NULL) {
+        return INTERNAL_ERROR;
+    }
+
+    // First optimize all child expressions
+    for (size_t i = 0; i < expr->child_count; i++) {
+        ErrorCode ec = optimize_expression(expr->params[i], globaltable, localtable);
+        if (ec != OK) {
+            return ec;
+        }
+    }
+
+    // Try to evaluate the expression if all operands are known
+    bool all_known = true;
+    for (size_t i = 0; i < expr->child_count; i++) {
+        if (!expr->params[i]->val_known) {
+            all_known = false;
+            break;
+        }
+    }
+
+    if (!all_known) {
+        return OK;
+    }
+
+    // Store original state for debug output
+    bool was_known = expr->val_known;
+
+    // Evaluate based on expression type
+    switch (expr->type) {
+        // Binary arithmetic operations
+        case EX_ADD:
+            if (expr->child_count == 2) {
+                AstExpression *left = expr->params[0];
+                AstExpression *right = expr->params[1];
+                
+                if (left->assumed_type == DT_NUM && right->assumed_type == DT_NUM) {
+                    expr->val_known = true;
+                    expr->assumed_type = DT_NUM;
+                    expr->double_val = left->double_val + right->double_val;
+                } else if (left->assumed_type == DT_STRING && right->assumed_type == DT_STRING) {
+                    expr->val_known = true;
+                    if (expr->assumed_type == DT_STRING && expr->string_val != NULL) {
+                        str_free(&expr->string_val);
+                    }
+                    expr->assumed_type = DT_STRING;
+                    expr->string_val = str_init();
+                    if (expr->string_val != NULL) {
+                        str_append_string(expr->string_val, left->string_val->val);
+                        str_append_string(expr->string_val, right->string_val->val);
+                    }
+                }
+            }
+            break;
+
+        case EX_SUB:
+            if (expr->child_count == 2 && expr->params[0]->assumed_type == DT_NUM && expr->params[1]->assumed_type == DT_NUM) {
+                expr->val_known = true;
+                expr->assumed_type = DT_NUM;
+                expr->double_val = expr->params[0]->double_val - expr->params[1]->double_val;
+            }
+            break;
+
+        case EX_MUL:
+            if (expr->child_count == 2 && expr->params[0]->assumed_type == DT_NUM && expr->params[1]->assumed_type == DT_NUM) {
+                expr->val_known = true;
+                expr->assumed_type = DT_NUM;
+                expr->double_val = expr->params[0]->double_val * expr->params[1]->double_val;
+            } else if (expr->child_count == 2 && expr->params[0]->assumed_type == DT_STRING && expr->params[1]->assumed_type == DT_NUM) {
+                expr->val_known = true;
+                if (expr->assumed_type == DT_STRING && expr->string_val != NULL) {
+                    str_free(&expr->string_val);
+                }
+                expr->assumed_type = DT_STRING;
+                expr->string_val = str_init();
+                if (expr->string_val != NULL) {
+                    int repeat_count = (int)expr->params[1]->double_val;
+                    for (int i = 0; i < repeat_count; i++) {
+                        str_append_string(expr->string_val, expr->params[0]->string_val->val);
+                    }
+                }
+            }
+            break;
+
+        case EX_DIV:
+            if (expr->child_count == 2 && 
+                expr->params[0]->assumed_type == DT_NUM && 
+                expr->params[1]->assumed_type == DT_NUM &&
+                expr->params[1]->double_val != 0.0) {
+                expr->val_known = true;
+                expr->assumed_type = DT_NUM;
+                expr->double_val = expr->params[0]->double_val / expr->params[1]->double_val;
+            }
+            break;
+
+        // Unary operations
+        case EX_NEGATE:
+            if (expr->child_count == 1 && expr->params[0]->assumed_type == DT_NUM) {
+                expr->val_known = true;
+                expr->assumed_type = DT_NUM;
+                expr->double_val = -expr->params[0]->double_val;
+            }
+            break;
+
+        case EX_NOT:
+            if (expr->child_count == 1 && expr->params[0]->assumed_type == DT_BOOL) {
+                expr->val_known = true;
+                expr->assumed_type = DT_BOOL;
+                expr->bool_val = !expr->params[0]->bool_val;
+            }
+            break;
+
+        // Comparison operations
+        case EX_GREATER:
+            if (expr->child_count == 2 && 
+                expr->params[0]->assumed_type == DT_NUM && 
+                expr->params[1]->assumed_type == DT_NUM) {
+                expr->val_known = true;
+                expr->assumed_type = DT_BOOL;
+                expr->bool_val = expr->params[0]->double_val > expr->params[1]->double_val;
+            }
+            break;
+
+        case EX_LESS:
+            if (expr->child_count == 2 && 
+                expr->params[0]->assumed_type == DT_NUM && 
+                expr->params[1]->assumed_type == DT_NUM) {
+                expr->val_known = true;
+                expr->assumed_type = DT_BOOL;
+                expr->bool_val = expr->params[0]->double_val < expr->params[1]->double_val;
+            }
+            break;
+
+        case EX_GREATER_EQ:
+            if (expr->child_count == 2 && 
+                expr->params[0]->assumed_type == DT_NUM && 
+                expr->params[1]->assumed_type == DT_NUM) {
+                expr->val_known = true;
+                expr->assumed_type = DT_BOOL;
+                expr->bool_val = expr->params[0]->double_val >= expr->params[1]->double_val;
+            }
+            break;
+
+        case EX_LESS_EQ:
+            if (expr->child_count == 2 && 
+                expr->params[0]->assumed_type == DT_NUM && 
+                expr->params[1]->assumed_type == DT_NUM) {
+                expr->val_known = true;
+                expr->assumed_type = DT_BOOL;
+                expr->bool_val = expr->params[0]->double_val <= expr->params[1]->double_val;
+            }
+            break;
+
+        case EX_EQ:
+            if (expr->child_count == 2 && 
+                expr->params[0]->assumed_type == expr->params[1]->assumed_type) {
+                expr->val_known = true;
+                expr->assumed_type = DT_BOOL;
+                
+                if (expr->params[0]->assumed_type == DT_NUM) {
+                    expr->bool_val = expr->params[0]->double_val == expr->params[1]->double_val;
+                } else if (expr->params[0]->assumed_type == DT_BOOL) {
+                    expr->bool_val = expr->params[0]->bool_val == expr->params[1]->bool_val;
+                } else if (expr->params[0]->assumed_type == DT_STRING) {
+                    expr->bool_val = strcmp(expr->params[0]->string_val->val, expr->params[1]->string_val->val) == 0;
+                } else if (expr->params[0]->assumed_type == DT_NULL) {
+                    expr->bool_val = true;
+                }
+            }
+            break;
+
+        case EX_NOT_EQ:
+            if (expr->child_count == 2 && 
+                expr->params[0]->assumed_type == expr->params[1]->assumed_type) {
+                expr->val_known = true;
+                expr->assumed_type = DT_BOOL;
+                
+                if (expr->params[0]->assumed_type == DT_NUM) {
+                    expr->bool_val = expr->params[0]->double_val != expr->params[1]->double_val;
+                } else if (expr->params[0]->assumed_type == DT_BOOL) {
+                    expr->bool_val = expr->params[0]->bool_val != expr->params[1]->bool_val;
+                } else if (expr->params[0]->assumed_type == DT_STRING) {
+                    expr->bool_val = strcmp(expr->params[0]->string_val->val, expr->params[1]->string_val->val) != 0;
+                } else if (expr->params[0]->assumed_type == DT_NULL) {
+                    expr->bool_val = false;
+                }
+            }
+            break;
+
+        // Logical operations
+        case EX_AND:
+            if (expr->child_count == 2 && 
+                expr->params[0]->assumed_type == DT_BOOL && expr->params[1]->assumed_type == DT_BOOL) {
+                expr->val_known = true;
+                expr->assumed_type = DT_BOOL;
+                expr->bool_val = expr->params[0]->bool_val && expr->params[1]->bool_val;
+            }
+            break;
+
+        case EX_OR:
+            if (expr->child_count == 2 && 
+                expr->params[0]->assumed_type == DT_BOOL && expr->params[1]->assumed_type == DT_BOOL) {
+                expr->val_known = true;
+                expr->assumed_type = DT_BOOL;
+                expr->bool_val = expr->params[0]->bool_val || expr->params[1]->bool_val;
+            }
+            break;
+
+        // Ternary operator
+        case EX_TERNARY:
+            if (expr->child_count == 3 && expr->params[0]->assumed_type == DT_BOOL) {
+                // Pick the branch based on condition
+                if (expr->params[0]->bool_val) {
+                    // Copy true branch result
+                    expr->val_known = expr->params[1]->val_known;
+                    expr->assumed_type = expr->params[1]->assumed_type;
+                    if (expr->params[1]->assumed_type == DT_NUM) {
+                        expr->double_val = expr->params[1]->double_val;
+                    } else if (expr->params[1]->assumed_type == DT_BOOL) {
+                        expr->bool_val = expr->params[1]->bool_val;
+                    } else if (expr->params[1]->assumed_type == DT_STRING) {
+                        if (expr->assumed_type == DT_STRING && expr->string_val != NULL) {
+                            str_free(&expr->string_val);
+                        }
+                        expr->string_val = str_init();
+                        if (expr->string_val != NULL) {
+                            str_append_string(expr->string_val, expr->params[1]->string_val->val);
+                        }
+                    }
+                } else {
+                    // Copy false branch result
+                    expr->val_known = expr->params[2]->val_known;
+                    expr->assumed_type = expr->params[2]->assumed_type;
+                    if (expr->params[2]->assumed_type == DT_NUM) {
+                        expr->double_val = expr->params[2]->double_val;
+                    } else if (expr->params[2]->assumed_type == DT_BOOL) {
+                        expr->bool_val = expr->params[2]->bool_val;
+                    } else if (expr->params[2]->assumed_type == DT_STRING) {
+                        if (expr->assumed_type == DT_STRING && expr->string_val != NULL) {
+                            str_free(&expr->string_val);
+                        }
+                        expr->string_val = str_init();
+                        if (expr->string_val != NULL) {
+                            str_append_string(expr->string_val, expr->params[2]->string_val->val);
+                        }
+                    }
+                }
+            }
+            break;
+
+        // Variable lookup
+        case EX_ID:
+            if (expr->string_val != NULL) {
+                SymtableItem *item = NULL;
+                if (find_local_var(localtable, expr->string_val->val, &item) && item != NULL) {
+                    if (item->data_type_known) {
+                        expr->val_known = true;
+                        expr->assumed_type = item->data_type;
+                        
+                        // Free the variable name string since we're converting to constant
+                        str_free(&expr->string_val);
+                        
+                        switch (item->data_type) {
+                            case DT_NUM:
+                                expr->type = EX_DOUBLE;
+                                expr->double_val = item->double_val;
+                                break;
+                            case DT_BOOL:
+                                expr->type = EX_BOOL;
+                                expr->bool_val = item->bool_val;
+                                break;
+                            case DT_STRING:
+                                expr->type = EX_STRING;
+                                expr->string_val = str_init();
+                                if (expr->string_val != NULL && item->string_val != NULL) {
+                                    str_append_string(expr->string_val, item->string_val->val);
+                                }
+                                break;
+                            case DT_NULL:
+                                expr->type = EX_NULL;
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+            }
+            break;
+
+        case EX_GLOBAL_ID:
+            if (expr->string_val != NULL) {
+                SymtableItem *item = NULL;
+                if (symtable_contains_global_var(globaltable, expr->string_val->val, &item) && item != NULL) {
+                    if (item->data_type_known) {
+                        expr->val_known = true;
+                        expr->assumed_type = item->data_type;
+                        
+                        // Free the variable name string since we're converting to constant
+                        str_free(&expr->string_val);
+                        
+                        switch (item->data_type) {
+                            case DT_NUM:
+                                expr->type = EX_DOUBLE;
+                                expr->double_val = item->double_val;
+                                break;
+                            case DT_BOOL:
+                                expr->type = EX_BOOL;
+                                expr->bool_val = item->bool_val;
+                                break;
+                            case DT_STRING:
+                                expr->type = EX_STRING;
+                                expr->string_val = str_init();
+                                if (expr->string_val != NULL && item->string_val != NULL) {
+                                    str_append_string(expr->string_val, item->string_val->val);
+                                }
+                                break;
+                            case DT_NULL:
+                                expr->type = EX_NULL;
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+            }
+            break;
+        default:
+            break;
+    }
+
+    // Print optimization result if expression was optimized
+    if (!was_known && expr->val_known) {
+        fprintf(stderr, "[OPTIMIZER] Expression optimized to: ");
+        switch (expr->assumed_type) {
+            case DT_NUM:
+                fprintf(stderr, "%g (NUM)\n", expr->double_val);
+                break;
+            case DT_BOOL:
+                fprintf(stderr, "%s (BOOL)\n", expr->bool_val ? "true" : "false");
+                break;
+            case DT_STRING:
+                fprintf(stderr, "\"%s\" (STRING)\n", expr->string_val ? expr->string_val->val : "(null)");
+                break;
+            case DT_NULL:
+                fprintf(stderr, "null (NULL)\n");
+                break;
+            default:
+                fprintf(stderr, "(unknown type)\n");
+                break;
+        }
+    }
+
+    return OK;
+}
+
+/// Optimizes a block of statements
+ErrorCode optimize_block(AstBlock *block, Symtable *globaltable, Symtable *localtable) {
+    if (block == NULL) {
+        return OK;
+    }
+
+    AstStatement *stmt = block->statements;
+    while (stmt != NULL && stmt->type != ST_END) {
+        ErrorCode ec = optimize_statement(stmt, globaltable, localtable);
+        if (ec != OK) {
+            return ec;
+        }
+        stmt = stmt->next;
+    }
+
+    return OK;
+}
+
+/// Optimizes a block of statements
+ErrorCode optimize_root(AstStatement *statement, Symtable *globaltable, Symtable *localtable) {
+    if (statement == NULL) {
+        return OK;
+    }
+
+    AstStatement *stmt = statement;
+    while (stmt != NULL && stmt->type != ST_END) {
+        ErrorCode ec = optimize_statement(stmt, globaltable, localtable);
+        if (ec != OK) {
+            return ec;
+        }
+        stmt = stmt->next;
+    }
+
+    return OK;
+}
+
+/// Optimizes a single statement
+ErrorCode optimize_statement(AstStatement *statement, Symtable *globaltable, Symtable *localtable) {
+    if (statement == NULL) {
+        return OK;
+    }
+
+    ErrorCode ec = OK;
+
+    switch (statement->type) {
+        case ST_LOCAL_VAR:
+            if (statement->local_var != NULL && statement->local_var->expression != NULL) {
+                ec = optimize_expression(statement->local_var->expression, globaltable, localtable);
+                if (ec != OK) return ec;
+
+                // Update symtable with known value
+                if (statement->local_var->expression->val_known) {
+                    SymtableItem *item = NULL;
+                    if (find_local_var(localtable, statement->local_var->name->val, &item) && item != NULL) {
+                        update_symtable_value(item, statement->local_var->expression);
+                    }
+                }
+            }
+            break;
+
+        case ST_GLOBAL_VAR:
+            if (statement->global_var != NULL && statement->global_var->expression != NULL) {
+                ec = optimize_expression(statement->global_var->expression, globaltable, localtable);
+                if (ec != OK) return ec;
+
+                // Update symtable with known value
+                if (statement->global_var->expression->val_known) {
+                    SymtableItem *item = NULL;
+                    if (symtable_contains_global_var(globaltable, statement->global_var->name->val, &item) && item != NULL) {
+                        update_symtable_value(item, statement->global_var->expression);
+                    }
+                }
+            }
+            break;
+
+        case ST_SETTER_CALL:
+            if (statement->setter_call != NULL && statement->setter_call->expression != NULL) {
+                ec = optimize_expression(statement->setter_call->expression, globaltable, localtable);
+            }
+            break;
+
+        case ST_RETURN:
+            if (statement->return_expr != NULL) {
+                ec = optimize_expression(statement->return_expr, globaltable, localtable);
+            }
+            break;
+
+        case ST_IF:
+            if (statement->if_st != NULL) {
+                ec = optimize_expression(statement->if_st->condition, globaltable, localtable);
+                if (ec != OK) return ec;
+
+                ec = optimize_block(statement->if_st->true_branch, globaltable, localtable);
+                if (ec != OK) return ec;
+
+                // Optimize else-if branches
+                for (size_t i = 0; i < statement->if_st->else_if_count; i++) {
+                    if (statement->if_st->else_if_branches[i] != NULL) {
+                        ec = optimize_expression(statement->if_st->else_if_branches[i]->condition, globaltable, localtable);
+                        if (ec != OK) return ec;
+
+                        ec = optimize_block(statement->if_st->else_if_branches[i]->body, globaltable, localtable);
+                        if (ec != OK) return ec;
+                    }
+                }
+
+                if (statement->if_st->false_branch != NULL) {
+                    ec = optimize_block(statement->if_st->false_branch, globaltable, localtable);
+                }
+            }
+            break;
+
+        case ST_WHILE:
+            if (statement->while_st != NULL) {
+                ec = optimize_expression(statement->while_st->condition, globaltable, localtable);
+                if (ec != OK) return ec;
+
+                ec = optimize_block(statement->while_st->body, globaltable, localtable);
+            }
+            break;
+
+        case ST_BLOCK:
+            if (statement->block != NULL) {
+                ec = optimize_block(statement->block, globaltable, localtable);
+            }
+            break;
+
+        case ST_FUNCTION:
+            if (statement->function != NULL && statement->function->body != NULL) {
+                ec = optimize_block(statement->function->body, globaltable, statement->function->symtable);
+            }
+            break;
+
+        case ST_GETTER:
+            if (statement->getter != NULL && statement->getter->body != NULL) {
+                ec = optimize_block(statement->getter->body, globaltable, statement->getter->symtable);
+            }
+            break;
+
+        case ST_SETTER:
+            if (statement->setter != NULL && statement->setter->body != NULL) {
+                ec = optimize_block(statement->setter->body, globaltable, statement->setter->symtable);
+            }
+            break;
+
+        case ST_EXPRESSION:
+            if (statement->expression != NULL) {
+                ec = optimize_expression(statement->expression, globaltable, localtable);
+            }
+            break;
+
+        case ST_ROOT:
+            ec = optimize_root(statement->next, globaltable, localtable);
+            break;
+        case ST_END:
+            break;
+    }
+
+    return ec;
+}
+
+/// Main optimization entry point
+ErrorCode optimize_ast(AstStatement *root, Symtable *globaltable) {
+    if (root == NULL) {
+        return INTERNAL_ERROR;
+    }
+
+    if (globaltable == NULL) {
+        return INTERNAL_ERROR;
+    }
+
+    ErrorCode ec = optimize_statement(root, globaltable, NULL);
+    return ec;
+}
+

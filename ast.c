@@ -19,6 +19,7 @@ AstExpression *ast_expr_create(AstExprType type, size_t child_count) {
     expr->child_count = child_count;
     expr->assumed_type = DT_UNKNOWN;
     expr->val_known = false;
+    expr->string_val = NULL; // Initialize union to NULL
     return expr;
 }
 
@@ -649,8 +650,10 @@ void ast_expr_free(AstExpression *expr) {
     free(expr->params);
 
     // Free string value if its a string expression
+    // Check both original type and optimized type (val_known with DT_STRING)
     if (expr->type == EX_STRING || expr->type == EX_ID || expr->type == EX_GLOBAL_ID ||
-        expr->type == EX_FUN || expr->type == EX_BUILTIN_FUN || expr->type == EX_GETTER) {
+        expr->type == EX_FUN || expr->type == EX_BUILTIN_FUN || expr->type == EX_GETTER ||
+        (expr->val_known && expr->assumed_type == DT_STRING)) {
         str_free(&expr->string_val);
     }
 
