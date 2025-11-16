@@ -152,10 +152,7 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
             break;
 
         case EX_DIV:
-            if (expr->child_count == 2 && 
-                expr->params[0]->assumed_type == DT_NUM && 
-                expr->params[1]->assumed_type == DT_NUM &&
-                expr->params[1]->double_val != 0.0) {
+            if (expr->child_count == 2 && expr->params[0]->assumed_type == DT_NUM && expr->params[1]->assumed_type == DT_NUM && expr->params[1]->double_val != 0.0) {
                 expr->val_known = true;
                 expr->assumed_type = DT_NUM;
                 expr->double_val = expr->params[0]->double_val / expr->params[1]->double_val;
@@ -181,9 +178,7 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
 
         // Comparison operations
         case EX_GREATER:
-            if (expr->child_count == 2 && 
-                expr->params[0]->assumed_type == DT_NUM && 
-                expr->params[1]->assumed_type == DT_NUM) {
+            if (expr->child_count == 2 && expr->params[0]->assumed_type == DT_NUM && expr->params[1]->assumed_type == DT_NUM) {
                 expr->val_known = true;
                 expr->assumed_type = DT_BOOL;
                 expr->bool_val = expr->params[0]->double_val > expr->params[1]->double_val;
@@ -191,9 +186,7 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
             break;
 
         case EX_LESS:
-            if (expr->child_count == 2 && 
-                expr->params[0]->assumed_type == DT_NUM && 
-                expr->params[1]->assumed_type == DT_NUM) {
+            if (expr->child_count == 2 && expr->params[0]->assumed_type == DT_NUM && expr->params[1]->assumed_type == DT_NUM) {
                 expr->val_known = true;
                 expr->assumed_type = DT_BOOL;
                 expr->bool_val = expr->params[0]->double_val < expr->params[1]->double_val;
@@ -201,9 +194,7 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
             break;
 
         case EX_GREATER_EQ:
-            if (expr->child_count == 2 && 
-                expr->params[0]->assumed_type == DT_NUM && 
-                expr->params[1]->assumed_type == DT_NUM) {
+            if (expr->child_count == 2 && expr->params[0]->assumed_type == DT_NUM && expr->params[1]->assumed_type == DT_NUM) {
                 expr->val_known = true;
                 expr->assumed_type = DT_BOOL;
                 expr->bool_val = expr->params[0]->double_val >= expr->params[1]->double_val;
@@ -211,9 +202,7 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
             break;
 
         case EX_LESS_EQ:
-            if (expr->child_count == 2 && 
-                expr->params[0]->assumed_type == DT_NUM && 
-                expr->params[1]->assumed_type == DT_NUM) {
+            if (expr->child_count == 2 && expr->params[0]->assumed_type == DT_NUM && expr->params[1]->assumed_type == DT_NUM) {
                 expr->val_known = true;
                 expr->assumed_type = DT_BOOL;
                 expr->bool_val = expr->params[0]->double_val <= expr->params[1]->double_val;
@@ -221,8 +210,7 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
             break;
 
         case EX_EQ:
-            if (expr->child_count == 2 && 
-                expr->params[0]->assumed_type == expr->params[1]->assumed_type) {
+            if (expr->child_count == 2 && expr->params[0]->assumed_type == expr->params[1]->assumed_type) {
                 expr->val_known = true;
                 expr->assumed_type = DT_BOOL;
                 
@@ -239,8 +227,7 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
             break;
 
         case EX_NOT_EQ:
-            if (expr->child_count == 2 && 
-                expr->params[0]->assumed_type == expr->params[1]->assumed_type) {
+            if (expr->child_count == 2 && expr->params[0]->assumed_type == expr->params[1]->assumed_type) {
                 expr->val_known = true;
                 expr->assumed_type = DT_BOOL;
                 
@@ -258,8 +245,7 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
 
         // Logical operations
         case EX_AND:
-            if (expr->child_count == 2 && 
-                expr->params[0]->assumed_type == DT_BOOL && expr->params[1]->assumed_type == DT_BOOL) {
+            if (expr->child_count == 2 && expr->params[0]->assumed_type == DT_BOOL && expr->params[1]->assumed_type == DT_BOOL) {
                 expr->val_known = true;
                 expr->assumed_type = DT_BOOL;
                 expr->bool_val = expr->params[0]->bool_val && expr->params[1]->bool_val;
@@ -267,8 +253,7 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
             break;
 
         case EX_OR:
-            if (expr->child_count == 2 && 
-                expr->params[0]->assumed_type == DT_BOOL && expr->params[1]->assumed_type == DT_BOOL) {
+            if (expr->child_count == 2 && expr->params[0]->assumed_type == DT_BOOL && expr->params[1]->assumed_type == DT_BOOL) {
                 expr->val_known = true;
                 expr->assumed_type = DT_BOOL;
                 expr->bool_val = expr->params[0]->bool_val || expr->params[1]->bool_val;
@@ -326,7 +311,6 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
                         expr->val_known = true;
                         expr->assumed_type = item->data_type;
                         
-                        // Free the variable name string since we're converting to constant
                         str_free(&expr->string_val);
                         
                         switch (item->data_type) {
@@ -364,7 +348,6 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
                         expr->val_known = true;
                         expr->assumed_type = item->data_type;
                         
-                        // Free the variable name string since we're converting to constant
                         str_free(&expr->string_val);
                         
                         switch (item->data_type) {
@@ -592,6 +575,7 @@ ErrorCode optimize_statement(AstStatement *statement, Symtable *globaltable, Sym
                 }
             }
             break;
+            
         case ST_BLOCK:
             if (statement->block != NULL) {
                 ec = optimize_block(statement->block, globaltable, localtable);
