@@ -637,6 +637,12 @@ ErrorCode check_function(Lexer *lexer, Symtable *globaltable, Symtable *localtab
         RETURN_CODE(SYNTACTIC_ERROR, token);
     }
 
+    CHECK_TOKEN(lexer, token);
+    if (token.type != TOK_EOL) {
+        param_list_free(params);
+        RETURN_CODE(SYNTACTIC_ERROR, token);
+    }
+
     // Add function to AST (transfers ownership of param names to AST)
     if (!ast_add_function(statement, identifier.string_val->val, params->count, localtable, params->names)) {
         param_list_free(params);
@@ -1204,6 +1210,12 @@ ErrorCode check_while_statement(Lexer *lexer, Symtable *globaltable, Symtable *l
 
     CHECK_TOKEN(lexer, token);
     if (token.type != TOK_LEFT_BRACE) {
+        ast_expr_free(expr);
+        RETURN_CODE(SYNTACTIC_ERROR, token);
+    }
+
+    CHECK_TOKEN(lexer, token);
+    if (token.type != TOK_EOL) {
         ast_expr_free(expr);
         RETURN_CODE(SYNTACTIC_ERROR, token);
     }

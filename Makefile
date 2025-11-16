@@ -7,7 +7,7 @@
 #
 CC = gcc
 CFLAGS += -Wall -Wextra -pedantic
-LDFLAGS += -lm
+LDLIBS += -lm
 # CFLAGS += -Werror
 # CFLAGS += -O3
 
