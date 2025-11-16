@@ -1,0 +1,34 @@
+import "ifj25" for Ifj
+class Program {
+    static set_globals() {
+        __i = 5
+        __s = "ahoj"
+        __len1 = "žžýřčš"
+    }
+    static main() {
+        var v_i = 5
+        var v_s = "ahoj"
+        set_globals()
+
+        Ifj.write("KNOWN\n")
+        Ifj.write(Ifj.str(Ifj.length("ahoj")) + "\n")
+        Ifj.write(Ifj.str(Ifj.length("ahoj" * 5)) + "\n")
+        Ifj.write("LOCALS\n")
+        Ifj.write(Ifj.str(Ifj.length(v_s)) + "\n")
+        Ifj.write(Ifj.str(Ifj.length(v_s * 5)) + "\n")
+        Ifj.write(Ifj.str(Ifj.length(v_s * v_i)) + "\n")
+        Ifj.write(Ifj.str(Ifj.length(v_s + "ahoj")) + "\n")
+        Ifj.write(Ifj.str(Ifj.length(v_s + v_s)) + "\n")
+        Ifj.write("GLOBALS\n")
+        Ifj.write(Ifj.str(Ifj.length(__s)) + "\n")
+        Ifj.write(Ifj.str(Ifj.length(__s * 5)) + "\n")
+        Ifj.write(Ifj.str(Ifj.length(__s * v_i)) + "\n")
+        Ifj.write(Ifj.str(Ifj.length(__s * __i)) + "\n")
+        Ifj.write(Ifj.str(Ifj.length(__s + "ahoj")) + "\n")
+        Ifj.write(Ifj.str(Ifj.length(__s + v_s)) + "\n")
+        Ifj.write(Ifj.str(Ifj.length(__s + __s)) + "\n")
+        Ifj.write("SPECIAL\n")
+        Ifj.write(Ifj.str(Ifj.length("žžýřčš")) + "\n")
+        Ifj.write(Ifj.str(Ifj.length(__len1)) + "\n")
+    }
+}

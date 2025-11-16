@@ -1,0 +1,13 @@
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        __false = false
+        __true = true
+        Ifj.write(true ? "ahoj\n" : "CHYBA\n")
+        Ifj.write(5 > 1 ? "ahoj\n" : "CHYBA\n")
+        Ifj.write(false ? "CHYBA\n" : "ahoj\n")
+        Ifj.write(5 < 1 ? "CHYBA\n" : "ahoj\n")
+        Ifj.write(__false ? "CHYBA\n" : "ahoj\n")
+        Ifj.write(__true ? "ahoj\n" : "CHYBA\n")
+    }
+}

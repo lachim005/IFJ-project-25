@@ -1,0 +1,40 @@
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        globs
+        if (true) {
+            Ifj.write("ahoj\n")
+        } else {
+            Ifj.write("CHYBA\n")
+        }
+        if (5 > 1) {
+            Ifj.write("ahoj\n")
+        } else {
+            Ifj.write("CHYBA\n")
+        }
+        if (false) {
+            Ifj.write("CHYBA\n")
+        } else {
+            Ifj.write("ahoj\n")
+        }
+        if (5 < 1) {
+            Ifj.write("CHYBA\n")
+        } else {
+            Ifj.write("ahoj\n")
+        }
+        if (__true) {
+            Ifj.write("ahoj\n")
+        } else {
+            Ifj.write("CHYBA\n")
+        }
+        if (__false) {
+            Ifj.write("CHYBA\n")
+        } else {
+            Ifj.write("ahoj\n")
+        }
+    }
+    static globs {
+        __false = false
+        __true = true
+    }
+}

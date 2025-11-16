@@ -1,0 +1,47 @@
+import "ifj25" for Ifj
+class Program {
+    static set_globals() {
+        __i = 5
+        __fi = 5.0
+        __f = 5.5
+        __false = false
+        __true = true
+        __s = "ahoj"
+        __n = null
+    }
+    static main() {
+        var v_i = 5
+        var v_fi = 5.0
+        var v_f = 5.5
+        var v_false = false
+        var v_true = true
+        var v_s = "ahoj"
+        var v_n = null
+        set_globals()
+
+        Ifj.write("KNOWN\n")
+        Ifj.write(Ifj.str(null) + "\n")
+        Ifj.write(Ifj.str(5) + "\n")
+        Ifj.write(Ifj.str(5.0) + "\n")
+        Ifj.write(Ifj.str(5.5) + "\n")
+        Ifj.write(Ifj.str("ahoj") + "\n")
+        Ifj.write(Ifj.str(false) + "\n")
+        Ifj.write(Ifj.str(true) + "\n")
+        Ifj.write("LOCALS\n")
+        Ifj.write(Ifj.str(v_n) + "\n")
+        Ifj.write(Ifj.str(v_i) + "\n")
+        Ifj.write(Ifj.str(v_fi) + "\n")
+        Ifj.write(Ifj.str(v_f) + "\n")
+        Ifj.write(Ifj.str(v_s) + "\n")
+        Ifj.write(Ifj.str(v_false) + "\n")
+        Ifj.write(Ifj.str(v_true) + "\n")
+        Ifj.write("GLOBALS\n")
+        Ifj.write(Ifj.str(__n) + "\n")
+        Ifj.write(Ifj.str(__i) + "\n")
+        Ifj.write(Ifj.str(__fi) + "\n")
+        Ifj.write(Ifj.str(__f) + "\n")
+        Ifj.write(Ifj.str(__s) + "\n")
+        Ifj.write(Ifj.str(__false) + "\n")
+        Ifj.write(Ifj.str(__true) + "\n")
+    }
+}

@@ -1,0 +1,36 @@
+import "ifj25" for Ifj
+class Program {
+    static set_globals() {
+        __i = 5
+        __fi = 5.0
+        __f = 5.5
+    }
+    static main() {
+        var v_i = 5
+        var v_fi = 5.0
+        var v_f = 5.5
+        set_globals()
+
+        Ifj.write("KNOWN\n")
+        Ifj.write(Ifj.str(Ifj.floor(5)) + "\n")
+        Ifj.write(Ifj.str(Ifj.floor(5.0)) + "\n")
+        Ifj.write(Ifj.str(Ifj.floor(5.5)) + "\n")
+        Ifj.write("LOCALS\n")
+        Ifj.write(Ifj.str(Ifj.floor(v_i)) + "\n")
+        Ifj.write(Ifj.str(Ifj.floor(v_fi)) + "\n")
+        Ifj.write(Ifj.str(Ifj.floor(v_f)) + "\n")
+        Ifj.write(Ifj.str(Ifj.floor(v_i + v_f)) + "\n")
+        Ifj.write(Ifj.str(Ifj.floor(v_fi + v_f)) + "\n")
+        Ifj.write(Ifj.str(Ifj.floor(v_f + v_i)) + "\n")
+        Ifj.write("GLOBALS\n")
+        Ifj.write(Ifj.str(Ifj.floor(__i)) + "\n")
+        Ifj.write(Ifj.str(Ifj.floor(__fi)) + "\n")
+        Ifj.write(Ifj.str(Ifj.floor(__f)) + "\n")
+        Ifj.write(Ifj.str(Ifj.floor(__i + v_f)) + "\n")
+        Ifj.write(Ifj.str(Ifj.floor(__fi + v_f)) + "\n")
+        Ifj.write(Ifj.str(Ifj.floor(__f + v_i)) + "\n")
+        Ifj.write(Ifj.str(Ifj.floor(__i + __f)) + "\n")
+        Ifj.write(Ifj.str(Ifj.floor(__fi + __f)) + "\n")
+        Ifj.write(Ifj.str(Ifj.floor(__f + __i)) + "\n")
+    }
+}

@@ -1,0 +1,60 @@
+import "ifj25" for Ifj
+class Program {
+    static fill_globals() {
+        __i = 5
+        __f = 5.0
+    }
+
+    static printline(a) {
+        Ifj.write(a)
+        Ifj.write("\n")
+    }
+
+    static main() {
+        var i = 5
+        var f = 5.0
+        fill_globals()
+
+        Ifj.write("BOTH KNOWN\n")
+        printline(5 - 5)
+        printline(5 - 5.0)
+        printline(5.0 - 5)
+        printline(5.0 - 5.0)
+        Ifj.write("ONE LOCAL\n")
+        printline(5 - i)
+        printline(i - 5)
+        printline(5 - f)
+        printline(i - 5.0)
+        printline(f - 5)
+        printline(5.0 - i)
+        printline(f - 5.0)
+        printline(5.0 - f)
+        Ifj.write("BOTH LOCAL\n")
+        printline(i - i)
+        printline(i - f)
+        printline(f - i)
+        printline(f - f)
+        Ifj.write("ONE GLOBAL\n")
+        printline(5 - __i)
+        printline(__i - 5)
+        printline(5 - __f)
+        printline(__i - 5.0)
+        printline(__f - 5)
+        printline(5.0 - __i)
+        printline(__f - 5.0)
+        printline(f - __f)
+        printline(i - __i)
+        printline(__i - i)
+        printline(i - __f)
+        printline(__i - f)
+        printline(__f - i)
+        printline(f - __i)
+        printline(__f - f)
+        printline(f - __f)
+        Ifj.write("BOTH GLOBAL\n")
+        printline(__i - __i)
+        printline(__i - __f)
+        printline(__f - __i)
+        printline(__f - __f)
+    }
+}

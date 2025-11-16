@@ -1,0 +1,26 @@
+import "ifj25" for Ifj
+class Program {
+    static set_globals() {
+        __s = "ahoj"
+        __zero = 0
+        __four = 4
+    }
+    static main() {
+        var v_i = 5
+        var v_fi = 5.0
+        var v_f = 5.5
+        set_globals()
+
+        Ifj.write("Known: " + Ifj.str(Ifj.substring("123ahoj123", 3, 7)) + "\n")
+        Ifj.write("Unknown: " + Ifj.str(Ifj.substring(__s, __zero, __four)) + "\n")
+        Ifj.write("NULLS\n")
+        Ifj.write(Ifj.str(Ifj.substring("ahoj", -1, 4)) + "\n")
+        Ifj.write(Ifj.str(Ifj.substring("ahoj", 0, 5)) + "\n")
+        Ifj.write(Ifj.str(Ifj.substring("ahoj", 2, 5)) + "\n")
+        Ifj.write(Ifj.str(Ifj.substring("ahoj", 4, -1)) + "\n")
+        Ifj.write(Ifj.str(Ifj.substring("ahoj", 4, 4)) + "\n")
+        Ifj.write(Ifj.str(Ifj.substring(__s, __four, __four)) + "\n")
+        Ifj.write(Ifj.str(Ifj.substring(__s, __four, __zero)) + "\n")
+        Ifj.write(Ifj.str(Ifj.substring(__s, __zero, __zero)) + "\n")
+    }
+}

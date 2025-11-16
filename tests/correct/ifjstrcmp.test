@@ -1,0 +1,28 @@
+import "ifj25" for Ifj
+class Program {
+    static set_globals() {
+        __s = "ahoj"
+    }
+    static main() {
+        set_globals()
+
+        Ifj.write("ZEROS\n")
+        Ifj.write(Ifj.str(Ifj.strcmp("ahoj", "ahoj")) + "\n")
+        Ifj.write(Ifj.str(Ifj.strcmp("", "")) + "\n")
+        Ifj.write(Ifj.str(Ifj.strcmp(__s, __s)) + "\n")
+        Ifj.write("ONES\n")
+        Ifj.write(Ifj.str(Ifj.strcmp("ahoja", "ahoj")) + "\n")
+        Ifj.write(Ifj.str(Ifj.strcmp("bha", "ahoj")) + "\n")
+        Ifj.write(Ifj.str(Ifj.strcmp("aia", "ahoj")) + "\n")
+        Ifj.write(Ifj.str(Ifj.strcmp("b", "")) + "\n")
+        Ifj.write(Ifj.str(Ifj.strcmp("b" + __s, __s)) + "\n")
+        Ifj.write(Ifj.str(Ifj.strcmp(__s + "a", __s)) + "\n")
+        Ifj.write("MINUSONES\n")
+        Ifj.write(Ifj.str(Ifj.strcmp("ahoj", "ahoja")) + "\n")
+        Ifj.write(Ifj.str(Ifj.strcmp("ahoj", "bh")) + "\n")
+        Ifj.write(Ifj.str(Ifj.strcmp("ahoj", "aia")) + "\n")
+        Ifj.write(Ifj.str(Ifj.strcmp("", "a")) + "\n")
+        Ifj.write(Ifj.str(Ifj.strcmp(__s, "b" + __s)) + "\n")
+        Ifj.write(Ifj.str(Ifj.strcmp(__s, __s + "a")) + "\n")
+    }
+}

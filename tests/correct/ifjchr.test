@@ -1,0 +1,16 @@
+import "ifj25" for Ifj
+class Program {
+    static set_globals() {
+        __i = 5
+        __oneoneone = 111
+    }
+    static main() {
+        var f = 5.5
+        set_globals()
+
+        Ifj.write(Ifj.chr(65) + "\n")
+        Ifj.write(Ifj.chr(99 + Ifj.floor(f)) + "\n")
+        Ifj.write(Ifj.chr(__oneoneone) + "\n")
+        Ifj.write(Ifj.chr(101 + __i) + "\n")
+    }
+}

@@ -1,0 +1,22 @@
+import "ifj25" for Ifj
+class Program {
+    static set_globals() {
+        __i = 5
+        __fi = 5.0
+        __f = 5.5
+        __s = "ahoj"
+        __one = 1
+        __zero = 0.0
+    }
+    static main() {
+        var v_i = 5
+        var v_fi = 5.0
+        var v_f = 5.5
+        set_globals()
+
+        Ifj.write(Ifj.str(Ifj.ord("Ahoj", Ifj.floor(v_f - v_fi))) + " = 65\n")
+        Ifj.write(Ifj.str(Ifj.ord(__s, __one)) + " = 104\n")
+        Ifj.write(Ifj.str(Ifj.ord("o", __zero)) + " = 111\n")
+        Ifj.write(Ifj.str(Ifj.ord("Ahoj", 3)) + " = 106\n")
+    }
+}

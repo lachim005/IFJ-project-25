@@ -5,6 +5,7 @@ CORRECT_DIR=correct
 RED='\033[0;31m'
 YELLOW='\033[0;33m'
 GREEN='\033[0;32m'
+GRAY='\033[0;90m'
 RESET='\033[0m'
 
 EXE=../../main
@@ -26,8 +27,9 @@ run_correct() {
         ((sum++))
         # Compile
         $EXE < $i 2> /dev/null 1> $i.ic25
-        if [ $? -ne 0 ]; then
-            echo -e "${RED}[ COMPILATION ERROR ]" $RESET $i
+        code=$?
+        if [ $code -ne 0 ]; then
+            echo -e "${RED}[ COMPILATION ERROR ]" $RESET $i "${GRAY}returned $code${RESET}"
             ((comp++))
             ((err++))
             continue
@@ -43,9 +45,10 @@ run_correct() {
         fi
 
         # Interpret
-        $INT $i.ic25 > $i.output
-        if [ $? -ne 0 ]; then
-            echo -e "${RED}[ INTERPRETER ERROR ]" $RESET $i
+        timeout 2 $INT $i.ic25 2>/dev/null > $i.output
+        code=$?
+        if [ $code -ne 0 ]; then
+            echo -e "${RED}[ INTERPRETER ERROR ]" $RESET $i "${GRAY}returned $code${RESET}"
             ((int++))
             ((err++))
             continue
@@ -72,14 +75,18 @@ run_correct() {
     if [ $mem -ne 0 ]; then
         echo -e "      Memory error: ${YELLOW}${mem}${RESET}/${sum}"
     fi
-    if [ $err -ne 0 ]; then
-        echo -e " Compilation error: ${RED}${err}${RESET}/${sum}"
+    if [ $comp -ne 0 ]; then
+        echo -e " Compilation error: ${RED}${comp}${RESET}/${sum}"
     fi
     if [ $int -ne 0 ]; then
         echo -e " Interpreter error: ${RED}${int}${RESET}/${sum}"
     fi
     if [ $output_err -ne 0 ]; then
         echo -e "      Output error: ${RED}${output_err}${RESET}/${sum}"
+    fi
+    if [ $err -ne 0 ]; then
+        echo - - - - - - - - - - - - - - - - - - -
+        echo -e "      Total errors: ${RED}${err}${RESET}/${sum}"
     fi
     echo ======================================
 

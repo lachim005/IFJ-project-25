@@ -1,0 +1,33 @@
+import "ifj25" for Ifj
+class Program {
+    static globs() {
+        __false = false
+        __a = 5
+    }
+    static main() {
+        var fls = false
+        var a = 5
+        globs()
+        while (false) {
+            Ifj.write("CHYBA\n")
+        }
+        while (fls) {
+            Ifj.write("CHYBA\n")
+        }
+        while (__false) {
+            Ifj.write("CHYBA\n")
+        }
+        while (null) {
+            Ifj.write("CHYBA\n")
+        }
+        while (__a > 0) {
+            Ifj.write("ahoj\n")
+            __a = __a - 1
+        }
+        Ifj.write("---\n")
+        while (a > 0) {
+            Ifj.write("ahoj\n")
+            a = a - 1
+        }
+    }
+}
