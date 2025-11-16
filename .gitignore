@@ -4,3 +4,4 @@ ic25int-linux-x86_64
 *.test.output
 *.ic25
 *.wren
+*.zip
