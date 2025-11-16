@@ -10,6 +10,7 @@
 #include "ast.h"
 #include "symtable.h"
 #include "string.h"
+#include <math.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -400,6 +401,11 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
             break;
         default:
             break;
+    }
+
+    if (expr->val_known && expr->assumed_type == DT_NUM) {
+        // We check if the known value is an integer
+        expr->surely_int = ceil(expr->double_val) == expr->double_val;
     }
 
     // Print optimization result if expression was optimized

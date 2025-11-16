@@ -19,6 +19,7 @@ AstExpression *ast_expr_create(AstExprType type, size_t child_count) {
     expr->child_count = child_count;
     expr->assumed_type = DT_UNKNOWN;
     expr->val_known = false;
+    expr->surely_int = false;
     expr->string_val = NULL; // Initialize union to NULL
     return expr;
 }
