@@ -1,3 +1,6 @@
+main
+ic25int-linux-x86_64
 *.o
 *.test.output
-*.test.ic25
+*.ic25
+*.wren
