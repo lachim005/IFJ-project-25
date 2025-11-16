@@ -1149,6 +1149,31 @@ ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
 
 ErrorCode generate_var_assignment(FILE *output, char *scope, AstVariable *st) {
     if (st->expression == NULL) return OK;
+    if (st->expression->val_known) {
+        AstExpression *expr = st->expression;
+        String *str;
+        // We can assign directly without pushing and poping
+        fprintf(output, "MOVE %s@%s ", scope, st->name->val);
+        switch (expr->assumed_type) {
+        case DT_NUM:
+            fprintf(output, "float@%a", expr->double_val);
+            break;
+        case DT_STRING:
+            convert_string(expr->string_val->val, &str);
+            fprintf(output, "string@%s", str->val);
+            str_free(&str);
+            break;
+        case DT_BOOL:
+            fprintf(output, "bool@%s", expr->bool_val ? "true" : "false");
+            break;
+        default:
+            fprintf(output, "nil@nil");
+            break;
+        }
+        fprintf(output, "\n");
+
+        return OK;
+    }
     CG_ASSERT(generate_expression_evaluation(output, st->expression) == OK);
     fprintf(output, "POPS %s@%s\n", scope, st->name->val);
     return OK;
