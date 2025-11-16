@@ -1719,7 +1719,7 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
 
     case EX_BUILTIN_FUN: {
         SymtableItem *builtin_item = NULL;
-        if (!symtable_contains_builtin_function(globaltable, expr->string_val->val, expr->child_count, &builtin_item)) {
+        if (!symtable_contains_builtin_function(globaltable, expr->string_val->val, &builtin_item)) {
             return SEM_UNDEFINED;
         }
 

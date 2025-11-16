@@ -127,7 +127,7 @@ bool symtable_contains_global_var(Symtable *st, char *var_name, SymtableItem **o
 SymtableItem *add_builtin_function(Symtable *symtab, const char *name, int param_count, DataType return_type, DataType *param_types);
 
 /// Checks if a builtin function with the given name and parameter count exists in the symtable
-bool symtable_contains_builtin_function(Symtable *st, const char *name, int param_count, SymtableItem **out_item);
+bool symtable_contains_builtin_function(Symtable *st, const char *name, SymtableItem **out_item);
 
 /// Increments the undefined items counter
 void symtable_increment_undefined_items_counter(Symtable *st);

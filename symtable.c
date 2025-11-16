@@ -498,16 +498,6 @@ SymtableItem *add_builtin_function(Symtable *symtab, const char *name, int param
     if (s == NULL) return NULL;
 
     str_append_string(s, name);
-    str_append_char(s, '$');
-
-    // Append param count
-    char buf[64];
-    int written = snprintf(buf, 64, "%d", param_count);
-    if (written >= 64) {
-        str_free(&s);
-        return NULL;
-    }
-    str_append_string(s, buf);
 
     SymtableItem *result = symtable_insert(symtab, s->val);
     str_free(&s);
@@ -538,23 +528,13 @@ SymtableItem *add_builtin_function(Symtable *symtab, const char *name, int param
     return result;
 }
 
-bool symtable_contains_builtin_function(Symtable *st, const char *name, int param_count, SymtableItem **out_item) {
+bool symtable_contains_builtin_function(Symtable *st, const char *name, SymtableItem **out_item) {
     // Constructs symtable name
     String *s = str_init();
     if (s == NULL) return false;
 
     str_append_char(s, '#');
     str_append_string(s, name);
-    str_append_char(s, '$');
-
-    // Append param count
-    char buf[64];
-    int written = snprintf(buf, 64, "%d", param_count);
-    if (written >= 64) {
-        str_free(&s);
-        return false;
-    }
-    str_append_string(s, buf);
 
     bool result = symtable_contains(st, s->val);
     if (out_item) {
