@@ -5,3 +5,4 @@ ic25int-linux-x86_64
 *.ic25
 *.wren
 *.zip
+.vscode/

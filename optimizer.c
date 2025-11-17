@@ -12,7 +12,6 @@
 #include "string.h"
 #include <math.h>
 #include <string.h>
-#include <stdio.h>
 
 /// Updates symtable item with known value from expression
 void update_symtable_value(SymtableItem *item, AstExpression *expr) {
@@ -91,9 +90,6 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
     if (!all_known) {
         return OK;
     }
-
-    // Store original state for debug output
-    bool was_known = expr->val_known;
 
     // Evaluate based on expression type
     switch (expr->type) {
@@ -389,28 +385,6 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
     if (expr->val_known && expr->assumed_type == DT_NUM) {
         // We check if the known value is an integer
         expr->surely_int = ceil(expr->double_val) == expr->double_val;
-    }
-
-    // Print optimization result if expression was optimized
-    if (!was_known && expr->val_known) {
-        fprintf(stderr, "[OPTIMIZER] Expression optimized to: ");
-        switch (expr->assumed_type) {
-            case DT_NUM:
-                fprintf(stderr, "%g (NUM)\n", expr->double_val);
-                break;
-            case DT_BOOL:
-                fprintf(stderr, "%s (BOOL)\n", expr->bool_val ? "true" : "false");
-                break;
-            case DT_STRING:
-                fprintf(stderr, "\"%s\" (STRING)\n", expr->string_val ? expr->string_val->val : "(null)");
-                break;
-            case DT_NULL:
-                fprintf(stderr, "null (NULL)\n");
-                break;
-            default:
-                fprintf(stderr, "(unknown type)\n");
-                break;
-        }
     }
 
     return OK;
