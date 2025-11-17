@@ -141,6 +141,4 @@ void symtable_decrement_undefined_items_counter(Symtable *st);
 /// Returns the number of undefined items in the symtable
 size_t symtable_get_undefined_items_count(Symtable *st);
 
-/// TODO: Removing? Probably not needed
-
 #endif // !_SYMTABLE_H_
