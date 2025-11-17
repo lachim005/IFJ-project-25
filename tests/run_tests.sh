@@ -175,6 +175,7 @@ run_with_comp_error 2
 run_with_comp_error 3
 run_with_comp_error 4
 run_with_comp_error 5
+run_with_int_error 25
 run_with_int_error 26
 
 # Print report

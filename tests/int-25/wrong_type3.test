@@ -1,0 +1,10 @@
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        foo(false)
+        var x = Ifj.ord(__b, 5)
+    }
+    static foo(a) {
+        __b = a
+    }
+}

@@ -1,0 +1,11 @@
+import "ifj25" for Ifj
+class Program {
+    static globs {
+        __i = 5
+        return 5
+    }
+    static main() {
+        var a = globs
+        a = Ifj.substring(__i, 1, 1)
+    }
+}

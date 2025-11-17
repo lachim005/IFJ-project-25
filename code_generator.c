@@ -33,35 +33,35 @@ bool has_fun_call(AstExpression *ex) {
 
 /// Generates code which checks if the value in a given var is the desired type
 /// and exits with 26 if not
-void generate_var_type_check(FILE *output, char *var, char *type) {
+void generate_var_type_check(FILE *output, char *var, char *type, unsigned return_code) {
     unsigned expr_id = internal_names_cntr++;
     fprintf(output, "PUSHS %s\n"
                     "TYPES\n"
                     "PUSHS string@%s\n"
                     "JUMPIFEQS $type_check_valid%u\n"
-                    "EXIT int@26\n"
+                    "EXIT int@%u\n"
                     "LABEL $type_check_valid%u\n" ,
-                    var, type, expr_id, expr_id);
+                    var, type, expr_id, return_code, expr_id);
 }
 /// Generates code which checks if the value in a given var (assumes float) is an int and converts
 /// to it and exits with 26 if not
-void generate_var_int_check(FILE *output, char *var) {
+void generate_var_int_check(FILE *output, char *var, unsigned return_code) {
     unsigned expr_id = internal_names_cntr++;
     fprintf(output, "PUSHS %s\n"
                     "ISINTS\n"
                     "PUSHS bool@true\n"
                     "JUMPIFEQS $int_check_valid%u\n"
-                    "EXIT int@26\n"
+                    "EXIT int@%u\n"
                     "LABEL $int_check_valid%u\n",
-                    var, expr_id, expr_id);
+                    var, expr_id, return_code, expr_id);
 }
 /// Generates code which checks if the value on the top of the stack is the desired type
 /// and exits with 26 if not
 /// Uses inter5
-void generate_stack_type_check(FILE *output, char *type) {
-    fprintf(output, "POPS GF@&&inter5\n");
-    generate_var_type_check(output, "GF@&&inter5", type);
-    fprintf(output, "PUSHS GF@&&inter5\n");
+void generate_stack_type_check(FILE *output, char *type, unsigned return_code) {
+    fprintf(output, "POPS GF@&&inter7\n");
+    generate_var_type_check(output, "GF@&&inter7", type, return_code);
+    fprintf(output, "PUSHS GF@&&inter7\n");
 }
 
 typedef enum required_branches {
@@ -362,7 +362,7 @@ ErrorCode generate_builtin_str(FILE *output, AstExpression *ex) {
                         "JUMPIFEQ $&&ifj_str_float%u GF@&&inter2 string@float\n"
                         "JUMPIFEQ $&&ifj_str_bool%u GF@&&inter2 string@bool\n"
                         "JUMPIFEQ $&&ifj_str_null%u GF@&&inter2 string@nil\n"
-                        "EXIT int@26\n", // Shouldn't happen
+                        "EXIT int@25\n", // Shouldn't happen
                         expr_id, expr_id, expr_id, expr_id);
     }
     // Generate string branch
@@ -464,18 +464,11 @@ ErrorCode generate_builtin_floor(FILE *output, AstExpression *ex) {
                         "INT2FLOATS\n");
         return OK;
     }
-    unsigned expr_id = internal_names_cntr++;
-    fprintf(output, "POPS GF@&&inter1\n"
-                    "PUSHS GF@&&inter1\n"
-                    "TYPES\n"
-                    "PUSHS string@float\n"
-                    "JUMPIFEQS $&&floor_float%u\n"
-                    "EXIT int@26\n"
-                    "LABEL $&&floor_float%u\n"
-                    "PUSHS GF@&&inter1\n"
+    fprintf(output, "POPS GF@&&inter1\n");
+    generate_var_type_check(output, "GF@&&inter1", "float", 25);
+    fprintf(output, "PUSHS GF@&&inter1\n"
                     "FLOAT2INTS\n"
-                    "INT2FLOATS\n",
-                    expr_id, expr_id);
+                    "INT2FLOATS\n");
     return OK;
 }
 
@@ -491,7 +484,7 @@ ErrorCode generate_builtin_length(FILE *output, AstExpression *ex) {
 
     fprintf(output, "POPS GF@&&inter1\n");
     if (param->assumed_type != DT_STRING) {
-        generate_var_type_check(output, "GF@&&inter1", "string");
+        generate_var_type_check(output, "GF@&&inter1", "string", 25);
     }
     fprintf(output, "STRLEN GF@&&inter2 GF@&&inter1\n"
                     "PUSHS GF@&&inter2\n"
@@ -508,32 +501,32 @@ ErrorCode generate_builtin_substring(FILE *output, AstExpression *ex) {
     CG_ASSERT(generate_expression_evaluation(output, str) == OK);
     fprintf(output, "POPS GF@&&inter1\n");
     if (str->assumed_type == DT_UNKNOWN) {
-        generate_var_type_check(output, "GF@&&inter1", "string");
+        generate_var_type_check(output, "GF@&&inter1", "string", 25);
     } else if (str->assumed_type != DT_STRING) {
-        fprintf(output, "EXIT int@26\n"); // Shouldn't happen
+        fprintf(output, "EXIT int@25\n"); // Shouldn't happen
     }
 
     CG_ASSERT(generate_expression_evaluation(output, start) == OK);
     fprintf(output, "POPS GF@&&inter2\n");
     if (start->assumed_type == DT_UNKNOWN) {
-        generate_var_type_check(output, "GF@&&inter2", "float");
+        generate_var_type_check(output, "GF@&&inter2", "float", 25);
     } else if (start->assumed_type != DT_NUM) {
-        fprintf(output, "EXIT int@26\n"); // Shouldn't happen
+        fprintf(output, "EXIT int@25\n"); // Shouldn't happen
     }
     if (!start->surely_int) {
-        generate_var_int_check(output, "GF@&&inter2");
+        generate_var_int_check(output, "GF@&&inter2", 26);
     }
     fprintf(output, "FLOAT2INT GF@&&inter2 GF@&&inter2\n");
 
     CG_ASSERT(generate_expression_evaluation(output, end) == OK);
     fprintf(output, "POPS GF@&&inter3\n");
     if (end->assumed_type == DT_UNKNOWN) {
-        generate_var_type_check(output, "GF@&&inter3", "float");
+        generate_var_type_check(output, "GF@&&inter3", "float", 25);
     } else if (end->assumed_type != DT_NUM) {
-        fprintf(output, "EXIT int@26\n"); // Shouldn't happen
+        fprintf(output, "EXIT int@25\n"); // Shouldn't happen
     }
     if (!start->surely_int) {
-        generate_var_int_check(output, "GF@&&inter3");
+        generate_var_int_check(output, "GF@&&inter3", 26);
     }
     fprintf(output, "FLOAT2INT GF@&&inter3 GF@&&inter3\n");
 
@@ -578,16 +571,16 @@ ErrorCode generate_builtin_strcmp(FILE *output, AstExpression *ex) {
     CG_ASSERT(generate_expression_evaluation(output, str1) == OK);
     fprintf(output, "POPS GF@&&inter1\n");
     if (str1->assumed_type == DT_UNKNOWN) {
-        generate_var_type_check(output, "GF@&&inter1", "string");
+        generate_var_type_check(output, "GF@&&inter1", "string", 25);
     } else if (str1->assumed_type != DT_STRING) {
-        fprintf(output, "EXIT int@26\n"); // Shouldn't happen
+        fprintf(output, "EXIT int@25\n"); // Shouldn't happen
     }
     CG_ASSERT(generate_expression_evaluation(output, str2) == OK);
     fprintf(output, "POPS GF@&&inter2\n");
     if (str1->assumed_type == DT_UNKNOWN) {
-        generate_var_type_check(output, "GF@&&inter2", "string");
+        generate_var_type_check(output, "GF@&&inter2", "string", 25);
     } else if (str1->assumed_type != DT_STRING) {
-        fprintf(output, "EXIT int@26\n"); // Shouldn't happen
+        fprintf(output, "EXIT int@25\n"); // Shouldn't happen
     }
 
     unsigned expr_id = internal_names_cntr++;
@@ -680,18 +673,18 @@ ErrorCode generate_builtin_function_call(FILE *output, AstExpression *ex) {
         fprintf(output, "POPS GF@&&inter2\n"
                         "POPS GF@&&inter1\n");
         if (ex->params[0]->assumed_type == DT_UNKNOWN) {
-            generate_var_type_check(output, "GF@&&inter1", "string");
+            generate_var_type_check(output, "GF@&&inter1", "string", 25);
         } else if (ex->params[0]->assumed_type != DT_STRING) {
             fprintf(output, "EXIT int@26\n"); // Shouldn't happen
             return OK;
         }
         if (ex->params[1]->assumed_type == DT_UNKNOWN) {
-            generate_var_type_check(output, "GF@&&inter2", "float");
+            generate_var_type_check(output, "GF@&&inter2", "float", 25);
         } else if (ex->params[1]->assumed_type != DT_NUM) {
             fprintf(output, "EXIT int@26\n"); // Shouldn't happen
             return OK;
         }
-        generate_var_int_check(output, "GF@&&inter2");
+        generate_var_int_check(output, "GF@&&inter2", 26);
         fprintf(output, "FLOAT2INT GF@&&inter2 GF@&&inter2\n"
                         "STRLEN GF@&&inter3 GF@&&inter1\n" // Check bounds
                         "PUSHS GF@&&inter3\n"
@@ -715,12 +708,12 @@ ErrorCode generate_builtin_function_call(FILE *output, AstExpression *ex) {
 
         fprintf(output, "POPS GF@&&inter1\n");
         if (ex->params[0]->assumed_type == DT_UNKNOWN) {
-            generate_var_type_check(output, "GF@&&inter1", "float");
+            generate_var_type_check(output, "GF@&&inter1", "float", 25);
         } else if (ex->params[0]->assumed_type != DT_NUM) {
             fprintf(output, "EXIT int@26\n"); // Shouldn't happen
             return OK;
         }
-        generate_var_int_check(output, "GF@&&inter1");
+        generate_var_int_check(output, "GF@&&inter1", 25);
         fprintf(output, "PUSHS GF@&&inter1\n"
                         "FLOAT2INTS\n"
                         "INT2CHARS\n");
@@ -1001,7 +994,7 @@ ErrorCode generate_binary_operator_with_floats(FILE *output, AstExpression *ex, 
     CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
     if (left_type == DT_UNKNOWN) {
         // Check if left is float or int and convert to float
-        generate_stack_type_check(output, "float");
+        generate_stack_type_check(output, "float", 26);
     }
     CG_ASSERT(left_type == DT_UNKNOWN || left_type == DT_NUM);
 
@@ -1009,7 +1002,7 @@ ErrorCode generate_binary_operator_with_floats(FILE *output, AstExpression *ex, 
     CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
     if (right_type == DT_UNKNOWN) {
         // Check if right is float or int and convert to float
-        generate_stack_type_check(output, "float");
+        generate_stack_type_check(output, "float", 26);
     }
     CG_ASSERT(right_type == DT_UNKNOWN ||right_type == DT_NUM);
 

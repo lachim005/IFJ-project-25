@@ -1,0 +1,10 @@
+import "ifj25" for Ifj
+class Program {
+    static globs() {
+        __i = null
+    }
+    static main() {
+        globs()
+        var x =Ifj.length(__i)
+    }
+}

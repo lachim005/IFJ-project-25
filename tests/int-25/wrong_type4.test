@@ -1,0 +1,10 @@
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        s = "ahoj"
+        var x = Ifj.chr(__s)
+    }
+    static s=(a) {
+        __s = a
+    }
+}
