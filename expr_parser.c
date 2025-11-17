@@ -217,7 +217,12 @@ ErrorCode shift(Stack *expr_stack, Stack *op_stack, Token token, Lexer *lexer) {
         if (lexer_get_token(lexer, &next_tok) != ERR_LEX_OK) return LEXICAL_ERROR;
         if (next_tok.type == TOK_LEFT_PAR) {
             // This, is a function!
-            return reduce_function_call(expr_stack, lexer, token.string_val);
+            ErrorCode ec = reduce_function_call(expr_stack, lexer, token.string_val);
+            if (ec != OK) {
+                token_free(&token);
+                token_free(&next_tok);
+            }
+            return ec;
         } else {
             lexer_unget_token(lexer, &next_tok);
         }
@@ -605,6 +610,7 @@ ErrorCode reduce_buildtin_call(Stack *expr_stack, Lexer *lexer) {
     if (lexer_get_token(lexer, &tok) != ERR_LEX_OK) return LEXICAL_ERROR;
     if (tok.type != TOK_LEFT_PAR) {
         token_free(&tok);
+        token_free(&id);
         return SYNTACTIC_ERROR;
     }
     token_free(&tok);
@@ -612,7 +618,7 @@ ErrorCode reduce_buildtin_call(Stack *expr_stack, Lexer *lexer) {
     // This puts the function call to the top of the stack
     ErrorCode res = reduce_function_call(expr_stack, lexer, id.string_val);
     if (res != OK) {
-        str_free(&id.string_val);
+        token_free(&id);
         return res;
     }
 
