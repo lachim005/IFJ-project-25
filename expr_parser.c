@@ -606,7 +606,10 @@ ErrorCode reduce_buildtin_call(Stack *expr_stack, Lexer *lexer) {
 
     // This puts the function call to the top of the stack
     ErrorCode res = reduce_function_call(expr_stack, lexer, id.string_val);
-    if (res != OK) return res;
+    if (res != OK) {
+        str_free(&id.string_val);
+        return res;
+    }
 
     // We have to change it's type to builtin
     stack_top(expr_stack, &tok);

@@ -31,8 +31,8 @@ run_correct() {
 
         if [ $CHECK_MEM -eq 1 ]; then
             # Check memory leaks
-            valgrind --leak-check=full --errors-for-leak-kinds=all --error-exitcode=1 $EXE < $i 1>/dev/null 2>/dev/null
-            if [ $? -ne 0 ]; then
+            valgrind --leak-check=full --errors-for-leak-kinds=all --error-exitcode=42 $EXE < $i 1>/dev/null 2>/dev/null
+            if [ $? -eq 42 ]; then
                 echo -e "${YELLOW}[ VALGRIND ERROR ]   " $RESET $i
                 ((mem++))
             fi
@@ -82,8 +82,8 @@ run_with_comp_error() {
 
         if [ $CHECK_MEM -eq 1 ]; then
             # Check memory leaks
-            valgrind --leak-check=full --errors-for-leak-kinds=all --error-exitcode=1 $EXE < $i 1>/dev/null 2>/dev/null
-            if [ $? -ne 0 ]; then
+            valgrind --leak-check=full --errors-for-leak-kinds=all --error-exitcode=42 $EXE < $i 1>/dev/null 2>/dev/null
+            if [ $? -eq 42 ]; then
                 echo -e "${YELLOW}[ VALGRIND ERROR ]   " $RESET $i
                 ((mem++))
             fi
