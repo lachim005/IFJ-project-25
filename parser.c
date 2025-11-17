@@ -839,6 +839,7 @@ ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localta
     if (token.type == TOK_OP_ASSIGN) {
         ErrorCode ec = parse_expression(lexer, &expr);
         if (ec != OK) {
+            token_free(&identifier);
             RETURN_CODE(ec, token);
         }
 
@@ -846,6 +847,7 @@ ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localta
         ec = semantic_check_expression(expr, globaltable, localtable, &expr_type);
         if (ec != OK) {
             ast_expr_free(expr);
+            token_free(&identifier);
             RETURN_CODE(ec, token);
         }
 
@@ -854,6 +856,7 @@ ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localta
 
     if (token.type != TOK_EOL) {
         if (expr) ast_expr_free(expr);
+        token_free(&identifier);
         RETURN_CODE(SYNTACTIC_ERROR, token);
     }
 
@@ -868,12 +871,14 @@ ErrorCode check_local_var(Lexer *lexer, Symtable *globaltable, Symtable *localta
     SymtableItem *it;
     if (find_local_var(localtable, identifier.string_val->val, &it) == false) {
         if (expr) ast_expr_free(expr);
+        token_free(&identifier);
         RETURN_CODE(INTERNAL_ERROR, token);
     }
 
     // Add local variable to AST
     if (ast_add_local_var(statement, it->key, expr) == false) {
         if (expr) ast_expr_free(expr);
+        token_free(&identifier);
         RETURN_CODE(INTERNAL_ERROR, token);
     }
 
