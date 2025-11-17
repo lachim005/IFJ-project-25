@@ -435,6 +435,10 @@ ErrorCode check_statics(Lexer *lexer, Symtable *symtable, AstStatement *statemen
     if (token.type == TOK_OP_ASSIGN) {
         ErrorCode ec = checks_setter(lexer, symtable, new_symtable, identifier, statement);
         if (ec != OK) {
+            if (statement->type != ST_SETTER || statement->setter->symtable != new_symtable) {
+                // We have to free the local symtable if it is not in the ast yet
+                symtable_free(new_symtable);
+            }
             token_free(&identifier);
             RETURN_CODE(ec, token);
         }
@@ -443,6 +447,10 @@ ErrorCode check_statics(Lexer *lexer, Symtable *symtable, AstStatement *statemen
     else if (token.type == TOK_LEFT_BRACE) {
         ErrorCode ec = check_getter(lexer, symtable, new_symtable, identifier, statement);
         if (ec != OK) {
+            if (statement->type != ST_GETTER || statement->getter->symtable != new_symtable) {
+                // We have to free the local symtable if it is not in the ast yet
+                symtable_free(new_symtable);
+            }
             token_free(&identifier);
             RETURN_CODE(ec, token);
         }
@@ -451,6 +459,10 @@ ErrorCode check_statics(Lexer *lexer, Symtable *symtable, AstStatement *statemen
     else if (token.type == TOK_LEFT_PAR) {
         ErrorCode ec = check_function(lexer, symtable, new_symtable, identifier, statement);
         if (ec != OK) {
+            if (statement->type != ST_FUNCTION || statement->function->symtable != new_symtable) {
+                // We have to free the local symtable if it is not in the ast yet
+                symtable_free(new_symtable);
+            }
             token_free(&identifier);
             RETURN_CODE(ec, token);
         }
