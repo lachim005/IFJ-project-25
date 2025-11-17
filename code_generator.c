@@ -1,3 +1,13 @@
+/*
+ * code_generator.c
+ * Code generator implementation
+ *
+ * IFJ project 2025
+ * FIT VUT
+ *
+ * Authors:
+ * Michal Šebesta (xsebesm00)
+ */
 #include "code_generator.h"
 #include "ast.h"
 #include "error.h"

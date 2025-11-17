@@ -2,6 +2,9 @@
  * symtable.c
  * Defines symtable interface
  *
+ * IFJ project 2025
+ * FIT VUT
+ *
  * Authors:
  * Michal Šebesta (xsebesm00)
  * Tomáš Hanák (xhanakt00)

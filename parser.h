@@ -2,6 +2,9 @@
  * parser.c
  * Defines parser
  *
+ * IFJ project 2025
+ * FIT VUT
+ *
  * Authors:
  * Tomáš Hanák (xhanakt00)
  */

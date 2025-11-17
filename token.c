@@ -2,6 +2,9 @@
  * token.c
  * Implements token operations
  *
+ * IFJ project 2025
+ * FIT VUT
+ *
  * Authors:
  * Michal Šebesta (xsebesm00)
  */

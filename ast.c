@@ -1,3 +1,14 @@
+/*
+ * ast.h
+ * Defines functions for working with the abstract syntax tree
+ *
+ * IFJ project 2025
+ * FIT VUT
+ *
+ * Authors:
+ * Vojtěch Borýsek (xborysv00)
+ * Tomáš Hanák (xhanakt00)
+ */
 #include "ast.h"
 #include "symtable.h"
 #include <stdlib.h>

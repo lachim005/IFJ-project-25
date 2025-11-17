@@ -1,6 +1,9 @@
 /* error.h
  * Return codes used by the IFJ25 compiler
  *
+ * IFJ project 2025
+ * FIT VUT
+ *
  * Authors:
  * Tomáš Hanák (xhanakt00)
  * 

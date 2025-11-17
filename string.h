@@ -2,6 +2,9 @@
  * string.h
  * Defines a dynamic string data structure
  *
+ * IFJ project 2025
+ * FIT VUT
+ *
  * Authors:
  * Michal Šebesta (xsebesm00)
  */

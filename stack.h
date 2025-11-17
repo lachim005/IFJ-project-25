@@ -2,6 +2,9 @@
  * stack.h
  * Defines a stack data structure for tokens
  *
+ * IFJ project 2025
+ * FIT VUT
+ *
  * Authors:
  * Vojtěch Borýsek (xborysv00)
  */

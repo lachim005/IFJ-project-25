@@ -2,6 +2,9 @@
  * main.c
  * Contains the flow of the program
  *
+ * IFJ project 2025
+ * FIT VUT
+ *
  * Authors:
  * Tomáš Hanák (xhanakt00)
  * Michal Šebesta (xsebesm00)

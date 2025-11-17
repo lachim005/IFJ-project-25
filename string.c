@@ -2,6 +2,9 @@
  * string.c
  * Implements a dynamic string data structure
  *
+ * IFJ project 2025
+ * FIT VUT
+ *
  * Authors:
  * Tomáš Hanák (xhanakt00)
  * Michal Šebesta (xsebesm00)

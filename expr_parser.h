@@ -2,6 +2,9 @@
  * expr_parser.h
  * Defines a precedence parser for expressions
  *
+ * IFJ project 2025
+ * FIT VUT
+ *
  * Authors:
  * Vojtěch Borýsek (xborysv00)
  */

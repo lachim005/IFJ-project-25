@@ -2,6 +2,9 @@
  * lexer.h
  * Defines lexical analyser
  *
+ * IFJ project 2025
+ * FIT VUT
+ *
  * Authors:
  * Michal Šebesta (xsebesm00)
  */

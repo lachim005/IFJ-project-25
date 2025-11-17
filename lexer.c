@@ -2,6 +2,9 @@
  * lexer.c
  * Implements lexical analyser
  *
+ * IFJ project 2025
+ * FIT VUT
+ *
  * Authors:
  * Michal Šebesta (xsebesm00)
  */

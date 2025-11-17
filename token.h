@@ -2,6 +2,9 @@
  * token.h
  * Defines tokens
  *
+ * IFJ project 2025
+ * FIT VUT
+ *
  * Authors:
  * Michal Šebesta (xsebesm00)
  * Vojtěch Borýsek (xborysv00)

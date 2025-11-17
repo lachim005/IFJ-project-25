@@ -2,6 +2,9 @@
  * ast.h
  * Defines structures to represent the abstract syntax tree
  *
+ * IFJ project 2025
+ * FIT VUT
+ *
  * Authors:
  * Michal Šebesta (xsebesm00)
  * Vojtěch Borýsek (xborysv00)

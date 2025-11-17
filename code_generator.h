@@ -2,6 +2,9 @@
  * code_generator.h
  * Defines code generator
  *
+ * IFJ project 2025
+ * FIT VUT
+ *
  * Authors:
  * Michal Šebesta (xsebesm00)
  */

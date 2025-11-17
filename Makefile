@@ -2,11 +2,14 @@
 # Makefile
 # Compiles the compiler
 #
+# IFJ project 2025
+# FIT VUT
+#
 # Authors:
 # Michal Šebesta (xsebesm00)
 #
 CC = gcc
-CFLAGS += -Wall -Wextra -pedantic
+CFLAGS += -Wall -Wextra -pedantic -std=c23
 LDLIBS += -lm
 # CFLAGS += -Werror
 # CFLAGS += -O3
