@@ -199,7 +199,6 @@ ErrorCode generate_while_statement(FILE *output, AstWhileStatement *st) {
 
     fprintf(output, "LABEL $&&while_cond%u\n", expr_id);
     RequiredBranches b = generate_truth_assessment(output, cond, "$&&while_body", "$&&while_end", expr_id);
-    cond->val_known = true;
     if (b & B_TRUE) {
         fprintf(output, "LABEL $&&while_body%u\n", expr_id);
         generate_compound_statement(output, st->body);
@@ -365,6 +364,12 @@ ErrorCode generate_builtin_str(FILE *output, AstExpression *ex) {
     CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
     unsigned expr_id = internal_names_cntr++;
     unsigned type = ex->params[0]->assumed_type;
+
+    if (type == DT_STRING) {
+        // We don't need to do anything for strings
+        return OK;
+    }
+
     fprintf(output, "POPS GF@&&inter1\n");
     // Generate switch
     if (type == DT_UNKNOWN) {
@@ -1044,7 +1049,7 @@ ErrorCode push_known_value(FILE *output, AstExpression *ex) {
 }
 
 ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
-    if (st->val_known && !has_fun_call(st)) {
+    if (st->val_known) {
         ErrorCode ec = push_known_value(output, st);
         if (ec == OK) return OK;
     }

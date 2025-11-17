@@ -14,6 +14,7 @@
 #include "error.h"
 #include "lexer.h"
 #include "token.h"
+#include <math.h>
 
 #define DEFAULT_CAPACITY 100
 
@@ -478,11 +479,21 @@ ErrorCode reduce_literal(Stack *expr_stack, TokType lit_type, AstExprType expr_t
 
     switch (expr_type) {
     case EX_STRING:
-        expr->string_val = top.string_val; break;
+        expr->string_val = top.string_val;
+        expr->assumed_type = DT_STRING;
+        break;
     case EX_DOUBLE:
-        expr->double_val = top.double_val; break;
+        expr->double_val = top.double_val;
+        expr->assumed_type = DT_NUM;
+        expr->surely_int = floor(top.double_val) == top.double_val;
+        break;
     case EX_BOOL:
         expr->bool_val = top.type == TOK_KW_TRUE;
+        expr->assumed_type = DT_BOOL;
+        break;
+    case EX_NULL:
+        expr->assumed_type = DT_NULL;
+        break;
     default:
         break;
     }

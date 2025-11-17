@@ -10,6 +10,7 @@
  * Tomáš Hanák (xhanakt00)
  */
 #include "ast.h"
+#include "string.h"
 #include "symtable.h"
 #include <stdlib.h>
 #include <stdbool.h>
@@ -666,7 +667,11 @@ void ast_expr_free(AstExpression *expr) {
     if (expr->type == EX_STRING || expr->type == EX_ID || expr->type == EX_GLOBAL_ID ||
         expr->type == EX_FUN || expr->type == EX_BUILTIN_FUN || expr->type == EX_GETTER ||
         (expr->val_known && expr->assumed_type == DT_STRING)) {
-        str_free(&expr->string_val);
+        // We only free if the value is a known string or is unknown
+        // because if the value is known, the identifier is already freed
+        if (!expr->val_known || expr->assumed_type == DT_STRING) {
+            str_free(&expr->string_val);
+        }
     }
 
     free(expr);

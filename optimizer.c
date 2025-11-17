@@ -11,9 +11,11 @@
 
 #include "optimizer.h"
 #include "ast.h"
+#include "error.h"
 #include "symtable.h"
 #include "string.h"
 #include <math.h>
+#include <stddef.h>
 #include <string.h>
 
 /// Updates symtable item with known value from expression
@@ -311,6 +313,7 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
                     // in the symtable because it could have been reset due to side effects
                     if (item->data_type == DT_UNKNOWN) {
                         expr->assumed_type = DT_UNKNOWN;
+                        break;
                     }
                     if (item->data_type_known) {
                         expr->val_known = true;
@@ -353,6 +356,7 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
                     // in the symtable because it could have been reset due to side effects
                     if (item->data_type == DT_UNKNOWN) {
                         expr->assumed_type = DT_UNKNOWN;
+                        break;
                     }
                     if (item->data_type_known) {
                         expr->val_known = true;
@@ -391,6 +395,91 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
             // Functions and getters could have side effects on global variables,
             // so we have to clear their values
             clear_symtable_values(globaltable);
+            break;
+        case EX_BUILTIN_FUN:
+            if (strcmp(expr->string_val->val, "floor") == 0) {
+                if (expr->params[0]->assumed_type != DT_NUM) return SEM_TYPE_COMPAT;
+                str_free(&expr->string_val);
+                expr->val_known = true;
+                expr->assumed_type = DT_NUM;
+                expr->surely_int = true;
+                expr->double_val = floor(expr->params[0]->double_val);
+                break;
+            }
+            if (strcmp(expr->string_val->val, "length") == 0) {
+                if (expr->params[0]->assumed_type != DT_STRING) return SEM_TYPE_COMPAT;
+                str_free(&expr->string_val);
+                expr->assumed_type = DT_NUM;
+                expr->val_known = true;
+                expr->double_val = (double)expr->params[0]->string_val->length;
+                break;
+            }
+            if (strcmp(expr->string_val->val, "substring") == 0) {
+                if (expr->params[0]->assumed_type != DT_STRING) return SEM_TYPE_COMPAT;
+                if (expr->params[1]->assumed_type != DT_NUM) return SEM_TYPE_COMPAT;
+                if (!expr->params[1]->surely_int) break;
+                if (expr->params[2]->assumed_type != DT_NUM) return SEM_TYPE_COMPAT;
+                if (!expr->params[2]->surely_int) break;
+                int start = (int)expr->params[1]->double_val;
+                int end = (int)expr->params[2]->double_val;
+                char *str = expr->params[0]->string_val->val;
+                int len = expr->params[0]->string_val->length;
+                if (start < 0 || end < 0 || start > end || start >= len || end > len) {
+                    expr->assumed_type = DT_NULL;
+                    break;
+                }
+                String *res = str_init();
+                if (res == NULL) return INTERNAL_ERROR;
+                for (int i = start; i < end; i++) {
+                    if (!str_append_char(res, str[i])) {
+                        return INTERNAL_ERROR;
+                        str_free(&res);
+                    }
+                }
+                // Clear function name
+                str_free(&expr->string_val);
+                expr->string_val = res;
+
+                expr->val_known = true;
+                expr->assumed_type = DT_STRING;
+                break;
+            }
+            if (strcmp(expr->string_val->val, "strcmp") == 0) {
+                if (expr->params[0]->assumed_type != DT_STRING) return SEM_TYPE_COMPAT;
+                if (expr->params[1]->assumed_type != DT_STRING) return SEM_TYPE_COMPAT;
+                str_free(&expr->string_val);
+                expr->assumed_type = DT_NUM;
+                expr->val_known = true;
+                int res = strcmp(expr->params[0]->string_val->val, expr->params[1]->string_val->val);
+                expr->double_val = res > 0 ? 1 :
+                                   res < 0 ? -1 :
+                                   0;
+                break;
+            }
+            if (strcmp(expr->string_val->val, "ord") == 0) {
+                if (expr->params[0]->assumed_type != DT_STRING) return SEM_TYPE_COMPAT;
+                if (expr->params[1]->assumed_type != DT_NUM) return SEM_TYPE_COMPAT;
+                if (!expr->params[1]->surely_int) break;
+                char *str = expr->params[0]->string_val->val;
+                int index = (int)expr->params[1]->double_val;
+                str_free(&expr->string_val);
+                expr->val_known = true;
+                expr->assumed_type = DT_NUM;
+                expr->double_val = (double)(unsigned char)str[index];
+                break;
+            }
+            if (strcmp(expr->string_val->val, "chr") == 0) {
+                if (expr->params[0]->assumed_type != DT_NUM) return SEM_TYPE_COMPAT;
+                if (!expr->params[0]->surely_int) break;
+                int num = (int)expr->params[0]->double_val;
+                if (num < 0 || num > 255) break;
+                expr->val_known = true;
+                expr->assumed_type = DT_STRING;
+                // Clear function name
+                str_clear(expr->string_val);
+                if (!str_append_char(expr->string_val, (char)num)) return INTERNAL_ERROR;
+                break;
+            }
             break;
         default:
             break;
