@@ -9,13 +9,13 @@
 # Michal Šebesta (xsebesm00)
 #
 CC = gcc
-CFLAGS += -Wall -Wextra -pedantic -std=c23
+CFLAGS += -Wall -Wextra -pedantic -std=c11
 LDLIBS += -lm
 # CFLAGS += -Werror
 # CFLAGS += -O3
 
 # Debugging
-CFLAGS += -g -DCG_DEBUG
+# CFLAGS += -g -DCG_DEBUG
 # Asan
 # CFLAGS += -fsanitize=address
 # LDFLAGS += -lasan
