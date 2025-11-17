@@ -40,10 +40,11 @@
 } while(0)
 
 /// Macro for adding function to symbol table with redefinition check
-#define ADD_FUNCTION(symtable, name, pcount, error_token) do { \
+#define ADD_FUNCTION(symtable, name, pcount, error_token, params) do { \
     SymtableItem *existing_item = NULL; \
     if (symtable_contains_function(symtable, name, pcount, &existing_item)) { \
         if (existing_item != NULL && existing_item->is_defined) { \
+            param_list_free(params); \
             RETURN_CODE(SEM_REDEFINITION, error_token); \
         } \
         if (existing_item != NULL && !existing_item->is_defined) { \
@@ -53,6 +54,7 @@
     } else { \
         SymtableItem *new_item = symtable_add_function(symtable, name, pcount, 1); \
         if (new_item == NULL) { \
+            param_list_free(params); \
             RETURN_CODE(INTERNAL_ERROR, error_token); \
         } \
     } \
@@ -642,7 +644,7 @@ ErrorCode check_function(Lexer *lexer, Symtable *globaltable, Symtable *localtab
     }
 
     // Add function to global symbol table
-    ADD_FUNCTION(globaltable, identifier.string_val->val, params->count, token);
+    ADD_FUNCTION(globaltable, identifier.string_val->val, params->count, token, params);
 
     CHECK_TOKEN(lexer, token);
     if (token.type != TOK_LEFT_BRACE) {
