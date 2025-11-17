@@ -20,6 +20,17 @@ do {\
 // Used for unique names for compiler variables and labels
 unsigned internal_names_cntr = 0;
 
+/// Helper that returns true if an expression contains any function calls
+bool has_fun_call(AstExpression *ex) {
+    if (ex->type == EX_GETTER || ex->type == EX_FUN || ex->type == EX_BUILTIN_FUN) {
+        return true;
+    }
+    for (unsigned i = 0; i < ex->child_count; i++) {
+        if (has_fun_call(ex->params[i])) return true;
+    }
+    return false;
+}
+
 /// Generates code which checks if the value in a given var is the desired type
 /// and exits with 26 if not
 void generate_var_type_check(FILE *output, char *var, char *type) {
@@ -53,6 +64,76 @@ void generate_stack_type_check(FILE *output, char *type) {
     fprintf(output, "PUSHS GF@&&inter5\n");
 }
 
+typedef enum required_branches {
+    B_NONE = 0,
+    B_TRUE = 1,
+    B_FALSE = 2,
+} RequiredBranches;
+
+/// Generates code which assesses the truthness of an expression and jumps to the propel label
+/// Assumes the true label is right below below the assessment and the return value to be respected
+/// Returns which branches are possible to take and have to be generated
+RequiredBranches generate_truth_assessment(FILE *output, AstExpression *ex, char *true_label, char *false_label, unsigned expr_id) {
+    DataType type = ex->assumed_type;
+    bool fun_call = has_fun_call(ex);
+    // Null is false
+    if (type == DT_NULL) {
+        if (fun_call) {
+            // We still have to evaluate the expression if it has a function call
+            generate_expression_evaluation(output, ex);
+            fprintf(output, "POPS GF@&&inter1\n");
+        }
+        return B_FALSE;
+    }
+    // Everything except bools is true
+    if (type != DT_UNKNOWN && type != DT_BOOL) {
+        if (fun_call) {
+            // We still have to evaluate the expression if it has a function call
+            generate_expression_evaluation(output, ex);
+            fprintf(output, "POPS GF@&&inter1\n");
+        }
+        return B_TRUE;
+    }
+    // We known the bool value
+    if (type == DT_BOOL && ex->val_known) {
+        if (fun_call) {
+            // We still have to evaluate the expression if it has a function call
+            generate_expression_evaluation(output, ex);
+            fprintf(output, "POPS GF@&&inter1\n");
+        }
+        return ex->bool_val ? B_TRUE : B_FALSE;
+    }
+    // We know it is a bool but don't know it's value
+    if (type == DT_BOOL) {
+        generate_expression_evaluation(output, ex);
+        fprintf(output, "PUSHS bool@true\n"
+                        "JUMPIFNEQS %s%u\n",
+                        false_label, expr_id);
+        return B_TRUE | B_FALSE;
+    }
+    // We know nothing
+    generate_expression_evaluation(output, ex);
+    // Check null
+    fprintf(output, "POPS GF@&&inter1\n"
+                    "PUSHS GF@&&inter1\n"
+                    "TYPES\n"
+                    "PUSHS string@null\n"
+                    "JUMPIFEQS %s%u\n",
+                    false_label, expr_id);
+    // Other non-bool types are true
+    fprintf(output, "PUSHS GF@&&inter1\n"
+                    "TYPES\n"
+                    "PUSHS string@bool\n"
+                    "JUMPIFNEQS %s%u\n",
+                    true_label, expr_id);
+    // Check bool value
+    fprintf(output, "PUSHS GF@&&inter1\n"
+                    "PUSHS bool@true\n"
+                    "JUMPIFNEQS %s%u\n",
+                    false_label, expr_id);
+    return B_TRUE | B_FALSE;
+}
+
 ErrorCode generate_compound_statement(FILE *output, AstBlock *st) {
     DEBUG_WRITE(output, "#v v v v v BLOCK v v v v v\n");
     for (AstStatement *cur = st->statements; cur->type != ST_END; cur = cur->next) {
@@ -67,113 +148,56 @@ ErrorCode generate_compound_statement(FILE *output, AstBlock *st) {
     return OK;
 }
 
-/// Helper that returns true if an expression contains any variables
-bool has_vars(AstExpression *ex) {
-    if (ex->type == EX_ID || ex->type == EX_GLOBAL_ID || ex->type == EX_GETTER || ex->type == EX_FUN) {
-        return true;
-    }
-    for (unsigned i = 0; i < ex->child_count; i++) {
-        if (has_vars(ex->params[i])) return true;
-    }
-    return false;
-}
-
 ErrorCode generate_if_statement(FILE *output, AstIfStatement *st) {
-    DataType cond_type = st->condition->assumed_type;
-    if (cond_type == DT_NULL ||
-        (cond_type == DT_BOOL && st->condition->val_known && !st->condition->bool_val)) {
-        if (st->false_branch != NULL) {
-            return generate_compound_statement(output, st->false_branch);
-        }
-        return OK;
-    }
-    if ((cond_type != DT_BOOL && cond_type != DT_UNKNOWN) ||
-        (cond_type == DT_BOOL && st->condition->val_known && st->condition->bool_val)) {
-        // If it is anything other than bool or null, it is always true
-        return generate_compound_statement(output, st->true_branch);
-    }
-    CG_ASSERT(generate_expression_evaluation(output, st->condition) == OK);
     unsigned expr_id = internal_names_cntr++;
-    if (cond_type != DT_BOOL) {
-        // If it is not bool, we have to check the data type
-        fprintf(output, "POPS GF@&&inter1\n");
-        if (cond_type == DT_UNKNOWN) {
-            // We only have to check for null if the type is unknown, otherwise we know it isn't
-            fprintf(output, "PUSHS GF@&&inter1\n"
-                            "PUSHS nil@nil\n"
-                            "JUMPIFEQS $&&if_false_branch%u\n",
-                            expr_id);
+    RequiredBranches b = generate_truth_assessment(output, st->condition, "$&&if_true", "$&&if_false", expr_id);
+    if (b & B_TRUE) {
+        fprintf(output, "LABEL $&&if_true%u\n", expr_id);
+        generate_compound_statement(output, st->true_branch);
+        // Skip the else branch if it is generated
+        if (b & B_FALSE) {
+            fprintf(output, "JUMP $&&if_end%u\n", expr_id);
         }
-        // Check if it is the bool datatype
-        fprintf(output, "PUSHS GF@&&inter1\n"
-                        "TYPES\n"
-                        "PUSHS string@bool\n"
-                        "JUMPIFNEQS $&&if_true_branch%u\n"
-                        "PUSHS GF@&&inter1\n",
-                        expr_id);
     }
-    // Check if false
-    fprintf(output, "PUSHS bool@false\n"
-                    "JUMPIFEQS $&&if_false_branch%u\n"
-                    "LABEL $&&if_true_branch%u\n",
-                    expr_id, expr_id);
-    generate_compound_statement(output, st->true_branch);
-    fprintf(output, "JUMP $&&if_end%u\n"
-                    "LABEL $&&if_false_branch%u\n",
-                    expr_id, expr_id);
-    if (st->false_branch != NULL) {
-        generate_compound_statement(output, st->false_branch);
+    if (b & B_FALSE) {
+        fprintf(output, "LABEL $&&if_false%u\n", expr_id);
+        // Generate else-if branches
+        for (size_t i = 0; i < st->else_if_count; i++) {
+            AstElseIfStatement *elif = st->else_if_branches[i];
+            unsigned elif_id = internal_names_cntr++;
+            RequiredBranches b = generate_truth_assessment(output, elif->condition, "$&&elif_true", "$&&elif_false", elif_id);
+            if (b & B_TRUE) {
+                fprintf(output, "LABEL $&&elif_true%u\n", elif_id);
+                generate_compound_statement(output, elif->body);
+                fprintf(output, "JUMP $&&if_end%u\n", expr_id);
+            }
+            fprintf(output, "LABEL $&&elif_false%u\n", elif_id);
+        }
+        // Else branch
+        if (st->false_branch != NULL) {
+            generate_compound_statement(output, st->false_branch);
+        }
     }
     fprintf(output, "LABEL $&&if_end%u\n", expr_id);
+
     return OK;
 }
 
 ErrorCode generate_while_statement(FILE *output, AstWhileStatement *st) {
-    AstExpression *cond = st->condition;
-    DataType cond_type = cond->assumed_type;
-    if ((cond_type == DT_NULL) ||
-        (cond_type == DT_BOOL && cond->val_known && !cond->bool_val && !has_vars(cond))) {
-        // Null will never execute, so we don't have to generate anything
-        return OK;
-    }
     unsigned expr_id = internal_names_cntr++;
-    if ((cond_type != DT_BOOL && cond_type != DT_UNKNOWN) ||
-        (cond_type == DT_BOOL && cond->val_known && cond->bool_val)) {
-        // If it is anything other than bool or null, it will be an infinite cycle
-        fprintf(output, "LABEL $&&while_start%u\n", expr_id);
-        generate_compound_statement(output, st->body);
-        fprintf(output, "JUMP $&&while_start%u\n", expr_id);
-        return OK;
-    }
+    AstExpression *cond = st->condition;
+
     fprintf(output, "LABEL $&&while_cond%u\n", expr_id);
-    CG_ASSERT(generate_expression_evaluation(output, cond) == OK);
-    if (cond_type != DT_BOOL) {
-        // If it is not bool, we have to check the data type
-        fprintf(output, "POPS GF@&&inter1\n");
-        if (cond_type == DT_UNKNOWN) {
-            // We only have to check for null if the type is unknown, otherwise we know it isn't
-            fprintf(output, "PUSHS GF@&&inter1\n"
-                            "PUSHS nil@nil\n"
-                            "JUMPIFEQS $&&while_end%u\n",
-                            expr_id);
-        }
-        // Check if it is the bool datatype
-        fprintf(output, "PUSHS GF@&&inter1\n"
-                        "TYPES\n"
-                        "PUSHS string@bool\n"
-                        "JUMPIFNEQS $&&while_start%u\n"
-                        "PUSHS GF@&&inter1\n",
-                        expr_id);
+    RequiredBranches b = generate_truth_assessment(output, cond, "$&&while_body", "$&&while_end", expr_id);
+    cond->val_known = true;
+    if (b & B_TRUE) {
+        fprintf(output, "LABEL $&&while_body%u\n", expr_id);
+        generate_compound_statement(output, st->body);
+
+        fprintf(output, "JUMP $&&while_cond%u\n", expr_id);
     }
-    // Checks if false
-    fprintf(output, "PUSHS bool@false\n"
-                    "JUMPIFEQS $&&while_end%u\n"
-                    "LABEL $&&while_start%u\n",
-                    expr_id, expr_id);
-    generate_compound_statement(output, st->body);
-    fprintf(output, "JUMP $&&while_cond%u\n"
-                    "LABEL $&&while_end%u\n",
-                    expr_id, expr_id);
+    fprintf(output, "LABEL $&&while_end%u\n", expr_id);
+
     return OK;
 }
 

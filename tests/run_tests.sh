@@ -2,6 +2,7 @@
 
 CORRECT_DIR=correct
 COMP_DIR=comp-
+INT_DIR=int-
 
 RED='\033[0;31m'
 YELLOW='\033[0;33m'
@@ -97,6 +98,48 @@ run_with_comp_error() {
     cd $OLDPWD
 }
 
+run_with_int_error() {
+    echo --------------------------------------
+    echo " RUNNING TESTS WITH INTERPRET ERROR $1"
+    echo --------------------------------------
+    cd $INT_DIR$1
+    for i in *.test; do
+        ((sum++))
+        # Compile
+        $EXE < $i 2> /dev/null 1> $i.ic25
+        code=$?
+        if [ $code -ne 0 ]; then
+            echo -e "${RED}[ COMPILATION ERROR ]" $RESET $i "${GRAY}returned $code${RESET}"
+            ((comp++))
+            ((err++))
+            continue
+        fi
+
+        if [ $CHECK_MEM -eq 1 ]; then
+            # Check memory leaks
+            valgrind --leak-check=full --errors-for-leak-kinds=all --error-exitcode=42 $EXE < $i 1>/dev/null 2>/dev/null
+            if [ $? -eq 42 ]; then
+                echo -e "${YELLOW}[ VALGRIND ERROR ]   " $RESET $i
+                ((mem++))
+            fi
+        fi
+
+        # Interpret
+        timeout 2 $INT $i.ic25 2>/dev/null > /dev/null
+        code=$?
+        if [ $code -ne $1 ]; then
+            echo -e "${RED}[ INTERPRETER ERROR ]" $RESET $i "${GRAY}returned $code${RESET}"
+            ((int++))
+            ((err++))
+            continue
+        fi
+
+        echo -e "${GREEN}[ CORRECT ]          " $RESET $i
+        ((correct++))
+    done
+    cd $OLDPWD
+}
+
 if [[ "$1" == "-h" ]]; then
     echo USAGE:
     echo Just run it
@@ -132,6 +175,7 @@ run_with_comp_error 2
 run_with_comp_error 3
 run_with_comp_error 4
 run_with_comp_error 5
+run_with_int_error 26
 
 # Print report
 echo ======================================

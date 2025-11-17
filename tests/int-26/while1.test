@@ -1,0 +1,17 @@
+
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        var a = 5
+        while (a > 0) {
+            Ifj.write(Ifj.str(a) + "\n")
+            a = a -1
+            if (a == 3) {
+                a = "ahoj"
+            }
+        }
+
+    }
+    
+
+}

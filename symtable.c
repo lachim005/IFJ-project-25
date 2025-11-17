@@ -9,6 +9,7 @@
  */
 
 #include "symtable.h"
+#include "ast.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -72,10 +73,14 @@ void symtable_free(Symtable *st) {
     // Free all keys
     for (size_t i = 0; i < st->capacity; ++i) {
         if (st->state[i] == SLOT_OCCUPIED && st->data[i].key) {
-            free(st->data[i].key);
-            str_free(&st->data[i].name);
-            if (st->data[i].param_types) {
-                free(st->data[i].param_types);
+            SymtableItem it = st->data[i];
+            free(it.key);
+            str_free(&it.name);
+            if (it.param_types) {
+                free(it.param_types);
+            }
+            if (it.data_type_known && it.data_type == DT_STRING) {
+                str_free(&it.string_val);
             }
         }
     }

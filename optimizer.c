@@ -19,6 +19,10 @@ void update_symtable_value(SymtableItem *item, AstExpression *expr) {
         return;
     }
 
+    if (item->data_type_known && item->data_type == DT_STRING) {
+        str_free(&item->string_val);
+    }
+
     item->data_type_known = true;
     item->data_type = expr->assumed_type;
 
@@ -30,9 +34,6 @@ void update_symtable_value(SymtableItem *item, AstExpression *expr) {
             item->bool_val = expr->bool_val;
             break;
         case DT_STRING:
-            if (item->string_val != NULL) {
-                str_free(&item->string_val);
-            }
             item->string_val = str_init();
             if (item->string_val != NULL && expr->string_val != NULL) {
                 str_append_string(item->string_val, expr->string_val->val);
@@ -302,7 +303,12 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
         case EX_ID:
             if (expr->string_val != NULL) {
                 SymtableItem *item = NULL;
-                if (find_local_var(localtable, expr->string_val->val, &item) && item != NULL) {
+                if ((item = symtable_find(localtable, expr->string_val->val)) != NULL) {
+                    // We always have to set the data type to unknown if it is unknown
+                    // in the symtable because it could have been reset due to side effects
+                    if (item->data_type == DT_UNKNOWN) {
+                        expr->assumed_type = DT_UNKNOWN;
+                    }
                     if (item->data_type_known) {
                         expr->val_known = true;
                         expr->assumed_type = item->data_type;
@@ -340,6 +346,11 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
             if (expr->string_val != NULL) {
                 SymtableItem *item = NULL;
                 if (symtable_contains_global_var(globaltable, expr->string_val->val, &item) && item != NULL) {
+                    // We always have to set the data type to unknown if it is unknown
+                    // in the symtable because it could have been reset due to side effects
+                    if (item->data_type == DT_UNKNOWN) {
+                        expr->assumed_type = DT_UNKNOWN;
+                    }
                     if (item->data_type_known) {
                         expr->val_known = true;
                         expr->assumed_type = item->data_type;
@@ -444,7 +455,7 @@ ErrorCode optimize_statement(AstStatement *statement, Symtable *globaltable, Sym
                 // Update symtable with known value
                 if (statement->local_var->expression->val_known) {
                     SymtableItem *item = NULL;
-                    if (find_local_var(localtable, statement->local_var->name->val, &item) && item != NULL) {
+                    if ((item = symtable_find(localtable, statement->local_var->name->val)) != NULL) {
                         update_symtable_value(item, statement->local_var->expression);
                     }
                 }
@@ -534,20 +545,18 @@ ErrorCode optimize_statement(AstStatement *statement, Symtable *globaltable, Sym
         case ST_WHILE:
             if (statement->while_st == NULL) break;
 
+            clear_symtable_values(localtable);
+            clear_symtable_values(globaltable);
             cond = statement->while_st->condition;
+
             ec = optimize_expression(cond, globaltable, localtable);
             if (ec != OK) return ec;
+            ec = optimize_block(statement->while_st->body, globaltable, localtable);
+            if (ec != OK) return ec;
 
-            if (cond->assumed_type == DT_UNKNOWN || !cond->val_known || cond->bool_val) {
-                ec = optimize_block(statement->while_st->body, globaltable, localtable);
+            clear_symtable_values(localtable);
+            clear_symtable_values(globaltable);
 
-                if (cond->assumed_type == DT_UNKNOWN || !cond->val_known) {
-                    // If we aren't sure that this branch will execute, we have to clear
-                    // symtable values because it could have side effects
-                    clear_symtable_values(localtable);
-                    clear_symtable_values(globaltable);
-                }
-            }
             break;
             
         case ST_BLOCK:
