@@ -211,33 +211,51 @@ ErrorCode generate_function_call(FILE *output, AstExpression *call) {
 
 ErrorCode generate_and_expr(FILE *output, AstExpression *ex) {
     unsigned expr_id = internal_names_cntr++;
-    CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
-    // Short circuit
-    fprintf(output, "PUSHS bool@false\n"
-                    "JUMPIFEQS $&&and_short%u\n", expr_id);
-
-    CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
-    fprintf(output, "JUMP $&&and_end%u\n"
-                    "LABEL $&&and_short%u\n"
+    RequiredBranches b;
+    b = generate_truth_assessment(output, ex->params[0], "$&&and_first_true", "$&&and_false", expr_id);
+    if (b & B_TRUE) {
+        fprintf(output, "LABEL $&&and_first_true%u\n", expr_id);
+        b = generate_truth_assessment(output, ex->params[1], "$&&and_true", "$&&and_false", expr_id);
+        if (b & B_TRUE) {
+            fprintf(output, "LABEL $&&and_true%u\n"
+                            "PUSHS bool@true\n"
+                            "JUMP $&&and_end%u\n",
+                            expr_id, expr_id);
+        }
+    }
+    fprintf(output, "LABEL $&&and_false%u\n"
                     "PUSHS bool@false\n"
                     "LABEL $&&and_end%u\n",
-                    expr_id, expr_id, expr_id);
+                    expr_id, expr_id);
     return OK;
 }
 
 ErrorCode generate_or_expr(FILE *output, AstExpression *ex) {
     unsigned expr_id = internal_names_cntr++;
-    CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
-    // Short circuit
-    fprintf(output, "PUSHS bool@true\n"
-                    "JUMPIFEQS $&&or_short%u\n", expr_id);
-
-    CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
-    fprintf(output, "JUMP $&&or_end%u\n"
-                    "LABEL $&&or_short%u\n"
-                    "PUSHS bool@true\n"
-                    "LABEL $&&or_end%u\n",
-                    expr_id, expr_id, expr_id);
+    RequiredBranches b;
+    b = generate_truth_assessment(output, ex->params[0], "$&&or_first_true", "$&&or_first_false", expr_id);
+    if (b & B_TRUE) {
+        fprintf(output, "LABEL $&&or_first_true%u\n"
+                        "PUSHS bool@true\n"
+                        "JUMP $&&or_end%u\n",
+                        expr_id, expr_id);
+    }
+    if (b & B_FALSE) {
+        fprintf(output, "LABEL $&&or_first_false%u\n", expr_id);
+        b = generate_truth_assessment(output, ex->params[1], "$&&or_true", "$&&or_false", expr_id);
+        if (b & B_TRUE) {
+            fprintf(output, "LABEL $&&or_true%u\n"
+                            "PUSHS bool@true\n"
+                            "JUMP $&&or_end%u\n",
+                            expr_id, expr_id);
+        }
+        if (b & B_FALSE) {
+            fprintf(output, "LABEL $&&or_false%u\n"
+                            "PUSHS bool@false\n",
+                            expr_id);
+        }
+    }
+    fprintf(output, "LABEL $&&or_end%u\n", expr_id);
     return OK;
 }
 
@@ -247,11 +265,21 @@ ErrorCode generate_is_expr(FILE *output, AstExpression *ex) {
     DataType checked_type = ex->params[1]->data_type;
     if (expr_type == checked_type) {
         // Types are the same, we can just push true
+        // Unless they have function calls, which we need to do
+        if (has_fun_call(ex->params[0])) {
+            generate_expression_evaluation(output, ex->params[0]);
+            fprintf(output, "POPS GF@&&inter1\n");
+        }
         fprintf(output, "PUSHS bool@true\n");
         return OK;
     }
     if (expr_type != DT_UNKNOWN) {
         // The type isn't uknown and it isn't the same, so we can push false
+        // Unless they have function calls, which we need to do
+        if (has_fun_call(ex->params[0])) {
+            generate_expression_evaluation(output, ex->params[0]);
+            fprintf(output, "POPS GF@&&inter1\n");
+        }
         fprintf(output, "PUSHS bool@false\n");
         return OK;
     }
@@ -1017,6 +1045,16 @@ ErrorCode generate_equals_expression(FILE *output, AstExpression *ex) {
     // We set all ints to doubles to possibly skip subexpressions evaluations
     // Both types known and not the same -> false
     if (left_type != right_type && left_type != DT_UNKNOWN && right_type != DT_UNKNOWN) {
+        if (has_fun_call(ex->params[0])) {
+            // We still have to evaluate the expression if it has a function call
+            generate_expression_evaluation(output, ex->params[0]);
+            fprintf(output, "POPS GF@&&inter1\n");
+        }
+        if (has_fun_call(ex->params[1])) {
+            // We still have to evaluate the expression if it has a function call
+            generate_expression_evaluation(output, ex->params[1]);
+            fprintf(output, "POPS GF@&&inter1\n");
+        }
         fprintf(output, "PUSHS bool@false\n");
         return OK;
     }
@@ -1095,7 +1133,7 @@ ErrorCode push_known_value(FILE *output, AstExpression *ex) {
 }
 
 ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
-    if (st->val_known) {
+    if (st->val_known && !has_fun_call(st)) {
         ErrorCode ec = push_known_value(output, st);
         if (ec == OK) return OK;
     }

@@ -32,6 +32,8 @@ class Program {
         Ifj.write("\n")
         Ifj.write(false is Null)
         Ifj.write("\n")
+        Ifj.write(Ifj.write("ahoj\n") is Null)
+        Ifj.write("\n")
 
         Ifj.write("LOCALS\n")
         Ifj.write(s is String)

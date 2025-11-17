@@ -32,6 +32,11 @@ class Program {
         } else {
             Ifj.write("ahoj\n")
         }
+        if (Ifj.write("ahoj\n") == null) {
+            Ifj.write("ahoj\n")
+        } else {
+            Ifj.write("CHYBA\n")
+        }
     }
     static globs {
         __false = false

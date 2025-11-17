@@ -1,0 +1,35 @@
+
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        globs
+        Ifj.write(true || Ifj.write("Chyba"))
+        Ifj.write("\n")
+        Ifj.write(__true || Ifj.write("Chyba"))
+        Ifj.write("\n")
+        Ifj.write(Ifj.write("ahoj\n") || Ifj.write("ahoj\n"))
+        Ifj.write("\n")
+        Ifj.write(Ifj.write("ahoj\n") == null || Ifj.write("chyba\n"))
+        Ifj.write("\n")
+        Ifj.write(__false || Ifj.write("ahoj\n"))
+        Ifj.write("\n")
+        Ifj.write(__true || __false)
+        Ifj.write("\n")
+        Ifj.write(__true || __true)
+        Ifj.write("\n")
+        Ifj.write(__false || __true)
+        Ifj.write("\n")
+        Ifj.write(__false || __false)
+        Ifj.write("\n")
+        Ifj.write(__false || Ifj.write("ahoj\n") is Null)
+        Ifj.write("\n")
+        Ifj.write(__false || true)
+        Ifj.write("\n")
+        Ifj.write(__false || false)
+        Ifj.write("\n")
+    }
+    static globs {
+        __false = false
+        __true = true
+    }
+}

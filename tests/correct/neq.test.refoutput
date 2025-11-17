@@ -1,14 +1,12 @@
 BOTH KNOWN
-true
-true
-true
-true
 false
-true
+false
 false
 false
 true
-ahoj
+false
+true
+true
 false
 ahoj
 true
@@ -16,23 +14,25 @@ ahoj
 false
 ahoj
 true
+ahoj
+false
 ONE UNKNOWN
-true
-true
-true
-true
-true
-true
-true
-true
+false
+false
+false
+false
+false
+false
 false
 false
 true
+true
+false
 BOTH UNKNOWN
-true
-true
-true
-true
-true
 false
 false
+false
+false
+false
+true
+true

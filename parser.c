@@ -1602,10 +1602,8 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
             return ec;
         }
 
-        if (left_type == DT_BOOL && right_type == DT_BOOL) {
-            result_type = DT_BOOL;
-            break;
-        }
+        result_type = DT_BOOL;
+        break;
 
         return SEM_TYPE_COMPAT;
     }

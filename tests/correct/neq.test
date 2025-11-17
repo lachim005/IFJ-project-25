@@ -1,0 +1,52 @@
+import "ifj25" for Ifj
+
+class Program {
+    static globs=(a) {
+        __i = a
+        __f = 5.0
+        __s = "aa"
+    }
+    static main() {
+        globs = 5
+
+        Ifj.write("BOTH KNOWN\n")
+        __ = printline(5 != 5)
+        __ = printline(5 != 5.0)
+        __ = printline(5.0 != 5)
+        __ = printline(5.0 != 5.0)
+        __ = printline(false != 5)
+        __ = printline(null != null)
+        __ = printline(false != true)
+        __ = printline("false" != false)
+        __ = printline("ahoj" != "ahoj")
+        __ = printline(Ifj.write("ahoj\n") != 5)
+        __ = printline(Ifj.write("ahoj\n") != null)
+        __ = printline(5 != Ifj.write("ahoj\n"))
+        __ = printline(null != Ifj.write("ahoj\n"))
+        Ifj.write("ONE UNKNOWN\n")
+        __ = printline(5 != __i)
+        __ = printline(__i != 5)
+        __ = printline(5 != __f)
+        __ = printline(__i != 5.0)
+        __ = printline(__f != 5)
+        __ = printline(5.0 != __i)
+        __ = printline(__f != 5.0)
+        __ = printline(5.0 != __f)
+        __ = printline(5.0 != __s)
+        __ = printline(__f != "aa")
+        __ = printline(__s != "aa")
+        Ifj.write("BOTH UNKNOWN\n")
+        __ = printline(__i != __i)
+        __ = printline(__i != __f)
+        __ = printline(__f != __i)
+        __ = printline(__f != __f)
+        __ = printline(__s != __s)
+        __ = printline(__s != __i)
+        __ = printline(__i != __s)
+    }
+
+    static printline(a) {
+        Ifj.write(a)
+        Ifj.write("\n")
+    }
+}
