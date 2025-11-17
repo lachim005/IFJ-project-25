@@ -117,7 +117,7 @@ RequiredBranches generate_truth_assessment(FILE *output, AstExpression *ex, char
     fprintf(output, "POPS GF@&&inter1\n"
                     "PUSHS GF@&&inter1\n"
                     "TYPES\n"
-                    "PUSHS string@null\n"
+                    "PUSHS string@nil\n"
                     "JUMPIFEQS %s%u\n",
                     false_label, expr_id);
     // Other non-bool types are true
@@ -309,47 +309,20 @@ ErrorCode generate_is_expr(FILE *output, AstExpression *ex) {
 ErrorCode generate_ternary_expr(FILE *output, AstExpression *ex) {
     unsigned expr_id = internal_names_cntr++;
     AstExpression *cond = ex->params[0];
-    DataType cond_type = cond->assumed_type;
-    if (cond_type == DT_NULL ||
-        (cond_type == DT_BOOL && cond->val_known && !cond->bool_val)) {
-        // We know it's false
-        return generate_expression_evaluation(output, ex->params[2]);
-    }
-    if ((cond_type != DT_BOOL && cond_type != DT_UNKNOWN) ||
-        (cond_type == DT_BOOL && cond->val_known && cond->bool_val)) {
-        // We know it's true
-        return generate_expression_evaluation(output, ex->params[1]);
-    }
-
-    CG_ASSERT(generate_expression_evaluation(output, ex->params[0]) == OK);
-    if (cond_type != DT_BOOL) {
-        // If it is not bool, we have to check the data type
-        fprintf(output, "POPS GF@&&inter1\n");
-        if (cond_type == DT_UNKNOWN) {
-            // We only have to check for null if the type is unknown, otherwise we know it isn't
-            fprintf(output, "PUSHS GF@&&inter1\n"
-                            "PUSHS nil@nil\n"
-                            "JUMPIFEQS $&&ternary_false%u\n",
-                            expr_id);
+    RequiredBranches b;
+    b = generate_truth_assessment(output, cond, "$&&ternary_true", "$&&ternary_false", expr_id);
+    if (b & B_TRUE) {
+        fprintf(output, "LABEL $&&ternary_true%u\n", expr_id);
+        CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
+        if (b & B_FALSE) {
+            // There is a false branch we have to skip
+            fprintf(output, "JUMP $&&ternary_end%u\n", expr_id);
         }
-        // Check if it is the bool datatype
-        fprintf(output, "PUSHS GF@&&inter1\n"
-                        "TYPES\n"
-                        "PUSHS string@bool\n"
-                        "JUMPIFNEQS $&&while_start%u\n"
-                        "PUSHS GF@&&inter1\n",
-                        expr_id);
     }
-    // Checks if false
-    fprintf(output, "PUSHS bool@false\n"
-                    "JUMPIFEQS $&&ternary_false%u\n"
-                    "LABEL $&&ternary_true%u\n",
-                    expr_id, expr_id);
-    CG_ASSERT(generate_expression_evaluation(output, ex->params[1]) == OK);
-    fprintf(output, "JUMP $&&ternary_end%u\n"
-                    "LABEL $&&ternary_false%u\n",
-                    expr_id, expr_id);
-    CG_ASSERT(generate_expression_evaluation(output, ex->params[2]) == OK);
+    if (b & B_FALSE) {
+        fprintf(output, "LABEL $&&ternary_false%u\n", expr_id);
+        CG_ASSERT(generate_expression_evaluation(output, ex->params[2]) == OK);
+    }
     fprintf(output, "LABEL $&&ternary_end%u\n", expr_id);
 
     internal_names_cntr++;
@@ -386,19 +359,42 @@ ErrorCode generate_builtin_str(FILE *output, AstExpression *ex) {
     // Generate switch
     if (type == DT_UNKNOWN) {
         fprintf(output, "TYPE GF@&&inter2 GF@&&inter1\n"
-                        "JUMPIFEQ $&&ifj_str_str%u GF@&&inter2 string@string\n"
                         "JUMPIFEQ $&&ifj_str_float%u GF@&&inter2 string@float\n"
-                        "JUMPIFEQ $&&ifj_str_bool%u GF@&&inter2 string@bool\n"
-                        "JUMPIFEQ $&&ifj_str_null%u GF@&&inter2 string@nil\n"
-                        "EXIT int@25\n", // Shouldn't happen
-                        expr_id, expr_id, expr_id, expr_id);
+                        "JUMPIFEQ $&&ifj_str_str%u GF@&&inter2 string@string\n"
+                        "JUMPIFEQ $&&ifj_str_bool%u GF@&&inter2 string@bool\n",
+                        expr_id, expr_id, expr_id);
+    }
+    // Generate null branch
+    if (type == DT_NULL || type == DT_UNKNOWN) {
+        fprintf(output, "PUSHS string@null\n");
+        if (type == DT_UNKNOWN) {
+            // Skip other branches
+            fprintf(output, "JUMP $&&ifj_str_end%u\n", expr_id);
+        }
     }
     // Generate string branch
     if (type == DT_STRING || type == DT_UNKNOWN) {
         fprintf(output, "LABEL $&&ifj_str_str%u\n"
-                        "PUSHS GF@&&inter1\n"
-                        "JUMP $&&ifj_str_end%u\n",
-                        expr_id, expr_id);
+                        "PUSHS GF@&&inter1\n",
+                        expr_id);
+        if (type == DT_UNKNOWN) {
+            // Skip other branches
+            fprintf(output, "JUMP $&&ifj_str_end%u\n", expr_id);
+        }
+    }
+    // Generate bool branch
+    if (type == DT_BOOL || type == DT_UNKNOWN) {
+        fprintf(output, "LABEL $&&ifj_str_bool%u\n"
+                        "JUMPIFEQ $&&ifj_str_bool_true%u GF@&&inter1 bool@true\n"
+                        "PUSHS string@false\n"
+                        "JUMP $&&ifj_str_end%u\n"
+                        "LABEL $&&ifj_str_bool_true%u\n"
+                        "PUSHS string@true\n",
+                        expr_id, expr_id, expr_id, expr_id);
+        if (type == DT_UNKNOWN) {
+            // Skip other branches
+            fprintf(output, "JUMP $&&ifj_str_end%u\n", expr_id);
+        }
     }
     // Generate num branch
     if (type == DT_NUM || type == DT_UNKNOWN) {
@@ -406,9 +402,7 @@ ErrorCode generate_builtin_str(FILE *output, AstExpression *ex) {
         if (ex->params[0]->surely_int) {
             fprintf(output, "PUSHS GF@&&inter1\n"
                             "FLOAT2INTS\n"
-                            "INT2STRS\n"
-                            "JUMP $&&ifj_str_end%u\n",
-                            expr_id);
+                            "INT2STRS\n");
         } else {
             fprintf(output, "PUSHS GF@&&inter1\n"
                             "ISINTS\n"
@@ -420,28 +414,9 @@ ErrorCode generate_builtin_str(FILE *output, AstExpression *ex) {
                             "LABEL $&&ifj_str_float_int%u\n"
                             "PUSHS GF@&&inter1\n"
                             "FLOAT2INTS\n"
-                            "INT2STRS\n"
-                            "JUMP $&&ifj_str_end%u\n",
-                            expr_id, expr_id, expr_id, expr_id);
+                            "INT2STRS\n",
+                            expr_id, expr_id, expr_id);
         }
-    }
-    // Generate bool branch
-    if (type == DT_BOOL || type == DT_UNKNOWN) {
-        fprintf(output, "LABEL $&&ifj_str_bool%u\n"
-                        "JUMPIFEQ $&&ifj_str_bool_true%u GF@&&inter1 bool@true\n"
-                        "PUSHS string@false\n"
-                        "JUMP $&&ifj_str_end%u\n"
-                        "LABEL $&&ifj_str_bool_true%u\n"
-                        "PUSHS string@true\n"
-                        "JUMP $&&ifj_str_end%u\n",
-                        expr_id, expr_id, expr_id, expr_id, expr_id);
-    }
-    // Generate null branch
-    if (type == DT_NULL || type == DT_UNKNOWN) {
-        fprintf(output, "LABEL $&&ifj_str_null%u\n"
-                        "PUSHS string@null\n"
-                        "JUMP $&&ifj_str_end%u\n",
-                        expr_id, expr_id);
     }
     fprintf(output, "LABEL $&&ifj_str_end%u\n", expr_id);
     return OK;

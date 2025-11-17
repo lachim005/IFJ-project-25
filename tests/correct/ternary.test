@@ -9,5 +9,6 @@ class Program {
         Ifj.write(5 < 1 ? "CHYBA\n" : "ahoj\n")
         Ifj.write(__false ? "CHYBA\n" : "ahoj\n")
         Ifj.write(__true ? "ahoj\n" : "CHYBA\n")
+        Ifj.write(Ifj.write("ahoj\n") ? "CHYBA\n" : "ahoj\n")
     }
 }
