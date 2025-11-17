@@ -121,9 +121,6 @@ ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr) {
             continue;
         }
 
-        int col = calculate_table_idx(token.type);
-        int row = calculate_table_idx(stack_token.type);
-
         if(token.type == TOK_DOLLAR && stack_token.type == TOK_DOLLAR){
             break;
         } // end of expression
@@ -131,6 +128,14 @@ ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr) {
         if(token.type != TOK_EOL) {
             last_used_token = token;
         } // store last used token for EOL check
+
+        int col = calculate_table_idx(token.type);
+        int row = calculate_table_idx(stack_token.type);
+        if (col < 0 || row < 0) {
+            stack_destroy(expr_stack);
+            stack_destroy(op_stack);
+            return SYNTACTIC_ERROR;
+        }
 
         char relation = precedence_table[row][col];
 
