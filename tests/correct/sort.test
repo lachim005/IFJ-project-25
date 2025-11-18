@@ -1,0 +1,63 @@
+import "ifj25" for Ifj
+class Program {
+    static write(a) {
+        Ifj.write(Ifj.str(a) + "\n")
+    }
+    static input=(a) {
+        __s = a
+    }
+    static main() {
+        var result
+        input = "dceagfhb"
+        result = sorted
+        write(reverse(result))
+    }
+    static sorted {
+        var len = Ifj.length(__s)
+        var res = ""
+        var max = get_max()
+        while (!(max is Null)) {
+            res = res + Ifj.chr(max)
+            max = get_max()
+        }
+        return res
+    }
+    static get_max() {
+        var len = Ifj.length(__s)
+        if (len == 0) {
+            return null
+        }
+        var i = 0
+        var max = 0
+        var max_i = 0
+        while (i < len) {
+            var val = Ifj.ord(__s, i)
+            if (val > max) {
+                max = val
+                max_i = i
+            }
+            i = i + 1
+        }
+        __s = remove_at(__s, max_i)
+        return max
+    }
+    static remove_at(str, i) {
+        var len = Ifj.length(str)
+        if (i >= len) {
+            return str
+        }
+        if (i >= len - 1) {
+            return Ifj.substring(str, 0, i)
+        }
+        return Ifj.substring(str, 0, i) + Ifj.substring(str, i+1, len)
+    }
+    static reverse(str) {
+        var res = ""
+        var i=Ifj.length(str)-1
+        while (i >= 0) {
+            res = res + Ifj.chr(Ifj.ord(str, i))
+            i = i - 1
+        }
+        return res
+    }
+}

@@ -517,14 +517,20 @@ ErrorCode generate_builtin_substring(FILE *output, AstExpression *ex) {
     AstExpression *end = ex->params[2];
     // Type checks
     CG_ASSERT(generate_expression_evaluation(output, str) == OK);
-    fprintf(output, "POPS GF@&&inter1\n");
-    if (str->assumed_type == DT_UNKNOWN) {
-        generate_var_type_check(output, "GF@&&inter1", "string", 25);
-    } else if (str->assumed_type != DT_STRING) {
+    CG_ASSERT(generate_expression_evaluation(output, start) == OK);
+    CG_ASSERT(generate_expression_evaluation(output, end) == OK);
+
+    fprintf(output, "POPS GF@&&inter3\n");
+    if (end->assumed_type == DT_UNKNOWN) {
+        generate_var_type_check(output, "GF@&&inter3", "float", 25);
+    } else if (end->assumed_type != DT_NUM) {
         fprintf(output, "EXIT int@25\n"); // Shouldn't happen
     }
+    if (!start->surely_int) {
+        generate_var_int_check(output, "GF@&&inter3", 26);
+    }
+    fprintf(output, "FLOAT2INT GF@&&inter3 GF@&&inter3\n");
 
-    CG_ASSERT(generate_expression_evaluation(output, start) == OK);
     fprintf(output, "POPS GF@&&inter2\n");
     if (start->assumed_type == DT_UNKNOWN) {
         generate_var_type_check(output, "GF@&&inter2", "float", 25);
@@ -536,17 +542,12 @@ ErrorCode generate_builtin_substring(FILE *output, AstExpression *ex) {
     }
     fprintf(output, "FLOAT2INT GF@&&inter2 GF@&&inter2\n");
 
-    CG_ASSERT(generate_expression_evaluation(output, end) == OK);
-    fprintf(output, "POPS GF@&&inter3\n");
-    if (end->assumed_type == DT_UNKNOWN) {
-        generate_var_type_check(output, "GF@&&inter3", "float", 25);
-    } else if (end->assumed_type != DT_NUM) {
+    fprintf(output, "POPS GF@&&inter1\n");
+    if (str->assumed_type == DT_UNKNOWN) {
+        generate_var_type_check(output, "GF@&&inter1", "string", 25);
+    } else if (str->assumed_type != DT_STRING) {
         fprintf(output, "EXIT int@25\n"); // Shouldn't happen
     }
-    if (!start->surely_int) {
-        generate_var_int_check(output, "GF@&&inter3", 26);
-    }
-    fprintf(output, "FLOAT2INT GF@&&inter3 GF@&&inter3\n");
 
     unsigned expr_id = internal_names_cntr++;
     // Check boundaries
@@ -587,16 +588,18 @@ ErrorCode generate_builtin_strcmp(FILE *output, AstExpression *ex) {
     AstExpression *str2 = ex->params[1];
     // Type checks
     CG_ASSERT(generate_expression_evaluation(output, str1) == OK);
-    fprintf(output, "POPS GF@&&inter1\n");
-    if (str1->assumed_type == DT_UNKNOWN) {
-        generate_var_type_check(output, "GF@&&inter1", "string", 25);
-    } else if (str1->assumed_type != DT_STRING) {
-        fprintf(output, "EXIT int@25\n"); // Shouldn't happen
-    }
     CG_ASSERT(generate_expression_evaluation(output, str2) == OK);
+
     fprintf(output, "POPS GF@&&inter2\n");
     if (str1->assumed_type == DT_UNKNOWN) {
         generate_var_type_check(output, "GF@&&inter2", "string", 25);
+    } else if (str1->assumed_type != DT_STRING) {
+        fprintf(output, "EXIT int@25\n"); // Shouldn't happen
+    }
+
+    fprintf(output, "POPS GF@&&inter1\n");
+    if (str1->assumed_type == DT_UNKNOWN) {
+        generate_var_type_check(output, "GF@&&inter1", "string", 25);
     } else if (str1->assumed_type != DT_STRING) {
         fprintf(output, "EXIT int@25\n"); // Shouldn't happen
     }
