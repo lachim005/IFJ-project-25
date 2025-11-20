@@ -1799,13 +1799,14 @@ ErrorCode parse(Lexer *lexer, AstStatement **out_root, Symtable **out_global_sym
         return INTERNAL_ERROR;
     }
 
-    if (check_prologue(lexer) != OK) {
+    ErrorCode ec = check_prologue(lexer);
+    if (ec != OK) {
         symtable_free(symtable);
         ast_free(root);
-        return SYNTACTIC_ERROR;
+        return ec;
     }
 
-    ErrorCode ec = check_class_program(lexer, symtable, (root)->next);
+    ec = check_class_program(lexer, symtable, (root)->next);
     if (ec != OK) {
         symtable_free(symtable);
         ast_free(root);

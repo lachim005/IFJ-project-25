@@ -171,6 +171,7 @@ sum=0
 
 # Run correct tests
 run_correct
+run_with_comp_error 1
 run_with_comp_error 2
 run_with_comp_error 3
 run_with_comp_error 4
