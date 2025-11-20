@@ -465,7 +465,12 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
                 str_free(&expr->string_val);
                 expr->val_known = true;
                 expr->assumed_type = DT_NUM;
-                expr->double_val = (double)(unsigned char)str[index];
+                if (index >= (int)strlen(str) || index < 0) {
+                    // Out of bound index
+                    expr->double_val = 0.0;
+                } else {
+                    expr->double_val = (double)(unsigned char)str[index];
+                }
                 break;
             }
             if (strcmp(expr->string_val->val, "chr") == 0) {

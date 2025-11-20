@@ -18,5 +18,11 @@ class Program {
         Ifj.write(Ifj.str(Ifj.ord(__s, __one)) + " = 104\n")
         Ifj.write(Ifj.str(Ifj.ord("o", __zero)) + " = 111\n")
         Ifj.write(Ifj.str(Ifj.ord("Ahoj", 3)) + " = 106\n")
+        Ifj.write(Ifj.str(Ifj.ord(__s, 4)) + " = 0\n")
+        Ifj.write(Ifj.str(Ifj.ord(__s, -1)) + " = 0\n")
+        Ifj.write(Ifj.str(Ifj.ord("Ahoj", 4)) + " = 0\n")
+        Ifj.write(Ifj.str(Ifj.ord("Ahoj", -1)) + " = 0\n")
+        Ifj.write(Ifj.str(Ifj.ord(__s, 500000)) + " = 0\n")
+        Ifj.write(Ifj.str(Ifj.ord("Ahoj", 50000)) + " = 0\n")
     }
 }

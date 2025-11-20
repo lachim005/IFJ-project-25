@@ -708,11 +708,16 @@ ErrorCode generate_builtin_function_call(FILE *output, AstExpression *ex) {
         generate_var_int_check(output, "GF@&&inter2", 26);
         fprintf(output, "FLOAT2INT GF@&&inter2 GF@&&inter2\n"
                         "STRLEN GF@&&inter3 GF@&&inter1\n" // Check bounds
-                        "PUSHS GF@&&inter3\n"
+                        "PUSHS GF@&&inter3\n" // Compare i with len
                         "PUSHS GF@&&inter2\n"
                         "GTS\n"
                         "PUSHS bool@true\n"
                         "JUMPIFNEQS $&&ifj_ord_err%u\n"
+                        "PUSHS GF@&&inter2\n" // Compare i with 0
+                        "PUSHS int@0\n"
+                        "LTS\n"
+                        "PUSHS bool@true\n"
+                        "JUMPIFEQS $&&ifj_ord_err%u\n"
                         "PUSHS GF@&&inter1\n" // Get value
                         "PUSHS GF@&&inter2\n"
                         "STRI2INTS\n"
@@ -721,7 +726,7 @@ ErrorCode generate_builtin_function_call(FILE *output, AstExpression *ex) {
                         "LABEL $&&ifj_ord_err%u\n" // Error
                         "PUSHS float@0x0p+0\n"
                         "LABEL $&&ifj_ord_end%u\n",
-                        expr_id, expr_id, expr_id, expr_id);
+                        expr_id, expr_id, expr_id, expr_id, expr_id);
     }
     else if (strcmp(ex->string_val->val, "chr") == 0) {
         CG_ASSERT(ex->child_count == 1);
