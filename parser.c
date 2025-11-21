@@ -15,6 +15,7 @@
 #include "symtable.h"
 #include "expr_parser.h"
 #include <string.h>
+#include <math.h>
 
 #define RETURN_CODE(code, token) do { \
     token_free(&token); \
@@ -1500,6 +1501,13 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
                 if ((left_type != DT_STRING && left_type != DT_NUM && left_type != DT_UNKNOWN) ||
                     (right_type != DT_NUM && right_type != DT_UNKNOWN)) {
                     return SEM_TYPE_COMPAT;
+                }
+                if (left_type == DT_STRING && right_type == DT_NUM && expr->params[1]->val_known) {
+                    double val = expr->params[1]->double_val;
+                    // If we are doing string iteration and the right side isn't an integer, we can thrown an error
+                    if (floor(val) != val) {
+                        return SEM_TYPE_COMPAT;
+                    }
                 }
                 // One unknown
                 if (left_type == DT_UNKNOWN) {
