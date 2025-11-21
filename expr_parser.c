@@ -8,7 +8,6 @@
  * Authors:
  * Vojtěch Borýsek (xborysv00)
  */
-
 #include "expr_parser.h"
 #include "ast.h"
 #include "error.h"

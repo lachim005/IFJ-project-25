@@ -8,7 +8,6 @@
  * Authors:
  * Tomáš Hanák (xhanakt00)
  */
-
 #ifndef _OPTIMIZER_H_
 #define _OPTIMIZER_H_
 

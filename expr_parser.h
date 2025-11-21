@@ -8,7 +8,6 @@
  * Authors:
  * Vojtěch Borýsek (xborysv00)
  */
-
 #include "stack.h"
 #include "lexer.h"
 #include "token.h"

@@ -18,7 +18,6 @@
  * 10  - other semantic errors
  * 99  - internal compiler error (e.g. memory allocation failure)
  */
-
 #ifndef _ERROR_H
 #define _ERROR_H
 

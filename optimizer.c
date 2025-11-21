@@ -8,7 +8,6 @@
  * Authors:
  * Tomáš Hanák (xhanakt00)
  */
-
 #include "optimizer.h"
 #include "ast.h"
 #include "error.h"

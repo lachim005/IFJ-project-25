@@ -10,7 +10,6 @@
  * Tomáš Hanák (xhanakt00)
  * Šimon Halas (xhalass00)
  */
-
 #include "symtable.h"
 #include "ast.h"
 #include <stdio.h>
