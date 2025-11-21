@@ -18,7 +18,6 @@
 #include <stddef.h>
 #include <string.h>
 
-/// Updates symtable item with known value from expression
 void update_symtable_value(SymtableItem *item, AstExpression *expr) {
     if (item == NULL || expr == NULL) {
         return;
@@ -52,7 +51,6 @@ void update_symtable_value(SymtableItem *item, AstExpression *expr) {
     }
 }
 
-/// Clears a known value from a symtable item
 void clear_symtable_item_value(SymtableItem *it, void* par) {
     // Par is unused here
     (void)par;
@@ -65,12 +63,10 @@ void clear_symtable_item_value(SymtableItem *it, void* par) {
     it->data_type = DT_UNKNOWN;
 }
 
-/// Clears all known values from a symtable
 void clear_symtable_values(Symtable *st) {
     symtable_foreach(st, clear_symtable_item_value, NULL);
 }
 
-/// Optimizes expression recursively
 ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtable *localtable) {
     if (expr == NULL) {
         return INTERNAL_ERROR;
@@ -498,7 +494,6 @@ ErrorCode optimize_expression(AstExpression *expr, Symtable *globaltable, Symtab
     return OK;
 }
 
-/// Optimizes a block of statements
 ErrorCode optimize_block(AstBlock *block, Symtable *globaltable, Symtable *localtable) {
     if (block == NULL) {
         return OK;
@@ -516,7 +511,6 @@ ErrorCode optimize_block(AstBlock *block, Symtable *globaltable, Symtable *local
     return OK;
 }
 
-/// Optimizes a block of statements
 ErrorCode optimize_root(AstStatement *statement, Symtable *globaltable, Symtable *localtable) {
     if (statement == NULL) {
         return OK;
@@ -534,7 +528,6 @@ ErrorCode optimize_root(AstStatement *statement, Symtable *globaltable, Symtable
     return OK;
 }
 
-/// Optimizes a single statement
 ErrorCode optimize_statement(AstStatement *statement, Symtable *globaltable, Symtable *localtable) {
     if (statement == NULL) {
         return OK;
@@ -699,7 +692,6 @@ ErrorCode optimize_statement(AstStatement *statement, Symtable *globaltable, Sym
     return ec;
 }
 
-/// Main optimization entry point
 ErrorCode optimize_ast(AstStatement *root, Symtable *globaltable) {
     if (root == NULL) {
         return INTERNAL_ERROR;

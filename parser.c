@@ -17,16 +17,19 @@
 #include <string.h>
 #include <math.h>
 
+/// Macro for returning with token free
 #define RETURN_CODE(code, token) do { \
     token_free(&token); \
     return code; \
 } while(0)
 
+/// Macro for initializing token
 #define INIT_TOKEN(token, tok_type) do { \
     (token).type = (tok_type); \
     (token).string_val = NULL; \
 } while(0)
 
+/// Macro for checking token
 #define CHECK_TOKEN(lexer, token) do { \
     token_free(&token); \
     if(lexer_get_token(lexer, &token) != ERR_LEX_OK) { \
@@ -34,6 +37,7 @@
     } \
 } while(0)
 
+/// Macro for checking token while skipping newlines
 #define CHECK_TOKEN_SKIP_NEWLINE(lexer, token) do { \
     token_free(&token); \
     do { \
@@ -301,6 +305,7 @@ ErrorCode check_class_program(Lexer *lexer, Symtable *symtable, AstStatement *st
     if (token.type != TOK_LEFT_BRACE)
         RETURN_CODE(SYNTACTIC_ERROR, token);
 
+    // Check class body
     ErrorCode ec = check_class_body(lexer, symtable, statement);
     if (ec != OK) {
         RETURN_CODE(ec, token);
@@ -336,6 +341,7 @@ ErrorCode check_class_body(Lexer *lexer, Symtable *symtable, AstStatement *state
         }
 
         ErrorCode ec;
+        // Check for statics
         if (token.type == TOK_KW_STATIC) {
             ec = check_statics(lexer, symtable, statement);
             if (ec != OK) {
@@ -428,6 +434,7 @@ ErrorCode check_statics(Lexer *lexer, Symtable *symtable, AstStatement *statemen
     if (identifier.type != TOK_IDENTIFIER)
         RETURN_CODE(SYNTACTIC_ERROR, identifier);
 
+    // Create new local symbol table for the static function/setter/getter
     Symtable *new_symtable = symtable_init();
     if (new_symtable == NULL) {
         RETURN_CODE(INTERNAL_ERROR, identifier);
@@ -490,6 +497,7 @@ ErrorCode checks_setter(Lexer *lexer, Symtable *globaltable, Symtable *localtabl
     // Enters new scope for the setter
     enter_scope(localtable);
 
+    // Add setter to symbol table with redefinition check
     ErrorCode ec = add_setter_helper(globaltable, identifier.string_val->val);
     if (ec != OK) {
         return ec;
@@ -710,6 +718,7 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable, 
         }
 
         ErrorCode ec;
+        // Analyze statement based on the first token
         switch (token.type) {
             case TOK_GLOBAL_VAR:
                 ec = check_global_var(lexer, globaltable, localtable, token.string_val, statement);
@@ -770,6 +779,7 @@ ErrorCode check_body(Lexer *lexer, Symtable *globaltable, Symtable *localtable, 
                     RETURN_CODE(INTERNAL_ERROR, token);
                 }
 
+                // Check block body
                 ec = check_body(lexer, globaltable, localtable, known, statement->block->statements);
                 if (ec != OK) {
                     RETURN_CODE(ec, token);
@@ -1357,8 +1367,6 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
                 break;
             } 
 
-            // Check getter
-
             // Change expression type to a getter
             expr->type = EX_GETTER;
 
@@ -1465,8 +1473,8 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
                 }
                 break;
             }
-            // Now for + and *
 
+            // Now for + and *
             // Both unknown
             if (left_type == DT_UNKNOWN && right_type == DT_UNKNOWN) {
                 result_type = DT_UNKNOWN;
@@ -1534,12 +1542,14 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
         }
 
         DataType left_type;
+        // Check left expression
         ec = semantic_check_expression(expr->params[0], globaltable, localtable, &left_type);
         if (ec != OK) {
             return ec;
         }
 
         DataType right_type;
+        // Check right expression
         ec = semantic_check_expression(expr->params[1], globaltable, localtable, &right_type);
         if (ec != OK) {
             return ec;
@@ -1581,12 +1591,14 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
         }
 
         DataType left_type;
+        // Check left expression
         ec = semantic_check_expression(expr->params[0], globaltable, localtable, &left_type);
         if (ec != OK) {
             return ec;
         }
 
         DataType right_type;
+        // Check right expression
         ec = semantic_check_expression(expr->params[1], globaltable, localtable, &right_type);
         if (ec != OK) {
             return ec;
@@ -1603,11 +1615,13 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
         }
 
         DataType left_type;
+        // Check left expression
         ec = semantic_check_expression(expr->params[0], globaltable, localtable, &left_type);
         if (ec != OK) {
             return ec;
         } 
         DataType right_type;
+        // Check right expression
         ec = semantic_check_expression(expr->params[1], globaltable, localtable, &right_type);
         if (ec != OK) {
             return ec;
@@ -1625,12 +1639,14 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
         }
 
         DataType left_type;
+        // Check left expression
         ec = semantic_check_expression(expr->params[0], globaltable, localtable, &left_type);
         if (ec != OK) {
             return ec;
         } 
 
         DataType right_type;
+        // Check right expression
         ec = semantic_check_expression(expr->params[1], globaltable, localtable, &right_type);
         if (ec != OK) {
             return ec;
@@ -1650,18 +1666,21 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
         }
 
         DataType cond_type;
+        // Check condition expression
         ec = semantic_check_expression(expr->params[0], globaltable, localtable, &cond_type);
         if (ec != OK) {
             return ec;
         }
 
         DataType true_type;
+        // Check true branch expression
         ec = semantic_check_expression(expr->params[1], globaltable, localtable, &true_type);
         if (ec != OK) {
             return ec;
         }
 
         DataType false_type;
+        // Check false branch expression
         ec = semantic_check_expression(expr->params[2], globaltable, localtable, &false_type);
         if (ec != OK) {
             return ec;
@@ -1780,6 +1799,7 @@ ErrorCode semantic_check_expression(AstExpression *expr, Symtable *globaltable, 
         return INTERNAL_ERROR;
     }
 
+    // Set assumed type in expression
     expr->assumed_type = result_type;
     if (out_type != NULL) {
         *out_type = result_type;
@@ -1807,6 +1827,7 @@ ErrorCode parse(Lexer *lexer, AstStatement **out_root, Symtable **out_global_sym
         return INTERNAL_ERROR;
     }
 
+    // Parse prologue
     ErrorCode ec = check_prologue(lexer);
     if (ec != OK) {
         symtable_free(symtable);
@@ -1814,6 +1835,7 @@ ErrorCode parse(Lexer *lexer, AstStatement **out_root, Symtable **out_global_sym
         return ec;
     }
 
+    // Parse class and function definitions
     ec = check_class_program(lexer, symtable, (root)->next);
     if (ec != OK) {
         symtable_free(symtable);
@@ -1821,6 +1843,7 @@ ErrorCode parse(Lexer *lexer, AstStatement **out_root, Symtable **out_global_sym
         return ec;
     }
 
+    // Semantic analysis - check for undefined functions/variables
     if (symtable_get_undefined_items_count(symtable) > 0) {
         symtable_free(symtable);
         ast_free(root);
