@@ -261,6 +261,7 @@ ErrLex lexer_read_token_from_file(Lexer *lexer, Token *tok) {
             if (ch == '"') MOVE_STATE(S_STR_EMPTY);
             if (ch == '\n') return ERR_LEX_NL_IN_STRING_LITERAL;
             if (ch == '\\') MOVE_STATE(S_STR_ESCAPE);
+            if (ch < 32) return ERR_LEX_INVALID_CHAR_IN_STRING;
             str_append_char(buf1, ch);
             MOVE_STATE(S_STR_INSIDE);
         case S_STR_INSIDE:
@@ -272,6 +273,7 @@ ErrLex lexer_read_token_from_file(Lexer *lexer, Token *tok) {
             }
             if (ch == '\n') return ERR_LEX_NL_IN_STRING_LITERAL;
             if (ch == '\\') MOVE_STATE(S_STR_ESCAPE);
+            if (ch < 32) return ERR_LEX_INVALID_CHAR_IN_STRING;
             str_append_char(buf1, ch);
             continue;
         case S_STR_ESCAPE:
@@ -288,6 +290,10 @@ ErrLex lexer_read_token_from_file(Lexer *lexer, Token *tok) {
             str_append_char(buf1, escaped_char);
             MOVE_STATE(S_STR_INSIDE);
         case S_STR_ESCAPE_CODE_1:
+            // Filter invalid characters
+            if ((ch < '0' || ch > '9') && (ch < 'a' || ch > 'f') && (ch < 'A' || ch > 'F')) {
+                return ERR_LEX_STRING_UNEXPECTED_ESCAPE_SEQUENCE;
+            }
             str_append_char(buf2, ch);
             MOVE_STATE(S_STR_ESCAPE_CODE_2);
         case S_STR_ESCAPE_CODE_2:
