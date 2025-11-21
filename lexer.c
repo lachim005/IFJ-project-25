@@ -310,15 +310,18 @@ ErrLex lexer_read_token_from_file(Lexer *lexer, Token *tok) {
             if (tok->string_val == NULL) return ERR_LEX_MALLOC;
             FOUND_TOK(TOK_LIT_STRING);
         case S_STR_MULTILINE_FIRST_LINE:
-            str_append_char(buf2, ch);
             if (ch == '\n') {
                 // We don't append the first line if it just whitespace
                 if (!is_just_whitespace(buf2->val)) {
                     str_append_string(buf1, buf2->val);
+                    str_clear(buf2);
+                    str_append_char(buf2, ch);
+                    MOVE_STATE(S_STR_MULTILINE_INSIDE);
                 }
                 str_clear(buf2);
                 MOVE_STATE(S_STR_MULTILINE_INSIDE);
             }
+            str_append_char(buf2, ch);
             // This will not return to the FIRST_LINE_STATE, but
             // it's fine because the state is here only to handle
             // empty first lines, which this will not be
