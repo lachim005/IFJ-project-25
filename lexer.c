@@ -385,7 +385,14 @@ ErrLex lexer_read_token_from_file(Lexer *lexer, Token *tok) {
             tok->double_val = (double)val;
             FOUND_TOK(TOK_LIT_NUM);
         case S_FLOAT_DOT:
-            if (!isdigit(ch)) return ERR_LEX_NUM_LIT_UNEXPECTED_CHARACTER;
+            if (!isdigit(ch)) {
+                UNGET;
+                ungetc('.', lexer->file);
+                lexer->pos_char--;
+                lexer->last_char_was_newline = false;
+                tok->double_val = strtod(buf1->val, NULL); // Should not fail
+                FOUND_TOK(TOK_LIT_NUM);
+            }
             str_append_char(buf1, ch);
             MOVE_STATE(S_FLOAT_DECIMAL);
         case S_FLOAT_E:
