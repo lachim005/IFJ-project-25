@@ -1139,7 +1139,7 @@ ErrorCode generate_expression_evaluation(FILE *output, AstExpression *st) {
 
 ErrorCode generate_var_assignment(FILE *output, char *scope, AstVariable *st) {
     if (st->expression == NULL) return OK;
-    if (st->expression->val_known) {
+    if (st->expression->val_known && !has_fun_call(st->expression)) {
         AstExpression *expr = st->expression;
         String *str;
         // We can assign directly without pushing and poping
@@ -1208,6 +1208,7 @@ ErrorCode generate_statement(FILE *output, AstStatement *st) {
     case ST_SETTER_CALL:
         return generate_setter_assignment(output, st->setter_call);
     case ST_EXPRESSION:
+        if (!has_fun_call(st->expression)) return OK;
         CG_ASSERT(generate_expression_evaluation(output, st->expression) == OK);
         fprintf(output, "POPS GF@&&inter1\n");
         return OK;

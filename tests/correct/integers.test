@@ -1,0 +1,9 @@
+import "ifj25" for Ifj
+class Program {
+    static main() {
+        Ifj.write(1.5 * 2)
+        Ifj.write("\n")
+        Ifj.write(Ifj.str(1.5 * 2))
+        Ifj.write("\n")
+    }
+}
