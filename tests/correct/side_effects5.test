@@ -1,0 +1,18 @@
+import "ifj25" for Ifj
+class Program {
+    static globs() {
+        __unknown = 10
+    }
+    static main() {
+        globs()
+        var a = 5
+        a = __unknown
+        Ifj.write(a)
+        Ifj.write("\n")
+
+        __a = 5
+        __a = __unknown
+        Ifj.write(__a)
+        Ifj.write("\n")
+    }
+}
