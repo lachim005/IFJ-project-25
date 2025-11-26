@@ -73,7 +73,6 @@ typedef enum tok_type {
     TOK_DOLLAR, // $
     TOK_E, // E
     TOK_PREC_OPEN, // <
-    TOK_PREC_CLOSE, // >
     TOK_PREC_EQUAL, // =
 } TokType;
 

@@ -284,6 +284,10 @@ ErrorCode check_prologue(Lexer *lexer) {
     if (token.type != TOK_KW_IFJ)
         RETURN_CODE(SYNTACTIC_ERROR, token);
 
+    CHECK_TOKEN(lexer, token);
+    if (token.type != TOK_EOL)
+        RETURN_CODE(SYNTACTIC_ERROR, token);
+
     RETURN_CODE(OK, token);
 }
 

@@ -13,14 +13,14 @@
 #include "stack.h"
 #include "token.h"
 
-Stack *stack_init(size_t capacity) {
+Stack *stack_init() {
     Stack *stack = malloc(sizeof(Stack));
     if (stack == NULL) {
         return NULL;
     }
-    stack->capacity = capacity;
+    stack->capacity = STACK_INITIAL_CAPACITY;
     stack->top = 0;
-    stack->items = malloc(capacity * sizeof(Token));
+    stack->items = malloc(stack->capacity * sizeof(Token));
     if (stack->items == NULL) {
         free(stack);
         return NULL;
@@ -40,11 +40,6 @@ bool stack_empty(Stack *stack) {
     return stack->top == 0;
 }
 
-/**
- * Pushes an item onto the stack
- * If the stack is full, it will be resized to double its current capacity
- * Returns true if successful, false if memory allocation fails
- */
 bool stack_push(Stack *stack, Token item) {
     if (stack->top >= stack->capacity) {
         size_t new_capacity = stack->capacity * 2;
@@ -62,10 +57,6 @@ bool stack_push(Stack *stack, Token item) {
     return true;
 }
 
-/**
- * Pops the top item from the stack and stores it in out_item
- * Returns true if successful, false if the stack is empty
- */
 bool stack_pop(Stack *stack) {
     if (stack_empty(stack)) {
         return false;
@@ -74,11 +65,6 @@ bool stack_pop(Stack *stack) {
     return true;
 }
 
-/**
- * Retrieves the top item of the stack without removing it
- * Stores the item in out_item
- * Returns true if successful, false if the stack is empty
- */
 bool stack_top(Stack *stack, Token *out_item) {
     if (stack_empty(stack)) {
         return false;
@@ -88,11 +74,6 @@ bool stack_top(Stack *stack, Token *out_item) {
     return true;
 }
 
-/**
- * Searches for a specific token type in stack
- * It pops items from the original stack and pushes them onto out_stack until it finds the type
- * If found, it returns true and the searched type is on the top of the stack, otherwise false
- */
 bool stack_find_type(Stack *stack, Stack *out_stack, TokType type) {
     for (size_t i = stack->top; i > 0; i--) {
         Token temp;
@@ -108,11 +89,6 @@ bool stack_find_type(Stack *stack, Stack *out_stack, TokType type) {
     return false;
 }
 
-/**
- * Searches for the topmost terminal in the stack
- * It pops items from the original stack and pushes them onto out_stack until it finds a terminal
- * If found, it returns true and the terminal is on the top of the stack, otherwise false
- */
 bool stack_find_term(Stack *stack, Stack *out_stack) {
     for (size_t i = stack->top; i > 0; i--) {
         Token temp;
@@ -128,10 +104,6 @@ bool stack_find_term(Stack *stack, Stack *out_stack) {
     return false;
 }
 
-/**
- * Pushes all items from src stack to dst stack
- * Returns true if successful, false otherwise
- */
 bool push_whole_stack(Stack *src, Stack *dst) {
     for (size_t i = src->top; i > 0; i--) {
         if(stack_empty(src)){

@@ -15,8 +15,6 @@
 #include "token.h"
 #include <math.h>
 
-#define DEFAULT_CAPACITY 100
-
 
 /**
  * Precedence table for operators
@@ -87,8 +85,8 @@ ErrorCode parse_expression(Lexer *lexer, AstExpression **out_expr) {
     Stack *expr_stack;
     Stack *op_stack;
 
-    expr_stack = stack_init(100);
-    op_stack = stack_init(100);
+    expr_stack = stack_init();
+    op_stack = stack_init();
 
     Token token;
     token.type = TOK_DOLLAR;
