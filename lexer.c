@@ -378,7 +378,7 @@ ErrLex lexer_read_token_from_file(Lexer *lexer, Token *tok) {
             tok->double_val = strtod(buf1->val, NULL); // Should not fail
             FOUND_TOK(TOK_LIT_NUM);
         case S_INT_HEX_LIT:
-            if (isdigit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'Z')) {
+            if (isdigit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')) {
                 str_append_char(buf1, ch);
                 continue;
             }
