@@ -8,6 +8,7 @@
 \usepackage{color}
 \usepackage{alltt} % \verb
 \usepackage[hidelinks]{hyperref} % odkazy
+\usepackage{tikz}
 
 % Ceske uvozovky
 \providecommand{\uv}[1]{\quotedblbase #1\textquotedblleft}
@@ -34,7 +35,34 @@
     \tableofcontents
     \newpage
     \section{Přehled}
-        TODO
+        \begin{center}
+            \begin{tikzpicture}[
+                    every node/.style={fill=white},
+                    block/.style={rectangle, draw=yellow, fill=yellow!5, very thick, minimum size=15mm, inner sep=4pt,draw},
+                    node distance=3cm,
+                    align=center,
+                ]
+                \node[block] (lexer) {Lexikální analyzátor\\ \texttt{lexer.c}};
+                \node[block] (parser) [below of=lexer] {Syntaktický analyzátor\\ \texttt{parser.c}};
+                \node[block] (expr) [right of=parser, xshift=4cm]{Precedenční analyzátor\\ \texttt{expr\_parser.c}};
+                \node[block] (optimizer) [below of=parser] {Optimalizátor\\ \texttt{optimizer.c}};
+                \node[block] (codegen) [below of=optimizer] {Generátor kódu\\ \texttt{code\_generator.c}};
+
+                \draw[->] (lexer.south) -- node {Tokeny} (parser.north);
+                \draw[->] (expr.west) -- node {ASS výrazu} (parser.east);
+                \draw[->] (parser.south) -- node {ASS programu} (optimizer.north);
+                \draw[->] (optimizer.south) -- node {Optimalizovaný ASS programu} (codegen.north);
+            \end{tikzpicture}
+        \end{center}
+        Překlad začíná inicializací lexikálního analyzátoru. Ten je následně předán syntaktickému analyzátoru,
+        který jej volá v případě potřeby tokenu. Pokud syntaktický analyzátor potřebuje načíst výraz, volá precedenční
+        analyzátor. V rámci syntaktického analyzátoru se rovnou také provádí sémantické akce,
+        jako kontrola typů výrazů, nebo kontrola deklarace proměnných. Výsledek ukládá do abstraktního
+        syntaktického stromu (ASS).
+
+        Jakmile je celý program převeden na ASS a sémanticky zkontrolován, je tento strom předán do optimalizátoru, který strom zoptimalizuje.
+        Optimalizovaný strom je následně předán generátoru kódu, který z něj vytvoří cílový kód, čímž překlad končí.
+
 
     \section{Lexikální analýza}
         TODO
@@ -46,6 +74,8 @@
     \subsection{Sémantická analýza}
         TODO
     \subsection{Zpracování výrazů}
+        TODO
+    \subsection{Abstraktní syntaktický strom}
         TODO
 
     \section{Optimalizátor}
