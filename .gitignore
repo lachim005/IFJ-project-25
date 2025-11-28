@@ -6,3 +6,9 @@ ic25int-linux-x86_64
 *.wren
 *.zip
 .vscode/
+*.aux
+*.dvi
+*.log
+*.out
+*.pdf
+*.toc

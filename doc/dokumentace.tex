@@ -1,0 +1,62 @@
+\documentclass[a4paper]{article}
+
+\usepackage[text={18.6cm, 26.0cm}, centering]{geometry}
+
+\usepackage[czech, provide=*]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{color}
+\usepackage{alltt} % \verb
+\usepackage[hidelinks]{hyperref} % odkazy
+
+% Ceske uvozovky
+\providecommand{\uv}[1]{\quotedblbase #1\textquotedblleft}
+
+\begin{document}
+    \begin{titlepage}
+        \begin{center}
+            \textsc{\Huge{}Vysoké učení technické v Brně\\[0.5em]}
+            \textsc{\huge Fakulta informačních technologií}\\
+            \vspace{\stretch{0.382}}
+            { \huge Wren překladač\,--\,dokumentace\\[0.5em]
+                IFJ/IAL 2025 }\\[0.5em]
+                Tým xsebesm00, varianta TRP-izp\\
+            \vspace{\stretch{0.618}}
+        \end{center}
+        { \phantom{a}\hfill FUNEXP\\
+          \phantom{a}\hfill EXTSTAT\\
+          Vojtěch Borýsek (xborysv00)\,--\, 33\% \hfill EXTFUN\\
+          Šimon Halas (xhalass00)\,--\, 00\% \hfill BOOLTHEN\\
+          Tomáš Hanák (xhanakt00)\,--\, 33\% \hfill OPERATORS\\
+          Michal Šebesta (xsebesm00)\,--\, 34\%, vedoucí \hfill STATICAN\\
+          }
+    \end{titlepage}
+    \tableofcontents
+    \newpage
+    \section{Přehled}
+        TODO
+
+    \section{Lexikální analýza}
+        TODO
+
+    \section{Syntaktický analýza}
+        TODO
+    \subsection{Tabulka symbolů}
+        TODO
+    \subsection{Sémantická analýza}
+        TODO
+    \subsection{Zpracování výrazů}
+        TODO
+
+    \section{Optimalizátor}
+        TODO
+
+    \section{Generátor kódu}
+        TODO
+
+    \section{Rozdělení práce}
+        \textbf{Vojtěch Borýsek}: Implementace precedenční analýzy a datových struktur.\\
+        \textbf{Šimon Halas}: Implementace tabulky symbolů. Hodnocení 0\% kvůli plánovanému ukončení studia.\\
+        \textbf{Tomáš Hanák}: Implementace syntaktické a sémantické analýzy a optimalizátoru.\\
+        \textbf{Michal Šebesta}: Implementace lexikálního analyzátoru a generátoru kódu.
+\end{document}
