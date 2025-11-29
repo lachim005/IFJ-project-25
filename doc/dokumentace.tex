@@ -79,8 +79,73 @@
         TODO
 
     \section{Optimalizátor}
-        TODO
+        Optimalizátor provádí optimalizaci abstraktního syntaktického stromu před jeho předáním generátoru kódu.
+        Hlavním cílem je zjednodušení výrazů, které lze vyhodnotit již v době překladu, a tím snížení složitosti
+        výsledného kódu a zvýšení rychlosti běhu programu.
 
+        \subsection{Princip činnosti}
+        Optimalizátor prochází celý AST rekurzivně a pro každý uzel provádí následující operace:
+        \begin{enumerate}
+            \item Nejprve optimalizuje všechny potomky uzlu (výrazy, příkazy, bloky)
+            \item Pokud jsou všechny operandy výrazu známé v době překladu, pokusí se výraz vyhodnotit
+            \item Udržuje informace o hodnotách proměnných v tabulce symbolů pro využití při optimalizaci
+            \item Při operacích s vedlejšími efekty (volání funkcí, setterů) maže známé hodnoty proměnných
+        \end{enumerate}
+
+        \subsection{Typy optimalizací}
+        \subsubsection{Konstantní výrazy}
+        Optimalizátor vyhodnocuje výrazy, jejichž všechny operandy jsou konstanty:
+        \begin{itemize}
+            \item \textbf{Aritmetické operace}: \texttt{2 + 3} $\rightarrow$ \texttt{5}, \texttt{10 / 2} $\rightarrow$ \texttt{5.0}
+            \item \textbf{Logické operace}: \texttt{true \&\& false} $\rightarrow$ \texttt{false}, \texttt{!true} $\rightarrow$ \texttt{false}
+            \item \textbf{Porovnávání}: \texttt{5 > 3} $\rightarrow$ \texttt{true}, \texttt{"abc" == "abc"} $\rightarrow$ \texttt{true}
+            \item \textbf{Stringové operace}: \texttt{"hello" + " world"} $\rightarrow$ \texttt{"hello world"}, \texttt{"abc" * 3} $\rightarrow$ \texttt{"abcabcabc"}
+            \item \textbf{Ternární operátor}: \texttt{true ? 1 : 2} $\rightarrow$ \texttt{1}
+        \end{itemize}
+
+        \subsubsection{Vestavěné funkce}
+        Optimalizátor dokáže vyhodnotit volání vestavěných funkcí s konstantními parametry:
+        \begin{itemize}
+            \item \texttt{Ifj.floor(3.7)} $\rightarrow$ \texttt{3.0}
+            \item \texttt{Ifj.length("hello")} $\rightarrow$ \texttt{5.0}
+            \item \texttt{Ifj.substring("hello", 1, 4)} $\rightarrow$ \texttt{"ell"}
+            \item \texttt{Ifj.strcmp("abc", "def")} $\rightarrow$ \texttt{-1.0}
+            \item \texttt{Ifj.ord("A", 0)} $\rightarrow$ \texttt{65.0}
+            \item \texttt{Ifj.chr(65)} $\rightarrow$ \texttt{"A"}
+        \end{itemize}
+
+        \subsubsection{Propagace konstant}
+        Optimalizátor sleduje hodnoty proměnných a využívá je k další optimalizaci:
+        \begin{alltt}
+var x = 5
+var y = x + 3  // y = 8 (známe hodnotu x)
+var z = y * 2  // z = 16 (známe hodnotu y)
+        \end{alltt}
+
+        Pokud je hodnota proměnné známá, nahradí její použití přímo hodnotou, čímž umožní
+        další optimalizace výrazů obsahujících tuto proměnnou.
+
+        \subsection{Ošetření vedlejších efektů}
+        Optimalizátor musí správně zacházet s operacemi, které mohou mít vedlejší efekty:
+        \begin{itemize}
+            \item \textbf{Volání funkcí a getterů}: Při volání funkce nebo getteru se maží všechny
+            známé hodnoty globálních proměnných, protože funkce může tyto proměnné modifikovat.
+            \item \textbf{Volání setterů}: Podobně jako u funkcí se maží hodnoty globálních proměnných.
+            \item \textbf{Podmínky a cykly}: V podmínkách \texttt{if} se optimalizují obě větve, ale
+            po optimalizaci se maží známé hodnoty proměnných, protože není jisté, která větev se vykoná.
+            V cyklech \texttt{while} se hodnoty maží jak před, tak po optimalizaci těla cyklu.
+        \end{itemize}
+
+        \subsection{Implementace}
+        Optimalizátor se skládá z několika klíčových funkcí:
+        \begin{itemize}
+            \item \texttt{optimize\_ast()}: Vstupní bod optimalizátoru, inicializuje optimalizaci celého programu
+            \item \texttt{optimize\_statement()}: Optimalizuje jednotlivé příkazy (deklarace, přiřazení, podmínky, cykly)
+            \item \texttt{optimize\_expression()}: Rekurzivně optimalizuje výrazy, vyhodnocuje známé operace
+            \item \texttt{optimize\_block()}: Optimalizuje bloky příkazů
+            \item \texttt{update\_symtable\_value()}: Ukládá známé hodnoty proměnných do tabulky symbolů
+            \item \texttt{clear\_symtable\_values()}: Maže známé hodnoty při operacích s vedlejšími efekty
+        \end{itemize}
     \section{Generátor kódu}
         TODO
 
