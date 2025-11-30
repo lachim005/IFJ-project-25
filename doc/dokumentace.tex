@@ -6,8 +6,9 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{color}
+\usepackage{graphicx}
 \usepackage{alltt} % \verb
-\usepackage[hidelinks]{hyperref} % odkazy
+\usepackage[]{hyperref} % odkazy
 \usepackage{tikz}
 
 % Ceske uvozovky
@@ -35,7 +36,8 @@
     \tableofcontents
     \newpage
     \section{Přehled}
-        \begin{center}
+        \begin{figure}[ht]
+            \centering
             \begin{tikzpicture}[
                     every node/.style={fill=white},
                     block/.style={rectangle, draw=yellow, fill=yellow!5, very thick, minimum size=15mm, inner sep=4pt,draw},
@@ -53,7 +55,9 @@
                 \draw[->] (parser.south) -- node {ASS programu} (optimizer.north);
                 \draw[->] (optimizer.south) -- node {Optimalizovaný ASS programu} (codegen.north);
             \end{tikzpicture}
-        \end{center}
+            \caption{Diagram komponent překladače}
+            \label{fig:compiler-diagram}
+        \end{figure}
         Překlad začíná inicializací lexikálního analyzátoru. Ten je následně předán syntaktickému analyzátoru,
         který jej volá v případě potřeby tokenu. Pokud syntaktický analyzátor potřebuje načíst výraz, volá precedenční
         analyzátor. V rámci syntaktického analyzátoru se rovnou také provádí sémantické akce,
@@ -65,7 +69,53 @@
 
 
     \section{Lexikální analýza}
-        TODO
+        Lexikální analyzátor čte vstupní program a rozděluje ho na jednotlivé tokeny. Je volán syntaktickým analyzátorem,
+        kontkrétně metodou \texttt{lexer\_get\_token()}. K dispozici je také funkce \texttt{lexer\_unget\_token()}, která
+        syntaktickému analyzátoru umožňuje token vrátit a načíst ho později, což se hodí v situacích,
+        kde další pravidlo není jasné a může být potřeba token vrátit jiné proceduře.
+
+
+        \begin{figure}[ht]
+            \centering
+            \includegraphics{fsm.pdf}
+            \caption{Diagram konečného automatu}
+            \label{fig:fsm}
+        \end{figure}
+
+        Lexikální analyzátor je implementován jako konečný stavový automat (\ref{fig:fsm}). Většinu typů tokenů jsme schopni
+        pokrýt pouze automatem. U některých typů ale musíme vyzužít něco navíc. Lexikální analyzátor má k
+        dispozici dva znakové buffery a jeden čítač, které využívá k načtení následujících typů tokenů.
+
+        \subsection{Číselné literály}
+            V momentě kdy automat přejde do stavu, kde se začíná zpracovávat číselný literál, začne
+            vstupní znaky psát do \texttt{buf1}. Jakmile narazíme na konec literálu, výsledný řetězec je
+            převeden na \texttt{double} pomocí funkce \texttt{strtod()} nebo \texttt{hex2int}.
+
+        \subsection{Řetězcové literály}
+            Klasické řetězcové literály se zapisují do \texttt{buf1} a výsledek je na konci vrácen uvnitř
+            tokenu.
+
+            Víceřádkové řetězcové literály jsou složitější. Znaky se nejprve čtou do \texttt{buf2}
+            dokud se nenarazí na znak nového řádku. V ten moment se obsah \texttt{buf2} přidá na konec
+            \texttt{buf1}, pokud řádek v \texttt{buf2} není první nebo poslední. V tom případě se do
+            \texttt{buf1} nepřidá pokud je prázdný nebo obsahuje pouze bílé znaky.
+        \subsection{Víceřádkové komentáře}
+            Víceřádkové komentáře mohou být zanořeny, takže lexikální analyzátor potřebuje čítač
+            zanoření. Při uzavření víceřádkového komentáře se podle stavu čítače přejde do stavu
+            uvnitř komentáře nebo mimo komentář.
+
+        \subsection{Identifikátory a klíčová slova}
+            Automat nijak nerozlišuje klíčová slova. Z jeho pohledu načte identifikátor, který
+            čte do \texttt{buf1}. Než je token identifikátoru vrácen, lexikální analyzátor se
+            podívá do tabulky klíčových slov a pokud v ní načtený text najde, vrátí místo tokenu
+            identifikátoru token správného klíčového slova.
+
+        Zbytek tokenů můžeme načíst pouze pomocí konečného automatu bez dalších neformalit.
+
+        Nové řádky se berou jako token, a jejich správné umístění řeší syntaktická analýza.
+
+        Lexikální analyzátor také přijímá tokeny pro zadání rozsahu do příkazu \texttt{for}, ale
+        celé rozšíření nakonec implementováno nebylo.
 
     \section{Syntaktický analýza}
         TODO
@@ -80,7 +130,7 @@
 
     \section{Optimalizátor}
         Optimalizátor provádí optimalizaci abstraktního syntaktického stromu před jeho předáním generátoru kódu.
-        Prochází celý AST rekurzivně a vyhodnocuje výrazy, které lze vypočítat již v době překladu, čímž
+        Prochází celý ASS rekurzivně a vyhodnocuje výrazy, které lze vypočítat již v době překladu, čímž
         snižuje složitost výsledného kódu a zvyšuje rychlost běhu programu.
 
         \subsection{Vyhodnocování konstantních výrazů}
