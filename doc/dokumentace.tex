@@ -229,16 +229,25 @@ if (null) \{
             vestavěných funkcích.
 
             Jako výrazy se berou také vestavěné funkce. Tyto funkce se vyhodnocují na místě bez jakéhokoliv volání.
+
+            Také normální funkce a gettery se berou jako výrazy a jejich vyhodnocování probíhá následovně:
+            \begin{enumerate}
+                \item Vyhodnotí se všechny podvýrazy reprezentující argumenty. Jejich hodnoty zůstanou na vrcholu zásobníku.
+                \item Zavolá se funkce, která argumenty z vrcholu zásobníku převezme.
+                \item Funkce nechá návratovou hodnotu na vrcholu zásobníku, kde si ji převezme nadvýraz.
+            \end{enumerate}
+
             \subsubsection{Optimalizace}
                 U každého výrazu mohou být ze sémantické analýzy uvedeny informace o typu výrazu a případně
                 i jeho hodnota, pokud ji optimalizátor dokázal vypočítat. Pokud jsou tyto informace k dispozici,
                 můžeme si někdy odpustit generování typové kontroly a někdy i samotného vyhodnocení výrazu.
 
-                Například u \texttt{a = "ahoj" + unknown} není potřeba generovat typovou kontrolu prvního podvýrazu
-                a zároveň nemusíme brát v potaz situaci, kdy \texttt{unknown} bude \texttt{Num}, protože spojovat
-                můžeme pouze dva řetězce.
-
-    \section{Rozdělení práce}
+                Například u \texttt{a = ("ahoj" * 2) + \_\_unknown} optimalizátor ví, že první podvýraz nabývá
+                hodnoty \texttt{"ahojahoj"}, takže nic nevyhodnocujeme a jen vložíme vypočtenou hodnotu na zásobník. Při vyhodnocování
+                operátoru \texttt{+} pak nemusíme kontrolovat typ levého podvýrazu, protože je ze sémantické analýzy
+                jasný. Také jistě víme, že zde operátor \texttt{+} označuje konkatenaci řetězců, takže nemusíme řešit,
+                že by se mohlo jednat o sčítání.
+        \section{Rozdělení práce}
         \textbf{Vojtěch Borýsek}: Implementace precedenční analýzy a datových struktur.\\
         \textbf{Šimon Halas}: Implementace tabulky symbolů. Hodnocení 0\% kvůli plánovanému ukončení studia.\\
         \textbf{Tomáš Hanák}: Implementace syntaktické a sémantické analýzy a optimalizátoru.\\
