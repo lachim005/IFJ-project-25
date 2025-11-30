@@ -165,7 +165,52 @@ var z = y * 2    // y je známé \(\rightarrow\) z = 8 * 2 \(\rightarrow\) z = 1
         Vstupním bodem je funkce \texttt{optimize\_ast()}, která inicializuje optimalizaci celého programu.
 
     \section{Generátor kódu}
-        TODO
+        Generátor kódu přijímá ASS a generuje z něj cílový program v IFJcode25. Vstupní metoda generátoru
+        je \texttt{generate\_code()}. Generování následně probíhá následovně:
+        \begin{enumerate}
+            \item Podle globální tabulky symbolů se vygenerují deklarace globálních proměnných a jejich
+                inicializace na \texttt{nil}.
+            \item Deklaruje se 7 interních překladačových globálních proměnných, se kterými dále pracujeme při
+                vyhodnocování výrazů.
+            \item Vygenerujeme kód, která zavolá funkci \texttt{main()} a po návratu ukončí program s kódem 0.
+            \item Generujeme jednotlivé funkce.
+        \end{enumerate}
+        \subsection{Generování funkcí}
+            Na začátku vygenerujeme pro funkci návěští a vytvoříme nový rámec proměnných. Název funkce je
+            zapsán ve formátu \texttt{fun\$x} kde \texttt{fun} je název funkce a \texttt{x} je počet jejích
+            parametrů. Následně podle lokální tabulky symbolů vygenerujeme deklarace všech lokálních proměnných.
+
+            Dále do lokálních proměnných reprezentující parametry funkce vložíme argumenty, které se podle
+            konvence volání nachází na zásobníku hodnot. Na vrcholu zásobníku vždy bude poslední argument,
+            volaný je tedy popuje v obráceném pořadí.
+
+            Pak už se generuje tělo funkce.
+
+            Na konci se vygeneruje implicitní příkaz \texttt{return}, spolu s příkazem \texttt{POPFRAME} a
+            vložením hodnoty \texttt{nil}, implicitní návratové hodnoty, na zásobník.
+
+        \subsection{Generování příkazů}
+            Pro každý možný příkaz v ASS existuje procedura, která pro tento příkaz vygeneruje cílový kód.
+            \begin{itemize}
+                \item \texttt{ST\_BLOCK}: Iteruje přes všechny příkazy a uvnitř bloku a generuje pro ně kód.
+                \item \texttt{ST\_IF}: Vygeneruje vyhodnocení pravdivosti výrazu a podle něj skočí na správné návěští.
+                \item \texttt{ST\_WHILE}: Vygeneruje vyhodnocení pravdivosti výrazu a podle něj cyklus opustí nebo v něm pokračuje. Na konci těla cyklu se skočí zpět na vyhodnocení pravdivosti.
+                \item \texttt{ST\_RETURN}: Vloží na vrchol zásobníku \texttt{nil} nebo vyhodnotí vracený výraz pokud je dán. Následně vygeneruje příkazy \texttt{POPFRAME} a \texttt{RETURN}.
+                \item \texttt{ST\_LOCAL\_VAR}: Pokud není dán výraz, který se má přiřadit, vloží se do proměnné \texttt{nil}. Pokud výraz dán je, vyhodnotí se a jeho hodnota se uloží do proměnné
+                    z vrochu zásobníku.
+                \item \texttt{ST\_GLOBAL\_VAR}: Vyhodnotí se přiřazovaný výraz a jeho hodnota se uloží do proměnné.
+                \item \texttt{ST\_SETTER\_CALL}: Vyhodnotí se přiřazovaný výraz a zavolá se setter.
+                \item \texttt{ST\_EXPRESSION}: Samostojící výraz se vyhodnotí a jeho hodnota se z vrcholu zásobníku zahodí.
+            \end{itemize}
+        \subsection{Generování výrazů}
+            Vyhodnocování výrazů probíhá na zásobníku. Nejdříve se rekurzivně vyhodnotí každý podvýraz a jejich
+            hodnoty zůstanou na vrcholu zásobníku. Následně se provede jejich typová kontrola a výraz se vyhodnotí.
+
+            Jako výrazy se berou také vestavěné funkce. Tyto funkce se vyhodnocují na místě bez jakéhokoliv volání.
+            \subsubsection{Optimalizace}
+                U každého výrazu mohou být ze sémantické analýzy uvedeny informace o typu výrazu a případně
+                i jeho hodnota, pokud ji optimalizátor dokázal vypočítat. Pokud jsou tyto informace k dispozici,
+                můžeme si někdy odpustit generování typové kontroly a někdy i samotného vyhodnocení výrazu.
 
     \section{Rozdělení práce}
         \textbf{Vojtěch Borýsek}: Implementace precedenční analýzy a datových struktur.\\
