@@ -202,15 +202,41 @@ var z = y * 2    // y je známé \(\rightarrow\) z = 8 * 2 \(\rightarrow\) z = 1
                 \item \texttt{ST\_SETTER\_CALL}: Vyhodnotí se přiřazovaný výraz a zavolá se setter.
                 \item \texttt{ST\_EXPRESSION}: Samostojící výraz se vyhodnotí a jeho hodnota se z vrcholu zásobníku zahodí.
             \end{itemize}
+            \subsubsection{Optimalizace}
+                Pokud přiřazujeme do proměnné výraz se známou hodnotou, místo toho, abychom ji pushnuli a následně popnuli,
+                vygenerujeme rovnou instrukci \texttt{MOVE}. Například u \texttt{a = 5 + 5} se vygeneruje \texttt{MOVE LF@a?0 float@0x1.4p+3}
+                namísto
+                \begin{alltt}
+PUSHS float@0x1.4p+3
+POPS LF@a!0 \end{alltt}
+
+                Při vyhodnocování pravdivostní hodnoty můžeme zjistit, že některé větve není potřeba generovat.
+                Tuto informaci vrací funkce, které vyhodnocení pravdivosti generuje, a můžeme podle ní některé
+                větve vypustit. Například u
+                \begin{alltt}
+if (null) \{
+    ...
+\} else \{
+    ...
+\} \end{alltt}
+                není potřeba generovat větev \uv{pravda.}
         \subsection{Generování výrazů}
             Vyhodnocování výrazů probíhá na zásobníku. Nejdříve se rekurzivně vyhodnotí každý podvýraz a jejich
             hodnoty zůstanou na vrcholu zásobníku. Následně se provede jejich typová kontrola a výraz se vyhodnotí.
+
+            Se všemi čísly se ve výsledném programu pracuje jako s \texttt{float}y. Ke konverzi na \texttt{int} dochází
+            pouze v případě kde je celočíselnost potřeba, např. při operátoru iterace řetězce nebo v některých
+            vestavěných funkcích.
 
             Jako výrazy se berou také vestavěné funkce. Tyto funkce se vyhodnocují na místě bez jakéhokoliv volání.
             \subsubsection{Optimalizace}
                 U každého výrazu mohou být ze sémantické analýzy uvedeny informace o typu výrazu a případně
                 i jeho hodnota, pokud ji optimalizátor dokázal vypočítat. Pokud jsou tyto informace k dispozici,
                 můžeme si někdy odpustit generování typové kontroly a někdy i samotného vyhodnocení výrazu.
+
+                Například u \texttt{a = "ahoj" + unknown} není potřeba generovat typovou kontrolu prvního podvýrazu
+                a zároveň nemusíme brát v potaz situaci, kdy \texttt{unknown} bude \texttt{Num}, protože spojovat
+                můžeme pouze dva řetězce.
 
     \section{Rozdělení práce}
         \textbf{Vojtěch Borýsek}: Implementace precedenční analýzy a datových struktur.\\
