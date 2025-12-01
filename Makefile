@@ -22,7 +22,7 @@ LDLIBS += -lm
 
 ZIPNAME=xsebesm00.zip
 
-main: main.o ast.o code_generator.o expr_parser.o lexer.o parser.o stack.o string.o symtable.o token.o optimizer.o
+main: main.o ast.o code_generator.o vojta.o lexer.o parser.o stack.o string.o symtable.o token.o optimizer.o
 
 doc: dokumentace.pdf
 dokumentace.pdf: doc/dokumentace.tex
@@ -43,14 +43,14 @@ pack: doc
 ast.o: ast.c ast.h string.h symtable.h
 code_generator.o: code_generator.c code_generator.h ast.h string.h \
  error.h symtable.h
-expr_parser.o: expr_parser.c expr_parser.h stack.h token.h string.h ast.h \
+vojta.o: vojta.c vojta.h stack.h token.h string.h ast.h \
  lexer.h error.h
 lexer.o: lexer.c lexer.h string.h token.h ast.h
 main.o: main.c ast.h string.h code_generator.h error.h symtable.h \
  parser.h lexer.h token.h optimizer.h
 optimizer.o: optimizer.c optimizer.h ast.h string.h error.h symtable.h
 parser.o: parser.c parser.h lexer.h string.h token.h ast.h error.h \
- symtable.h expr_parser.h stack.h
+ symtable.h vojta.h stack.h
 stack.o: stack.c stack.h token.h string.h ast.h
 string.o: string.c string.h
 symtable.o: symtable.c symtable.h string.h ast.h
