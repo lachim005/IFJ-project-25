@@ -7,9 +7,11 @@
 
 % Resizing the table to fit the text width because it is very wide
 %\resizebox{\textwidth}{!}{%
-\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+\begin{tabular}{|c||c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
 \hline
-\cellcolor{gray} & \textbf{$+$} & \textbf{$-$} & \textbf{$*$} & \textbf{$/$} & \textbf{$>$} & \textbf{$<$} & \textbf{$>=$} & \textbf{$<=$} & \textbf{$==$} & \textbf{$!=$} & \textbf{$\&\&$} & \textbf{$||$} & \textbf{$id$} & \textbf{$($} & \textbf{$)$} & \textbf{$is$} & \textbf{$?$} & \textbf{$:$} & \textbf{$!$} & \textbf{$\$$} \\ \hline
+\cellcolor{gray} & \textbf{$+$} & \textbf{$-$} & \textbf{$*$} & \textbf{$/$} & \textbf{$>$} & \textbf{$<$} & \textbf{$>=$} &
+ \textbf{$<=$} & \textbf{$==$} & \textbf{$!=$} & \textbf{$\&\&$} & \textbf{$||$} & \textbf{$id$} & \textbf{$($} & \textbf{$)$} &
+  \textbf{$is$} & \textbf{$?$} & \textbf{$:$} & \textbf{$!$} & \textbf{$\$$} \\ \hline \hline
 \textbf{$+$} & $>$ & $>$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $<$ & $>$ \\ \hline
 \textbf{$-$} & $>$ & $>$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $<$ & $>$ \\ \hline
 \textbf{$*$} & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $<$ & $>$ \\ \hline
@@ -22,14 +24,14 @@
 \textbf{$!=$} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $<$ & $<$ & $>$ & $<$ & $>$ & $>$ & $<$ & $>$ \\ \hline
 \textbf{$\&\&$} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $>$ & $>$ & $<$ & $<$ & $>$ & $<$ & $>$ & $>$ & $<$ & $>$ \\ \hline
 \textbf{$||$} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $>$ & $<$ & $<$ & $>$ & $<$ & $>$ & $>$ & $<$ & $>$ \\ \hline
-\textbf{$id$} & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & \cellcolor{red} & \cellcolor{red} & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ \\ \hline
-\textbf{$($} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $=$ & $<$ & $<$ & $<$ & $<$ & \cellcolor{red} \\ \hline
-\textbf{$)$} & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & \cellcolor{red} & \cellcolor{red} & $>$ & $>$ & $>$ & $>$ & \cellcolor{red} & $>$ \\ \hline
+\textbf{$id$} & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & \cellcolor{red!10} & \cellcolor{red!10} & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ \\ \hline
+\textbf{$($} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $=$ & $<$ & $<$ & $<$ & $<$ & \cellcolor{red!10} \\ \hline
+\textbf{$)$} & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & \cellcolor{red!10} & \cellcolor{red!10} & $>$ & $>$ & $>$ & $>$ & \cellcolor{red!10} & $>$ \\ \hline
 \textbf{$is$} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $<$ & $>$ \\ \hline
-\textbf{$?$} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $>$ & $<$ & \cellcolor{red} & $=$ & $<$ & $>$ \\ \hline
-\textbf{$:$} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $>$ & $<$ & $<$ & \cellcolor{red} & $<$ & $>$ \\ \hline
+\textbf{$?$} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $>$ & $<$ & \cellcolor{red!10} & $=$ & $<$ & $>$ \\ \hline
+\textbf{$:$} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $>$ & $<$ & $<$ & \cellcolor{red!10} & $<$ & $>$ \\ \hline
 \textbf{$!$} & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $<$ & $<$ & $>$ & $<$ & $>$ & $>$ & $<$ & $>$ \\ \hline
-\textbf{$\$$} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & \cellcolor{red} & $<$ & $<$ & \cellcolor{red} & $<$ & \cellcolor{red} \\ \hline
+\textbf{$\$$} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & \cellcolor{red!10} & $<$ & $<$ & \cellcolor{red!10} & $<$ & \cellcolor{red!10} \\ \hline
 \end{tabular}%
 %}
 \caption{Precedenční tabulka}
@@ -41,12 +43,12 @@
 
 % Resizing the table to fit the text width
 \resizebox{0.95\textwidth}{!}{%
-\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+\begin{tabular}{|c||c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
 \hline
 \cellcolor{gray} & \textbf{\texttt{import}} & \textbf{\texttt{class}} & 
 \textbf{\texttt{static}} & \textbf{\texttt{id}} & \textbf{\texttt{\_\_id}} & \textbf{\texttt{var}} & 
 \textbf{\texttt{(}} & \textbf{\texttt{)}} & \textbf{\texttt{if}} & \textbf{\texttt{else}} & 
-\textbf{\texttt{while}} & \textbf{\texttt{return}} & \textbf{\texttt{\{}} & \textbf{\texttt{\}}} & \textbf{\texttt{=}} & \textbf{\texttt{,}} & \textbf{\texttt{<EOL>}} & \textbf{ostatní} \\ \hline
+\textbf{\texttt{while}} & \textbf{\texttt{return}} & \textbf{\texttt{\{}} & \textbf{\texttt{\}}} & \textbf{\texttt{=}} & \textbf{\texttt{,}} & \textbf{\texttt{<EOL>}} & \textbf{ostatní} \\ \hline \hline
 \textbf{<program>} & 1 &&&&&&&&&&&&&&&&&  \\ \hline
 \textbf{<prologue>} & 2 &&&&&&&&&&&&&&&&&  \\ \hline
 \textbf{<class\_program>} && 3 &&&&&&&&&&&&&&&&  \\ \hline

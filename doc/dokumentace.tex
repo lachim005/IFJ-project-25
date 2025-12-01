@@ -120,15 +120,28 @@
 
     \section{Syntaktický analýza}
         TODO
-        \grammar
-        \llTable
     \subsection{Tabulka symbolů}
         TODO
     \subsection{Sémantická analýza}
         TODO
     \subsection{Zpracování výrazů}
         TODO
-        \precTable
+        Výrazy jsou v překladači zpracovávány pomocí syntaktické analýzy zdola nahoru. 
+        Přesněji je využit precedenční syntaktický analyzátor, který výraz zpracovává pomocí práce s precedencní tabulkou (\ref{precTab}).
+
+        Tato analýza je volána pomocí funkce \texttt{parse\_expression()} z hlavního syntaktického analyzátoru. 
+        
+        Podle nejvyššího terminálu na zásobníku a nyní přečtenému tokenu rozhoduje, zdali provede shift na zásobník (<) nebo výraz zredukuje (>). 
+        Při redukci je rozhodnuto, zda se jedná o unární, binární nebo ternární operátor a podle tohoto se poté celé pravidlo zredukuje a vytvoří se token E, který si uloží uzel ASS pro výraz do své hodnoty. 
+        Tato redukce probíhá pomocí volání funkce \texttt{stack\_is\_sequence\_on\_top()}, která zkontroluje, jestli se na vrcholu zásobníku nachází předpokládané pravidlo. 
+        Pokud ne, jedná se o syntaktickou chybu, vrací se správný návratový kód a analýza se přerusí. 
+        
+        Speciální prípad nastává u funkcí, kdy se analyzátor prvně podívá, co následuje za identifikátorem, pokud se jedná o '(', pak zavolá funkci \texttt{reduce\_function\_call()}. 
+        Zpracovávány jsou rovněž builtin funkce, pro které je volána funkce \texttt{reduce\_buildtin\_call()}. 
+        
+        Pokud analyzátor narazí na ')', která není součástí žádného jeho pravidla, tak tuto závorku vrátí voláním funkce \texttt{lexer\_unget\_token()}.
+
+        Po skončení zpracování výrazu je následně volajícímu (\texttt{parse()}) vrácen otcovský uzel celého tohoto výrazu. 
     \subsection{Abstraktní syntaktický strom}
         TODO
 
@@ -256,4 +269,15 @@ if (null) \{
         \textbf{Šimon Halas}: Implementace tabulky symbolů. Hodnocení 0\% kvůli plánovanému ukončení studia.\\
         \textbf{Tomáš Hanák}: Implementace syntaktické a sémantické analýzy a optimalizátoru.\\
         \textbf{Michal Šebesta}: Implementace lexikálního analyzátoru a generátoru kódu.
+
+    \newpage
+    \appendix
+    \section{LL gramatika}
+    \label{app:llgram}
+        \grammar
+        \newpage
+    \section{LL tabulka}
+        \llTable
+    \section{Precedenční tabulka}
+        \precTable
 \end{document}
