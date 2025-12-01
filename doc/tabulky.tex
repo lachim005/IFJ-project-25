@@ -1,0 +1,101 @@
+
+\usepackage[table]{xcolor}
+
+\newcommand{\precTable}{
+\begin{table}[h!]
+\centering
+
+% Resizing the table to fit the text width because it is very wide
+%\resizebox{\textwidth}{!}{%
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+\hline
+\cellcolor{gray} & \textbf{$+$} & \textbf{$-$} & \textbf{$*$} & \textbf{$/$} & \textbf{$>$} & \textbf{$<$} & \textbf{$>=$} & \textbf{$<=$} & \textbf{$==$} & \textbf{$!=$} & \textbf{$\&\&$} & \textbf{$||$} & \textbf{$id$} & \textbf{$($} & \textbf{$)$} & \textbf{$is$} & \textbf{$?$} & \textbf{$:$} & \textbf{$!$} & \textbf{$\$$} \\ \hline
+\textbf{$+$} & $>$ & $>$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $<$ & $>$ \\ \hline
+\textbf{$-$} & $>$ & $>$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $<$ & $>$ \\ \hline
+\textbf{$*$} & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $<$ & $>$ \\ \hline
+\textbf{$/$} & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $<$ & $>$ \\ \hline
+\textbf{$>$} & $<$ & $<$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $<$ & $>$ \\ \hline
+\textbf{$<$} & $<$ & $<$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $<$ & $>$ \\ \hline
+\textbf{$>=$} & $<$ & $<$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $<$ & $>$ \\ \hline
+\textbf{$<=$} & $<$ & $<$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $<$ & $>$ \\ \hline
+\textbf{$==$} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $<$ & $<$ & $>$ & $<$ & $>$ & $>$ & $<$ & $>$ \\ \hline
+\textbf{$!=$} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $<$ & $<$ & $>$ & $<$ & $>$ & $>$ & $<$ & $>$ \\ \hline
+\textbf{$\&\&$} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $>$ & $>$ & $<$ & $<$ & $>$ & $<$ & $>$ & $>$ & $<$ & $>$ \\ \hline
+\textbf{$||$} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $>$ & $<$ & $<$ & $>$ & $<$ & $>$ & $>$ & $<$ & $>$ \\ \hline
+\textbf{$id$} & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & \cellcolor{red} & \cellcolor{red} & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ \\ \hline
+\textbf{$($} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $=$ & $<$ & $<$ & $<$ & $<$ & \cellcolor{red} \\ \hline
+\textbf{$)$} & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & \cellcolor{red} & \cellcolor{red} & $>$ & $>$ & $>$ & $>$ & \cellcolor{red} & $>$ \\ \hline
+\textbf{$is$} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $<$ & $<$ & $>$ & $>$ & $>$ & $>$ & $<$ & $>$ \\ \hline
+\textbf{$?$} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $>$ & $<$ & \cellcolor{red} & $=$ & $<$ & $>$ \\ \hline
+\textbf{$:$} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $>$ & $<$ & $<$ & \cellcolor{red} & $<$ & $>$ \\ \hline
+\textbf{$!$} & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $>$ & $<$ & $<$ & $>$ & $<$ & $>$ & $>$ & $<$ & $>$ \\ \hline
+\textbf{$\$$} & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & $<$ & \cellcolor{red} & $<$ & $<$ & \cellcolor{red} & $<$ & \cellcolor{red} \\ \hline
+\end{tabular}%
+%}
+\caption{Precedenční tabulka}
+\end{table}}
+
+\newcommand{\llTable}{
+\begin{table}[h!]
+\centering
+
+% Resizing the table to fit the text width
+\resizebox{0.95\textwidth}{!}{%
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+\hline
+\cellcolor{gray} & \textbf{\texttt{import}} & \textbf{\texttt{class}} & 
+\textbf{\texttt{static}} & \textbf{\texttt{id}} & \textbf{\texttt{\_\_id}} & \textbf{\texttt{var}} & 
+\textbf{\texttt{(}} & \textbf{\texttt{)}} & \textbf{\texttt{if}} & \textbf{\texttt{else}} & 
+\textbf{\texttt{while}} & \textbf{\texttt{return}} & \textbf{\texttt{\{}} & \textbf{\texttt{\}}} & \textbf{\texttt{=}} & \textbf{\texttt{,}} & \textbf{\texttt{<EOL>}} & \textbf{ostatní} \\ \hline
+\textbf{<program>} & 1 &&&&&&&&&&&&&&&&&  \\ \hline
+\textbf{<prologue>} & 2 &&&&&&&&&&&&&&&&&  \\ \hline
+\textbf{<class\_program>} && 3 &&&&&&&&&&&&&&&&  \\ \hline
+\textbf{<class\_body>} &&& 5 &&&&&&&&&&& 4 &&&&  \\ \hline
+\textbf{<statics>} &&&&&&& 8 &&&&&& 7 && 6 &&&  \\ \hline
+\textbf{<params>} &&&& 10 &&&& 9 &&&&&&&&&&  \\ \hline
+\textbf{<params\_c>} &&&&&&&&12&&&&&&&& 11 &&  \\ \hline
+\textbf{<body>} &&&& 15 & 13 & 14 &&& 16 && 17 & 18 & 21 &&&&& 20  \\ \hline
+\textbf{<assign>} &&&&&&&&&&&&&&& 23 && 22 &  \\ \hline
+\textbf{<els>} &&&&&&&&&& 25 &&&&&&& 24 &  \\ \hline
+\textbf{<elif>} &&&&&&&&& 27 &&&& 26 &&&&&  \\ \hline
+\textbf{<return\_stat>} &&&&&&&&&&&&&&&&& 28 & 29 \\ \hline
+\end{tabular}%
+}
+\caption{LL tabulka}
+\end{table}
+}
+
+
+\newcommand{\grammar}{
+\begin{enumerate}
+    \item <program> $\rightarrow$ <prologue> <EOL> <class\_program>
+    \item <prologue> $\rightarrow$ \textbf{import "ifj25" for Ifj}
+    \item <class\_program> $\rightarrow$ \textbf{class Program \{ <EOL>} <class\_body> \textbf{\}}
+    \item <class\_body> $\rightarrow$ $\varepsilon$
+    \item <class\_body> $\rightarrow$ \textbf{static id} <statics>
+    \item <statics> $\rightarrow$ = \textbf{( id ) \{ <EOL>}  <body> \textbf{\} <EOL>} <class\_body>
+    \item <statics> $\rightarrow$ \textbf{\{ <EOL>} <body> \textbf{\} <EOL>} <class\_body>
+    \item <statics> $\rightarrow$ \textbf{(} <params> \textbf{) \{ <EOL>} <body> \textbf{\} <EOL>} <class\_body>
+    \item <params> $\rightarrow$ $\varepsilon$
+    \item <params> $\rightarrow$ \textbf{id} <params\_c>
+    \item <params\_c> $\rightarrow$ \textbf{, id} <params>
+    \item <params\_c> $\rightarrow$ $\varepsilon$
+    \item <body> $\rightarrow$ \textbf{\_\_id} <assign> <body>
+    \item <body> $\rightarrow$ \textbf{var id} <assign> <body>
+    \item <body> $\rightarrow$ \textbf{id =} <expr> \textbf{<EOL>} <body>
+    \item <body> $\rightarrow$ \textbf{if (} <expr> \textbf{) \{ <EOL>} <body> \textbf{\}} <els>
+    \item <body> $\rightarrow$ \textbf{while (} <expr> \textbf{) \{ <EOL>} <body> \textbf{\} <EOL>}
+    \item <body> $\rightarrow$ \textbf{return} <return\_stat>
+    \item <body> $\rightarrow$ $\varepsilon$
+    \item <body> $\rightarrow$ <expr> \textbf{<EOL>}
+    \item <body> $\rightarrow$ \textbf{\{ <EOL>} <body> \textbf{\} <EOL>}
+    \item <assign> $\rightarrow$ \textbf{<EOL>}
+    \item <assign> $\rightarrow$ \textbf{=} <expr> \textbf{<EOL>}
+    \item <els> $\rightarrow$ \textbf{<EOL>}
+    \item <els> $\rightarrow$ \textbf{else} <elif>
+    \item <elif> $\rightarrow$ \textbf{\{ <EOL>} <body> \textbf{\} <EOL>}
+    \item <elif> $\rightarrow$ \textbf{if (} <expr> \textbf{) \{ <EOL>} <body> \textbf{\}} <els>
+    \item <return\_stat> $\rightarrow$ \textbf{<EOL>}
+    \item <return\_stat> $\rightarrow$ <expr> \textbf{<EOL>}
+\end{enumerate}
+}
