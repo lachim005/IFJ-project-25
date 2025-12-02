@@ -119,13 +119,40 @@
         celé rozšíření nakonec implementováno nebylo.
 
     \section{Syntaktický analýza}
-        TODO
+        Syntaktická analýza je implementována metodou rekurzivního sestupu podle LL gramatiky (\ref{app:llgram}) a LL tabulky (\ref{llTab}).
+        Hlavní program volá funkci \texttt{parse()}, která je vstupním bodem celé analýzy. 
+        Tato funkce inicializuje globální tabulku symbolů, přidá do ní vestavěné funkce a následně postupně volá funkce pro kontrolu jednotlivých částí programu.
+
+        Parser získává tokeny od lexikálního analyzátoru pomocí funkce \texttt{lexer\_get\_token()}.
+        Pokud narazí na výraz, volá precedenční analyzátor funkcí \texttt{parse\_expression()}, která zpracuje výraz a vrátí uzel ASS reprezentující tento výraz.
+        Syntaktická analýza zároveň provádí sémantické kontroly, které ověřují správnost typů, existenci proměnných a funkcí, a detekují redefinice.
+        
+        Pro každou funkci, getter a setter se během analýzy vytváří nová lokální tabulka symbolů, která je následně uložena v ASS v příslušném uzlu.
+        Tato tabulka obsahuje lokální proměnné a parametry dané funkce či getteru/setteru.
+        
+        Výsledkem syntaktické analýzy je ASS reprezentující celý program a globální tabulka symbolů obsahující všechny definované symboly.
     \subsection{Tabulka symbolů}
-        TODO
+        Tabulka symbolů slouží k ukládání informací o proměnných, funkcích, getterech a setterech v průběhu překladu. 
+        Je implementována jako hash tabulka s implicitním zřetězením položek (otevřené adresování metodou lineárního přidávání). Pro výpočet hash hodnoty je použit algoritmus djb2\footnote{\url{http://www.cse.yorku.ca/~oz/hash.html}}, který je rychlý, efektivní a poskytuje dobrou distribuci hash hodnot pro řetězce.
+
+        Každá položka tabulky obsahuje klíč, název symbolu, typ symbolu (\texttt{SYM\_GLOBAL\_VAR}, \texttt{SYM\_FUNCTION}, \texttt{SYM\_GETTER}, \texttt{SYM\_SETTER}, \texttt{SYM\_VAR}), datový typ, počet parametrů u funkcí, pole typů parametrů, příznak definice a případně známou hodnotu při překladu.
+
+        Tabulka dynamicky roste při dosažení 70\% zaplnění na dvojnásobnou kapacitu. Místo skutečného mazání se položky pouze označí příznakem jako smazané, což umožňuje korektní fungování lineárního přidávání a tyto sloty mohou být při vkládání nových prvků znovu využity.
+
+        Pro správu viditelnosti proměnných v různých rozsazích slouží zásobník rozsahů. Každý vstup do bloku přidá na zásobník nový unikátní identifikátor rozsahu, při výstupu se odstraní. 
+        Lokální proměnné mají v tabulce klíč ve formátu \texttt{název?scope\_id}, funkce \texttt{název\$počet\_parametrů}, gettery \texttt{název!}, settery \texttt{název*} a globální proměnné pouze \texttt{název}.
+        Při hledání lokální proměnné se prochází zásobník rozsahů od nejvnitřnějšího po nejvyšší, dokud není proměnná nalezena.
+
+        Pro usnadnění práce s tabulkou jsou k dispozici pomocné funkce pro operace s různými typy symbolů, které automaticky zajišťují správný formát klíčů.
     \subsection{Sémantická analýza}
-        TODO
+        Sémantická analýza probíhá současně se syntaktickou analýzou během rekurzivního sestupu.
+        Kontroluje se existence a správné použití proměnných, funkcí, getterů a setterů v rámci jejich platných rozsahů.
+        Při deklaraci nových symbolů se ověřuje, zda nedochází k redefinici již existujících symbolů.
+
+        Typová kontrola výrazů probíhá pomocí funkce \texttt{semantic\_check\_expression()}, která rekurzivně prochází strukturu \texttt{AstExpression} získanou od precedenční analýzy.
+        Funkce ověřuje, zda typy operandů odpovídají požadavkům operátorů a zda jsou všechny použité symboly korektně definovány.
+        Po dokončení analýzy se také kontroluje, zda byly všechny použité symboly definovány a zda existuje funkce \texttt{main} s nula parametry, která slouží jako vstupní bod programu.
     \subsection{Zpracování výrazů}
-        TODO
         Výrazy jsou v překladači zpracovávány pomocí syntaktické analýzy zdola nahoru. 
         Přesněji je využit precedenční syntaktický analyzátor, který výraz zpracovává pomocí práce s precedencní tabulkou (\ref{precTab}).
 
@@ -143,7 +170,16 @@
 
         Po skončení zpracování výrazu je následně volajícímu (\texttt{parse()}) vrácen otcovský uzel celého tohoto výrazu. 
     \subsection{Abstraktní syntaktický strom}
-        TODO
+        ASS slouží k reprezentaci struktury programu v překladači. Skládá se z uzlů reprezentujících příkazy a výrazy. 
+        Každý uzel příkazu obsahuje typ příkazu (\texttt{AstStatementType}) a union, který uchovává specifická data pro daný typ příkazu.
+
+        Union umožňuje efektivní využití paměti - každý uzel zabírá pouze tolik místa, kolik potřebuje největší typ příkazu. 
+        Možné typy příkazů zahrnují bloky, podmínky, cykly, deklarace proměnných, definice funkcí, getterů, setterů, návratové příkazy a samostatné výrazy.
+
+        Příkazy jsou organizovány do spojového seznamu pomocí ukazatele \texttt{next}, což umožňuje iteraci přes sekvenci příkazů. Bloky obsahují ukazatel na první příkaz v bloku, z něhož lze projít celý řetězec příkazů.
+
+        Výrazy jsou reprezentovány stromovou strukturou, kde každý uzel obsahuje typ výrazu (\texttt{AstExprType}), pole podvýrazů a informace o datovém typu a případné známé hodnotě z optimalizace. 
+        Tímto způsobem překladač ukládá celý zdrojový kód do ASS, který je následně předán optimalizátoru a generátoru kódu.
 
     \section{Optimalizátor}
         Optimalizátor provádí optimalizaci abstraktního syntaktického stromu před jeho předáním generátoru kódu.
