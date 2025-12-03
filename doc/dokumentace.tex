@@ -76,14 +76,7 @@
         kde další pravidlo není jasné a může být potřeba token vrátit jiné proceduře.
 
 
-        \begin{figure}[ht]
-            \centering
-            \includegraphics{fsm.pdf}
-            \caption{Diagram konečného automatu}
-            \label{fig:fsm}
-        \end{figure}
-
-        Lexikální analyzátor je implementován jako konečný stavový automat (\ref{fig:fsm}). Většinu typů tokenů jsme schopni
+        Lexikální analyzátor je implementován jako konečný stavový automat (\ref{app:fsm}). Většinu typů tokenů jsme schopni
         pokrýt pouze automatem. U některých typů ale musíme vyzužít něco navíc. Lexikální analyzátor má k
         dispozici dva znakové buffery a jeden čítač, které využívá k načtení následujících typů tokenů.
 
@@ -119,7 +112,7 @@
         celé rozšíření nakonec implementováno nebylo.
 
     \section{Syntaktický analýza}
-        Syntaktická analýza je implementována metodou rekurzivního sestupu podle LL gramatiky (\ref{app:llgram}) a LL tabulky (\ref{llTab}).
+        Syntaktická analýza je implementována metodou rekurzivního sestupu podle LL gramatiky (\ref{app:llgram}) a LL tabulky (\ref{app:llTab}).
         Hlavní program volá funkci \texttt{parse()}, která je vstupním bodem celé analýzy. 
         Tato funkce inicializuje globální tabulku symbolů, přidá do ní vestavěné funkce a následně postupně volá funkce pro kontrolu jednotlivých částí programu.
 
@@ -154,7 +147,7 @@
         Po dokončení analýzy se také kontroluje, zda byly všechny použité symboly definovány a zda existuje funkce \texttt{main} s nula parametry, která slouží jako vstupní bod programu.
     \subsection{Zpracování výrazů}
         Výrazy jsou v překladači zpracovávány pomocí syntaktické analýzy zdola nahoru. 
-        Přesněji je využit precedenční syntaktický analyzátor, který výraz zpracovává pomocí práce s precedencní tabulkou (\ref{precTab}).
+        Přesněji je využit precedenční syntaktický analyzátor, který výraz zpracovává pomocí práce s precedencní tabulkou (\ref{app:prectable}).
 
         Tato analýza je volána pomocí funkce \texttt{parse\_expression()} z hlavního syntaktického analyzátoru. 
         
@@ -308,12 +301,23 @@ if (null) \{
 
     \newpage
     \appendix
+    \section{Konečný stavový automat}
+    \label{app:fsm}
+        \begin{figure}[ht]
+            \centering
+            \includegraphics{fsm.pdf}
+            \caption{Diagram konečného automatu}
+            \label{fig:fsm}
+        \end{figure}
+    \newpage
     \section{LL gramatika}
     \label{app:llgram}
         \grammar
         \newpage
     \section{LL tabulka}
+    \label{app:lltable}
         \llTable
     \section{Precedenční tabulka}
+    \label{app:prectable}
         \precTable
 \end{document}
