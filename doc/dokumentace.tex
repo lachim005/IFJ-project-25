@@ -62,10 +62,10 @@
         Překlad začíná inicializací lexikálního analyzátoru. Ten je následně předán syntaktickému analyzátoru,
         který jej volá v případě potřeby tokenu. Pokud syntaktický analyzátor potřebuje načíst výraz, volá precedenční
         analyzátor. V rámci syntaktického analyzátoru se rovnou také provádí sémantické akce,
-        jako kontrola typů výrazů, nebo kontrola deklarace proměnných. Výsledek ukládá do abstraktního
+        jako kontrola typů ve výrazech, nebo kontrola deklarace proměnných. Výsledek ukládá do abstraktního
         syntaktického stromu (ASS).
 
-        Jakmile je celý program převeden na ASS a sémanticky zkontrolován, je tento strom předán do optimalizátoru, který strom zoptimalizuje.
+        Jakmile je celý program převeden na ASS a sémanticky zkontrolován, je tento strom předán do optimalizátoru.
         Optimalizovaný strom je následně předán generátoru kódu, který z něj vytvoří cílový kód, čímž překlad končí.
 
 
@@ -75,6 +75,10 @@
         syntaktickému analyzátoru umožňuje token vrátit a načíst ho později, což se hodí v situacích,
         kde další pravidlo není jasné a může být potřeba token vrátit jiné proceduře.
 
+        Nové řádky se berou jako token, a jejich správné umístění řeší syntaktická analýza.
+
+        Lexikální analyzátor také přijímá tokeny pro zadání rozsahu do příkazu \texttt{for}, ale
+        celé rozšíření nakonec implementováno nebylo.
 
         Lexikální analyzátor je implementován jako konečný stavový automat (\ref{app:fsm}). Většinu typů tokenů jsme schopni
         pokrýt pouze automatem. U některých typů ale musíme vyzužít něco navíc. Lexikální analyzátor má k
@@ -83,7 +87,7 @@
         \subsection{Číselné literály}
             V momentě kdy automat přejde do stavu, kde se začíná zpracovávat číselný literál, začne
             vstupní znaky psát do \texttt{buf1}. Jakmile narazíme na konec literálu, výsledný řetězec je
-            převeden na \texttt{double} pomocí funkce \texttt{strtod()} nebo \texttt{hex2int}.
+            převeden na \texttt{double} pomocí funkce \texttt{strtod()} nebo \texttt{hex2int()}.
 
         \subsection{Řetězcové literály}
             Klasické řetězcové literály se zapisují do \texttt{buf1} a výsledek je na konci vrácen uvnitř
@@ -91,8 +95,8 @@
 
             Víceřádkové řetězcové literály jsou složitější. Znaky se nejprve čtou do \texttt{buf2}
             dokud se nenarazí na znak nového řádku. V ten moment se obsah \texttt{buf2} přidá na konec
-            \texttt{buf1}, pokud řádek v \texttt{buf2} není první nebo poslední. V tom případě se do
-            \texttt{buf1} nepřidá pokud je prázdný nebo obsahuje pouze bílé znaky.
+            \texttt{buf1}, pokud řádek v \texttt{buf2} není první nebo poslední. Pokud je, do
+            \texttt{buf1} se nepřidá jestliže je prázdný nebo obsahuje pouze bílé znaky.
         \subsection{Víceřádkové komentáře}
             Víceřádkové komentáře mohou být zanořeny, takže lexikální analyzátor potřebuje čítač
             zanoření. Při uzavření víceřádkového komentáře se podle stavu čítače přejde do stavu
@@ -104,15 +108,9 @@
             podívá do tabulky klíčových slov a pokud v ní načtený text najde, vrátí místo tokenu
             identifikátoru token správného klíčového slova.
 
-        Zbytek tokenů můžeme načíst pouze pomocí konečného automatu bez dalších neformalit.
-
-        Nové řádky se berou jako token, a jejich správné umístění řeší syntaktická analýza.
-
-        Lexikální analyzátor také přijímá tokeny pro zadání rozsahu do příkazu \texttt{for}, ale
-        celé rozšíření nakonec implementováno nebylo.
 
     \section{Syntaktický analýza}
-        Syntaktická analýza je implementována metodou rekurzivního sestupu podle LL gramatiky (\ref{app:llgram}) a LL tabulky (\ref{app:llTab}).
+        Syntaktická analýza je implementována metodou rekurzivního sestupu podle LL gramatiky (\ref{app:llgram}, \ref{app:lltable}).
         Hlavní program volá funkci \texttt{parse()}, která je vstupním bodem celé analýzy. 
         Tato funkce inicializuje globální tabulku symbolů, přidá do ní vestavěné funkce a následně postupně volá funkce pro kontrolu jednotlivých částí programu.
 
@@ -123,7 +121,11 @@
         Pro každou funkci, getter a setter se během analýzy vytváří nová lokální tabulka symbolů, která je následně uložena v ASS v příslušném uzlu.
         Tato tabulka obsahuje lokální proměnné a parametry dané funkce či getteru/setteru.
         
-        Výsledkem syntaktické analýzy je ASS reprezentující celý program a globální tabulka symbolů obsahující všechny definované symboly.
+        Jestliže nelze v těle bloku použít žádné pravidlo pro načtení příkazu, vrátí se všechny zatím načtené tokeny a zavolá se
+        precedenční analyzátor. Ten zpracuje samovolně stojící výraz, který se vyhodnotí a jeho hodnota se následně zahodí. Tento
+        přístup pokryje i samovolně stojící funkce (Rozšíření \texttt{EXTFUN}).
+
+        Výsledkem syntaktické analýzy je ASS reprezentující celý program a globální tabulka symbolů obsahující všechny globální proměnné a funkce.
     \subsection{Tabulka symbolů}
         Tabulka symbolů slouží k ukládání informací o proměnných, funkcích, getterech a setterech v průběhu překladu. 
         Je implementována jako hash tabulka s implicitním zřetězením položek (otevřené adresování metodou lineárního přidávání). Pro výpočet hash hodnoty je použit algoritmus djb2\footnote{\url{http://www.cse.yorku.ca/~oz/hash.html}}, který je rychlý, efektivní a poskytuje dobrou distribuci hash hodnot pro řetězce.
@@ -159,14 +161,13 @@
         Speciální prípad nastává u funkcí, kdy se analyzátor prvně podívá, co následuje za identifikátorem, pokud se jedná o '(', pak zavolá funkci \texttt{reduce\_function\_call()}. 
         Zpracovávány jsou rovněž builtin funkce, pro které je volána funkce \texttt{reduce\_buildtin\_call()}. 
         
-        Pokud analyzátor narazí na ')', která není součástí žádného jeho pravidla, tak tuto závorku vrátí voláním funkce \texttt{lexer\_unget\_token()}.
-
-        Po skončení zpracování výrazu je následně volajícímu (\texttt{parse()}) vrácen otcovský uzel celého tohoto výrazu. 
+        Anaýza se ukončuje při naražení na nepárovou uzavírací závorku, čárku, nebo nevhodně umístěný znak nového řádku. V tom případě se poslední načtený token
+        vrátí pomocí \texttt{lexer\_unget\_token()}. Po skončení zpracování výrazu je následně volajícímu vrácen otcovský uzel celého tohoto výrazu. 
     \subsection{Abstraktní syntaktický strom}
         ASS slouží k reprezentaci struktury programu v překladači. Skládá se z uzlů reprezentujících příkazy a výrazy. 
         Každý uzel příkazu obsahuje typ příkazu (\texttt{AstStatementType}) a union, který uchovává specifická data pro daný typ příkazu.
 
-        Union umožňuje efektivní využití paměti - každý uzel zabírá pouze tolik místa, kolik potřebuje největší typ příkazu. 
+        Union umožňuje efektivní využití paměti\,--\,každý uzel zabírá pouze tolik místa, kolik potřebuje největší typ příkazu. 
         Možné typy příkazů zahrnují bloky, podmínky, cykly, deklarace proměnných, definice funkcí, getterů, setterů, návratové příkazy a samostatné výrazy.
 
         Příkazy jsou organizovány do spojového seznamu pomocí ukazatele \texttt{next}, což umožňuje iteraci přes sekvenci příkazů. Bloky obsahují ukazatel na první příkaz v bloku, z něhož lze projít celý řetězec příkazů.
@@ -177,7 +178,7 @@
     \section{Optimalizátor}
         Optimalizátor provádí optimalizaci abstraktního syntaktického stromu před jeho předáním generátoru kódu.
         Prochází celý ASS rekurzivně a vyhodnocuje výrazy, které lze vypočítat již v době překladu, čímž
-        snižuje složitost výsledného kódu a zvyšuje rychlost běhu programu.
+        snižuje složitost výsledného kódu a zvyšuje rychlost běhu programu. Vstupním bodem je funkce \texttt{optimize\_ast()}.
 
         \subsection{Vyhodnocování konstantních výrazů}
         Optimalizátor vyhodnocuje výrazy, jejichž všechny operandy jsou známé v době překladu.
@@ -207,8 +208,6 @@ var z = y * 2    // y je známé \(\rightarrow\) z = 8 * 2 \(\rightarrow\) z = 1
         Při volání funkcí, getterů a setterů se maží všechny známé hodnoty globálních proměnných,
         protože tyto operace mohou proměnné modifikovat. V podmínkách a cyklech se rovněž maží
         známé hodnoty, protože není jisté, která větev se vykoná nebo kolikrát se cyklus opakuje.
-
-        Vstupním bodem je funkce \texttt{optimize\_ast()}, která inicializuje optimalizaci celého programu.
 
     \section{Generátor kódu}
         Generátor kódu přijímá ASS a generuje z něj cílový program v IFJcode25. Vstupní metoda generátoru
